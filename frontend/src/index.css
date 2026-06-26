@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  background-color: #0f1923;
+  color: #e2e8f0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #151f2b; }
+::-webkit-scrollbar-thumb { background: #2b3c50; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #50b89e; }
+
+/* Plotly override — transparent bg */
+.js-plotly-plot .plotly, .js-plotly-plot .plotly .svg-container {
+  background: transparent !important;
+}
+
+/* Toast slide-in animation */
+@keyframes slide-in-from-bottom {
+  from { transform: translateY(0.5rem); opacity: 0; }
+  to   { transform: translateY(0);      opacity: 1; }
+}
+.animate-in { animation-fill-mode: both; }
+.slide-in-from-bottom-2 { animation: slide-in-from-bottom 0.2s ease-out; }

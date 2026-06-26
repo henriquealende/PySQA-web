@@ -1,0 +1,83 @@
+"""PySQA Web — FastAPI entry point."""
+from __future__ import annotations
+
+import traceback
+from pathlib import Path
+
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+from routers import audio, processing, export
+from services.session_store import load_all_sessions
+
+# ── App ───────────────────────────────────────────────────────────────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    load_all_sessions()
+    yield
+
+app = FastAPI(title="PySQA Web API", version="0.1.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],          # open for ngrok / any origin
+    allow_credentials=False,      # must be False when allow_origins=["*"]
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ── Global error handler ──────────────────────────────────────────────────────
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    tb = traceback.format_exc()
+    print("\n=== UNHANDLED EXCEPTION ===")
+    print(tb)
+    print("===========================\n")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "traceback": tb},
+    )
+
+# ── API routers ───────────────────────────────────────────────────────────────
+app.include_router(audio.router,      prefix="/api/audio",      tags=["audio"])
+app.include_router(processing.router, prefix="/api/processing", tags=["processing"])
+app.include_router(export.router,     prefix="/api/export",     tags=["export"])
+
+
+@app.get("/api/health")
+def health():
+    import importlib
+    deps = ["scipy", "numpy", "mosqito", "soundfile", "openpyxl"]
+    status = {}
+    for dep in deps:
+        try:
+            m = importlib.import_module(dep)
+            status[dep] = getattr(m, "__version__", "ok")
+        except ImportError as e:
+            status[dep] = f"MISSING: {e}"
+    return {"status": "ok", "dependencies": status}
+
+
+# ── Serve built frontend (must come AFTER API routes) ─────────────────────────
+DIST = Path(__file__).parent.parent / "frontend" / "dist"
+
+if DIST.exists():
+    # Serve static assets (JS, CSS, images)
+    assets_dir = DIST / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    # SPA fallback — serve static file if it exists, otherwise return index.html
+    @app.get("/{full_path:path}")
+    def spa_fallback(full_path: str):
+        candidate = DIST / full_path
+        if candidate.exists() and candidate.is_file():
+            return FileResponse(str(candidate))
+        return FileResponse(str(DIST / "index.html"))
+else:
+    @app.get("/")
+    def root():
+        return {"message": "Frontend not built. Run: cd frontend && npm run build"}

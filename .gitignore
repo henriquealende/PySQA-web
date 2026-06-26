@@ -1,0 +1,41 @@
+# ── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# ── Node / Frontend ──────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.local
+
+# ── IDE / OS ─────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Uploads / temp session data ──────────────────────────────────────────────
+backend/uploads/
+backend/tmp_sessions/
+
+# ── Binaries / tools ─────────────────────────────────────────────────────────
+ngrok.exe
+ngrok
+
+# ── Secrets / env ────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
