@@ -28,6 +28,9 @@ class RecorderProcessor extends AudioWorkletProcessor {
     this._preLen        = 0           // total samples in pre-buffer
     this._recording     = false
     this._levelCounter  = 0
+    this._peakAcc       = 0           // level statistics accumulated since the last report
+    this._sqAcc         = 0
+    this._countAcc      = 0
     this._levelInterval = Math.round(sampleRate * 0.05)  // ~50 ms
 
     this.port.onmessage = ({ data }) => {
@@ -67,18 +70,23 @@ class RecorderProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // Send level metrics to main thread at ~50 ms intervals
+    // Accumulate level statistics over EVERY block and report them every ~50 ms.
+    // (Measuring only the block that lands on the report boundary looks at ~5% of
+    // the audio, so clipping and overload between reports went unnoticed.)
+    let blockPeak = 0, blockSq = 0
+    for (let i = 0; i < ch.length; i++) {
+      const v = Math.abs(ch[i])
+      if (v > blockPeak) blockPeak = v
+      blockSq += v * v
+    }
+    if (blockPeak > this._peakAcc) this._peakAcc = blockPeak
+    this._sqAcc    += blockSq
+    this._countAcc += ch.length
     this._levelCounter += ch.length
     if (this._levelCounter >= this._levelInterval) {
+      this.port.postMessage({ type: 'level', peak: this._peakAcc, rms: Math.sqrt(this._sqAcc / this._countAcc) })
       this._levelCounter = 0
-      let peak = 0, sumSq = 0
-      for (let i = 0; i < ch.length; i++) {
-        const v = Math.abs(ch[i])
-        if (v > peak) peak = v
-        sumSq += v * v
-      }
-      const rms = Math.sqrt(sumSq / ch.length)
-      this.port.postMessage({ type: 'level', peak, rms })
+      this._peakAcc = 0; this._sqAcc = 0; this._countAcc = 0
     }
 
     return true   // keep processor alive

@@ -236,16 +236,26 @@ function LiveWaveform({ bufRef, posRef, sampleRate, windowSec = 3 }: LiveWavefor
 
       if (displayLen < 2) { ctx.restore(); return }
 
-      // Waveform
-      ctx.strokeStyle = '#50b89e'; ctx.lineWidth = 1.5; ctx.beginPath()
-      let first = true
+      // Waveform: min/max per pixel column, so short peaks and clipping stay visible
+      ctx.strokeStyle = '#50b89e'; ctx.lineWidth = 1; ctx.beginPath()
       const start = pos - displayLen
+      const clipX: number[] = []
       for (let i = 0; i < cw; i++) {
-        const sampleIdx = Math.floor(start + (i / cw) * displayLen)
-        const bufIdx = ((sampleIdx % capacity) + capacity) % capacity
-        const y = midY - buf[bufIdx] * midY * 0.9
-        if (first) { ctx.moveTo(i, y); first = false } else ctx.lineTo(i, y)
+        const a = Math.floor(start + (i / cw) * displayLen)
+        const b = Math.max(a + 1, Math.floor(start + ((i + 1) / cw) * displayLen))
+        let lo = Infinity, hi = -Infinity
+        for (let s = a; s < b; s++) {
+          const v = buf[((s % capacity) + capacity) % capacity]
+          if (v < lo) lo = v
+          if (v > hi) hi = v
+        }
+        ctx.moveTo(i + 0.5, midY - hi * midY * 0.9)
+        ctx.lineTo(i + 0.5, midY - lo * midY * 0.9 + 0.5)
+        if (hi >= 0.999 || lo <= -0.999) clipX.push(i + 0.5)
       }
+      ctx.stroke()
+      ctx.strokeStyle = '#ed693b'; ctx.beginPath()
+      for (const x of clipX) { ctx.moveTo(x, 0); ctx.lineTo(x, ch) }
       ctx.stroke()
       ctx.restore()
     }
@@ -471,11 +481,19 @@ function StaticWaveform({ pcm, sampleRate, playProgress }: {
 
     const n = pcm.length
     ctx.strokeStyle = '#50b89e'; ctx.lineWidth = 1; ctx.beginPath()
+    const clipX: number[] = []
     for (let i = 0; i < cw; i++) {
-      const idx = Math.floor((i / cw) * n)
-      const y = midY - pcm[idx] * midY * 0.9
-      i === 0 ? ctx.moveTo(i, y) : ctx.lineTo(i, y)
+      const a = Math.floor((i / cw) * n)
+      const b = Math.max(a + 1, Math.floor(((i + 1) / cw) * n))
+      let lo = Infinity, hi = -Infinity
+      for (let s = a; s < b && s < n; s++) { const v = pcm[s]; if (v < lo) lo = v; if (v > hi) hi = v }
+      ctx.moveTo(i + 0.5, midY - hi * midY * 0.9)
+      ctx.lineTo(i + 0.5, midY - lo * midY * 0.9 + 0.5)
+      if (hi >= 0.999 || lo <= -0.999) clipX.push(i + 0.5)
     }
+    ctx.stroke()
+    ctx.strokeStyle = '#ed693b'; ctx.beginPath()
+    for (const x of clipX) { ctx.moveTo(x, 0); ctx.lineTo(x, ch) }
     ctx.stroke()
 
     // Duration labels
@@ -711,20 +729,32 @@ export default function RecordingPage() {
 
   // ── Enumerate devices ───────────────────────────────────────────────────────
 
+  // Listing devices needs no permission (names stay blank until it is granted), so
+  // opening the page never triggers the browser's microphone prompt.
+  const listDevices = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return
+    const all = await navigator.mediaDevices.enumerateDevices()
+    const inputs = all.filter(d=>d.kind==='audioinput')
+      .map((d,i)=>({ deviceId: d.deviceId, label: d.label||`Microphone ${i+1}` }))
+    setDevices(inputs)
+    if (inputs.length>0 && !inputs.find(d=>d.deviceId===selectedDevRef.current))
+      setSelectedDev(inputs[0].deviceId)
+  }, [])
+
+  // Explicit user action (Refresh button): ask for access so the device names can be read.
   const refreshDevices = useCallback(async () => {
     try {
       const tmp = await navigator.mediaDevices.getUserMedia({ audio: true })
       tmp.getTracks().forEach(t=>t.stop())
-      const all = await navigator.mediaDevices.enumerateDevices()
-      const inputs = all.filter(d=>d.kind==='audioinput')
-        .map((d,i)=>({ deviceId: d.deviceId, label: d.label||`Microphone ${i+1}` }))
-      setDevices(inputs)
-      if (inputs.length>0 && !inputs.find(d=>d.deviceId===selectedDevRef.current))
-        setSelectedDev(inputs[0].deviceId)
-    } catch { toast.error('Microphone permission denied') }
-  }, [])
+      await listDevices()
+    } catch (e: any) {
+      toast.error(e?.name === 'NotAllowedError'
+        ? 'Microphone blocked. Allow it in the browser site settings, then press Refresh.'
+        : 'Could not read the microphone list: ' + (e?.message ?? e))
+    }
+  }, [listDevices])
 
-  useEffect(() => { refreshDevices() }, [])
+  useEffect(() => { listDevices().catch(() => {}) }, [listDevices])
 
   // ── Cleanup ─────────────────────────────────────────────────────────────────
 
@@ -785,6 +815,7 @@ export default function RecordingPage() {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       }
       streamRef.current = stream
+      listDevices().catch(() => {})   // permission is granted now: device names become readable
       const ctx = new AudioContext({ sampleRate })
       audioCtxRef.current = ctx
       // Mobile browsers (iOS Safari, some Android) start AudioContext suspended
