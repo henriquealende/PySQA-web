@@ -1,0 +1,13 @@
+# Render Blueprint — PySQA Web (single free web service: FastAPI + built frontend)
+# Free plan: sleeps after 15 min idle, ephemeral disk (sessions are lost on restart).
+services:
+  - type: web
+    name: pysqa-web
+    runtime: python
+    plan: free
+    region: virginia
+    branch: main
+    buildCommand: pip install -r backend/requirements.txt && npm ci --prefix frontend && npm run build --prefix frontend
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeploy: true
