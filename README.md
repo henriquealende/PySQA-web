@@ -219,6 +219,7 @@ PySQA web/
 | Annoyance indices (SIL, Zwicker-Fastl) | Done |
 | Export WAV / XLSX / CSV | Done |
 | Audio playback (Web Audio API) | Done |
+| Lossless WAV playback and download (the upload is kept as sent; processed files are 32-bit float) | Done |
 
 ---
 

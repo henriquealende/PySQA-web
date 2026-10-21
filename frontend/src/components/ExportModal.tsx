@@ -97,7 +97,7 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
             <FileAudio size={18} className="text-teal shrink-0" />
             <div>
               <p className="text-xs font-semibold text-white">Audio (.wav)</p>
-              <p className="text-[10px] text-muted">Download the (processed) WAV file</p>
+              <p className="text-[10px] text-muted">Lossless: the file as you sent it, or 32-bit float if processed</p>
             </div>
           </button>
 

@@ -23,6 +23,7 @@ from typing import Dict, Optional
 import numpy as np
 
 from utils import limits
+from utils.samples import normalise_samples
 
 # PYSQA_TMP_DIR moves the session files (tests use it to stay out of the project folder)
 TMP_DIR = Path(os.environ.get("PYSQA_TMP_DIR") or Path(__file__).parent.parent / "tmp_sessions")
@@ -153,12 +154,7 @@ def load_all_sessions() -> None:
                     continue  # WAV deleted — skip this entry
 
                 sr, data = wavfile.read(str(raw_path))
-                if data.dtype == np.int16:
-                    norm = data.astype(np.float64) / 32768.0
-                elif data.dtype == np.int32:
-                    norm = data.astype(np.float64) / 2147483648.0
-                else:
-                    norm = data.astype(np.float64)
+                norm = normalise_samples(data)
 
                 entry = AudioEntry(
                     audio_id      = meta["audio_id"],

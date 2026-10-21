@@ -16,6 +16,7 @@ from scipy.signal import spectrogram as scipy_spectrogram, hilbert
 
 from services.session_store import AudioEntry, audio_ram_mb, new_audio_id, persist_session, usable_audio_id
 from utils import limits
+from utils.samples import BROWSER_SAFE, normalise_samples
 
 # ── Pre-warmed metric singletons ──────────────────────────────────────────────
 _LOUD = _SHARP = _ROUGH = _FS_CALC = _TON = _MPI = None
@@ -65,26 +66,25 @@ _WAVEFORM_MAX_POINTS = 8_000
 # ── I/O ───────────────────────────────────────────────────────────────────────
 
 def load_wav(file_bytes: bytes, filename: str, audio_id: Optional[str] = None) -> AudioEntry:
-    """Parse WAV bytes, normalise to float64 [-1,1], save tmp file."""
+    """Parse WAV bytes, normalise to float64 (full scale = 1.0) and keep a copy on disk."""
     sr, data = wavfile.read(io.BytesIO(file_bytes))
-    # Normalise to float64
-    if data.dtype == np.int16:
-        norm = data.astype(np.float64) / 32768.0
-    elif data.dtype == np.int32:
-        norm = data.astype(np.float64) / 2147483648.0
-    elif np.issubdtype(data.dtype, np.floating):
-        norm = data.astype(np.float64)
-    else:
-        norm = data.astype(np.float64)
+    norm = normalise_samples(data)
 
     channels = 1 if norm.ndim == 1 else norm.shape[1]
     n_samples = norm.shape[0]
     duration_s = n_samples / sr
 
-    # Save to tmp file for streaming
+    # The copy on disk is what is played, downloaded and reloaded after a restart, so it must not lose
+    # quality: keep the upload exactly as it came whenever a browser can play it (it used to be
+    # squeezed into 16 bits, and a peak above full scale wrapped around into noise); otherwise
+    # (64-bit samples) write 32-bit float, which holds every sample of a file of up to 24 bits.
     audio_id = usable_audio_id(audio_id) or new_audio_id()
     tmp_path = TMP_DIR / f"{uuid.uuid4().hex}.wav"      # the file name never comes from client input
-    wavfile.write(str(tmp_path), sr, (norm * 32767).astype(np.int16))
+    if data.dtype in BROWSER_SAFE:
+        tmp_path.write_bytes(file_bytes)
+    else:
+        import soundfile as sf
+        sf.write(str(tmp_path), norm, sr, subtype="FLOAT")
 
     return AudioEntry(
         audio_id=audio_id,
@@ -752,7 +752,9 @@ def _derive(entry: AudioEntry, new_data: np.ndarray, tag: str, audio_id: Optiona
     new_entry.duration_s = new_data.shape[0] / entry.sample_rate
     new_entry._cache = {}
     tmp = TMP_DIR / f"{uuid.uuid4().hex}.wav"
-    sf.write(str(tmp), new_entry.data, entry.sample_rate)
+    # 32-bit float: processing (EQ, loudness adjustment...) can push samples past full scale, and
+    # 16-bit PCM would clip them. Browsers play it and clip only at the loudspeaker.
+    sf.write(str(tmp), new_entry.data, entry.sample_rate, subtype="FLOAT")
     new_entry.raw_path = tmp
     return new_entry
 
