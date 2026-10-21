@@ -17,11 +17,16 @@ limit is detected, so local development stays unrestricted:
     PYSQA_MAX_EXPORT_CELLS      largest Excel table the server builds (CSV is made in the browser)
 
 Set one of them to 0 to disable that limit alone.
+
+On Linux the module also tunes the memory allocator (see _tune_allocator); setting
+MALLOC_ARENA_MAX or MALLOC_MMAP_THRESHOLD_ yourself turns that off.
 """
 from __future__ import annotations
 
 import contextlib
+import ctypes
 import os
+import sys
 import threading
 from typing import Dict, Iterator, Optional, Tuple
 
@@ -64,6 +69,35 @@ def _detect_memory_limit_mb() -> Optional[float]:
 MEMORY_LIMIT_MB: Optional[float] = _detect_memory_limit_mb()
 ENABLED: bool = MEMORY_LIMIT_MB is not None
 _SCALE = max(1.0, (MEMORY_LIMIT_MB or 512.0) / 512.0)    # bigger machines get proportionally bigger caps
+
+
+def _tune_allocator() -> bool:
+    """Keep memory freed by a calculation from piling up inside the process (Linux, glibc).
+
+    The server answers each request in its own worker thread and glibc gives every thread a memory
+    arena of its own. What a thread frees stays in its arena, so after a few heavy calculations the
+    resident size sat at 350 MB on a 512 MB container (175 -> 292 MB on Render after a single
+    loudness) and the next calculation was refused for lack of memory. One shared arena, and big
+    blocks always taken from the system and given back when freed, keep it near 180 MB.
+
+    Returns True if both settings were applied. A value set through the environment
+    (MALLOC_ARENA_MAX, MALLOC_MMAP_THRESHOLD_) wins and leaves this alone.
+    """
+    if not sys.platform.startswith("linux"):
+        return False
+    if "MALLOC_ARENA_MAX" in os.environ or "MALLOC_MMAP_THRESHOLD_" in os.environ:
+        return False
+    try:
+        libc = ctypes.CDLL("libc.so.6")
+        arenas = libc.mallopt(-8, 1)                  # M_ARENA_MAX: a single arena for all threads
+        mmap = libc.mallopt(-3, 256 * 1024)           # M_MMAP_THRESHOLD: blocks of 256 KB or more go back to the system
+        return bool(arenas and mmap)
+    except (OSError, AttributeError):                 # not glibc (musl, macOS...): nothing to tune
+        return False
+
+
+# Done while the process is still single-threaded, before the first request creates a worker arena.
+ALLOCATOR_TUNED: bool = _tune_allocator() if ENABLED else False
 
 
 def _setting(name: str, hosted_default: float) -> Optional[float]:
@@ -235,4 +269,5 @@ def describe(audio_ram_mb: float = 0.0) -> Dict[str, object]:
         "max_audio_ram_mb": MAX_AUDIO_RAM_MB,
         "session_idle_min": SESSION_IDLE_MIN,
         "max_export_cells": MAX_EXPORT_CELLS,
+        "allocator_tuned": ALLOCATOR_TUNED,
     }

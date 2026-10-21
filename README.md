@@ -124,6 +124,12 @@ refused up front with a message instead of crashing the process. Measured on a 5
 Loudness ISO 532-1 and Sharpness accept about 4-5 s of audio, Loudness ECMA-418-2 about 1.7 s, and
 Roughness / Tonality ECMA-418-2 do not fit at all (they need roughly 440 and 540 MB per second of audio).
 
+On Linux the server also tunes the memory allocator when the limits are on: it answers each request in
+its own thread, and without this the memory freed by one calculation stayed in that thread's arena, so the
+free memory shrank after every heavy calculation (a 512 MiB container ended up refusing a 3 s section).
+`GET /api/health` shows `allocator_tuned`; setting `MALLOC_ARENA_MAX` or `MALLOC_MMAP_THRESHOLD_` yourself
+leaves it alone.
+
 A longer file can still be analysed in pieces: select a section (drag on the waveform in the Normal view, or
 type the limits in the Section bar). Every analysis (spectrum, spectrogram, 1/3-octave, envelope, metrics,
 batch) then runs on that part only, and the memory check is made on the length of the section. The API takes
