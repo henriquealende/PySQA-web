@@ -60,6 +60,11 @@ async def resource_limit_handler(request: Request, exc: limits.ResourceLimitErro
     return JSONResponse(status_code=413, content={"detail": str(exc)})
 
 
+@app.exception_handler(limits.RequestCancelled)
+async def request_cancelled_handler(request: Request, exc: limits.RequestCancelled):
+    return JSONResponse(status_code=499, content={"detail": "The request was cancelled."})     # nobody is listening
+
+
 @app.exception_handler(limits.ServerBusyError)
 async def server_busy_handler(request: Request, exc: limits.ServerBusyError):
     return JSONResponse(status_code=503, content={"detail": str(exc)})

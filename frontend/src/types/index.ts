@@ -102,6 +102,18 @@ export interface EnvelopeData {
   section?: Section | null
 }
 
+/** What /api/health says about the compute queue and how long calculations usually take. */
+export interface ServerLoad {
+  heavy?: {
+    tracked: boolean
+    running_job: string | null
+    running_kind: string | null
+    running_for_s: number | null
+    queue: string[]
+  }
+  timing_s_per_audio_s?: Record<string, number>
+}
+
 export interface BatchRow {
   audio_id: string
   name: string

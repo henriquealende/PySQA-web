@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import io
+import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import soundfile as sf
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, Query
+import anyio
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -34,6 +36,7 @@ class MetricRequest(BaseModel):
     field_type: str = "free"   # "free" | "diffuse"
     t0: Optional[float] = None  # analyse only [t0, t1] seconds of the file
     t1: Optional[float] = None
+    job: Optional[str] = None   # the browser's name for this request: lets /api/health say where it is in the queue
 
 
 class BatchRequest(BaseModel):
@@ -196,15 +199,22 @@ def envelope(
 
 # ── Metrics ───────────────────────────────────────────────────────────────────
 
+_JOB_ID = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+
+
 @router.post("/{session_id}/{audio_id}/metrics")
-def compute_metric(session_id: str, audio_id: str, body: MetricRequest, background_tasks: BackgroundTasks):
+def compute_metric(session_id: str, audio_id: str, body: MetricRequest, background_tasks: BackgroundTasks, request: Request):
     entry = _get(session_id, audio_id)
+    job = body.job if body.job and _JOB_ID.match(body.job) else ""
+    # This runs in a worker thread: ask the event loop whether the browser is still there
+    gone = lambda: anyio.from_thread.run(request.is_disconnected)
     try:
-        result = svc.compute_metric(entry, body.metric_key, field_type=body.field_type, t0=body.t0, t1=body.t1)
+        result = svc.compute_metric(entry, body.metric_key, field_type=body.field_type, t0=body.t0, t1=body.t1,
+                                    cancelled=gone, job=job)
         background_tasks.add_task(persist_session, session_id)
         return result
-    except (limits.ResourceLimitError, limits.ServerBusyError, svc.SectionError):
-        raise                                  # answered as 413 / 503 / 400 with a readable message
+    except (limits.ResourceLimitError, limits.ServerBusyError, limits.RequestCancelled, svc.SectionError):
+        raise                                  # answered as 413 / 503 / 499 / 400 with a readable message
     except Exception as e:
         raise HTTPException(500, str(e))
 

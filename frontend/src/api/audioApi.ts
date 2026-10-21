@@ -1,8 +1,10 @@
-import { AudioFile, WaveformData, SpectrumData, SpectrogramData, OctaveData, EnvelopeData, MetricResult, MetricKey, Section, SpectrogramParams, EnvelopeParams, FieldType } from '../types'
+import { AudioFile, WaveformData, SpectrumData, SpectrogramData, OctaveData, EnvelopeData, MetricResult, MetricKey, Section, ServerLoad, SpectrogramParams, EnvelopeParams, FieldType } from '../types'
 import { apiFetch, checkResponse, newClientId, SessionExpiredError, watched } from './http'
 import * as recovery from './recovery'
+import { cachedFetch, invalidateAudio } from './viewCache'
 
 export { SessionExpiredError }
+export { isAbort } from './viewCache'
 
 const BASE = '/api/audio'
 
@@ -22,6 +24,7 @@ export async function uploadFiles(sessionId: string, files: File[]): Promise<Aud
 
 export async function deleteAudio(sessionId: string, audioId: string): Promise<void> {
   await watched(() => fetch(`${BASE}/${sessionId}/${audioId}`, { method: 'DELETE' }))
+  invalidateAudio(audioId)
   await recovery.recordDelete(sessionId, audioId)
 }
 
@@ -29,30 +32,51 @@ export function getStreamUrl(sessionId: string, audioId: string): string {
   return `${BASE}/${sessionId}/${audioId}/stream`
 }
 
-export async function fetchWaveform(sessionId: string, audioId: string): Promise<WaveformData> {
-  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/waveform`)
+// ── Analysis results ──────────────────────────────────────────────────────────
+// Every call below keeps its answer in memory (see viewCache), accepts an AbortSignal, and the server
+// analyses only [t0, t1] seconds when a section is given (nothing means the whole file).
+
+async function readJson<T>(res: Response): Promise<{ data: T; size: number }> {
   await checkResponse(res)
-  return res.json()
+  const text = await res.text()
+  return { data: JSON.parse(text) as T, size: text.length * 2 }
 }
 
-/** `t0` and `t1` (seconds) ask the server to analyse only that part of the file; nothing means the whole file. */
+const getJson = async <T>(sessionId: string, url: string, signal: AbortSignal) =>
+  readJson<T>(await apiFetch(sessionId, url, { signal }))
+
+const postJson = async <T>(sessionId: string, url: string, body: unknown, signal: AbortSignal) =>
+  readJson<T>(await apiFetch(sessionId, url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  }))
+
 function withSection(q: URLSearchParams, section?: Section | null): URLSearchParams {
   if (section) { q.set('t0', String(section[0])); q.set('t1', String(section[1])) }
   return q
 }
 
-export async function fetchSpectrum(sessionId: string, audioId: string, section?: Section | null): Promise<SpectrumData> {
-  const qs = withSection(new URLSearchParams(), section).toString()
-  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/spectrum${qs ? '?' + qs : ''}`)
-  await checkResponse(res)
-  return res.json()
+const cacheKey = (sessionId: string, audioId: string, kind: string, detail = '') => `${sessionId}|${audioId}|${kind}|${detail}`
+
+export function fetchWaveform(sessionId: string, audioId: string, signal?: AbortSignal): Promise<WaveformData> {
+  return cachedFetch(audioId, cacheKey(sessionId, audioId, 'waveform'),
+    (s) => getJson<WaveformData>(sessionId, `${BASE}/${sessionId}/${audioId}/waveform`, s), signal)
 }
 
-export async function fetchSpectrogram(
+export function fetchSpectrum(sessionId: string, audioId: string, section?: Section | null, signal?: AbortSignal): Promise<SpectrumData> {
+  const qs = withSection(new URLSearchParams(), section).toString()
+  return cachedFetch(audioId, cacheKey(sessionId, audioId, 'spectrum', qs),
+    (s) => getJson<SpectrumData>(sessionId, `${BASE}/${sessionId}/${audioId}/spectrum${qs ? '?' + qs : ''}`, s), signal)
+}
+
+export function fetchSpectrogram(
   sessionId: string,
   audioId: string,
   params?: Partial<SpectrogramParams>,
   section?: Section | null,
+  signal?: AbortSignal,
 ): Promise<SpectrogramData> {
   const q = new URLSearchParams()
   if (params?.nfft      != null) q.set('nfft',       String(params.nfft))
@@ -64,52 +88,67 @@ export async function fetchSpectrogram(
   if (params?.fmax      != null) q.set('fmax',       String(params.fmax))
   if (params?.dyn_range != null) q.set('dyn_range',  String(params.dyn_range))
   const qs = withSection(q, section).toString()
-  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/spectrogram${qs ? '?' + qs : ''}`)
-  await checkResponse(res)
-  return res.json()
+  return cachedFetch(audioId, cacheKey(sessionId, audioId, 'spectrogram', qs),
+    (s) => getJson<SpectrogramData>(sessionId, `${BASE}/${sessionId}/${audioId}/spectrogram${qs ? '?' + qs : ''}`, s), signal)
 }
 
-export async function fetchOctave(
+export function fetchOctave(
   sessionId: string,
   audioId: string,
   weighting = 'Z',
   section?: Section | null,
+  signal?: AbortSignal,
 ): Promise<OctaveData> {
   const qs = withSection(new URLSearchParams({ weighting }), section).toString()
-  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/octave?${qs}`)
-  await checkResponse(res)
-  return res.json()
+  return cachedFetch(audioId, cacheKey(sessionId, audioId, 'octave', qs),
+    (s) => getJson<OctaveData>(sessionId, `${BASE}/${sessionId}/${audioId}/octave?${qs}`, s), signal)
 }
 
-export async function fetchEnvelope(
+export function fetchEnvelope(
   sessionId: string,
   audioId: string,
   params?: Partial<EnvelopeParams>,
   section?: Section | null,
+  signal?: AbortSignal,
 ): Promise<EnvelopeData> {
   const q = new URLSearchParams()
   if (params?.smoothing_ms != null) q.set('smoothing_ms', String(params.smoothing_ms))
   if (params?.lpf_hz       != null) q.set('lpf_hz',       String(params.lpf_hz))
   const qs = withSection(q, section).toString()
-  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/envelope${qs ? '?' + qs : ''}`)
-  await checkResponse(res)
-  return res.json()
+  return cachedFetch(audioId, cacheKey(sessionId, audioId, 'envelope', qs),
+    (s) => getJson<EnvelopeData>(sessionId, `${BASE}/${sessionId}/${audioId}/envelope${qs ? '?' + qs : ''}`, s), signal)
 }
 
-export async function fetchMetric(
+/**
+ * A psychoacoustic metric. It can take a while on a small server: `job` names this request so that
+ * /api/health tells where it is (running, or how many are ahead of it), and aborting the signal removes
+ * it from the server's queue if it has not started yet.
+ */
+export function fetchMetric(
   sessionId: string,
   audioId: string,
   metricKey: MetricKey,
   fieldType: FieldType = 'free',
   section?: Section | null,
+  opts?: { signal?: AbortSignal; job?: string },
 ): Promise<MetricResult> {
-  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/metrics`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ metric_key: metricKey, field_type: fieldType, ...(section ? { t0: section[0], t1: section[1] } : {}) }),
-  })
-  await checkResponse(res)
-  return res.json()
+  const detail = `${metricKey}|${fieldType}|${section ? section.join('-') : ''}`
+  return cachedFetch(audioId, cacheKey(sessionId, audioId, 'metric', detail),
+    (s) => postJson<MetricResult>(sessionId, `${BASE}/${sessionId}/${audioId}/metrics`, {
+      metric_key: metricKey, field_type: fieldType,
+      ...(section ? { t0: section[0], t1: section[1] } : {}),
+      ...(opts?.job ? { job: opts.job } : {}),
+    }, s), opts?.signal)
+}
+
+/** What the server is doing and how long its calculations usually take (null if it cannot be reached). */
+export async function fetchServerLoad(): Promise<ServerLoad | null> {
+  try {
+    const res = await fetch('/api/health', { cache: 'no-store' })
+    if (!res.ok) return null
+    const h = await res.json()
+    return { heavy: h.limits?.heavy, timing_s_per_audio_s: h.limits?.timing_s_per_audio_s }
+  } catch { return null }
 }
 
 export async function fetchBatch(
@@ -144,11 +183,13 @@ export async function setCalibration(
     body: JSON.stringify({ sensitivity_mv_pa: sensitivityMvPa, fs_voltage: fsVoltage }),
   })
   await checkResponse(res)
+  invalidateAudio(audioId)                 // everything calculated for this file used the old calibration
   await recovery.recordCalibration(sessionId, audioId, { sensitivityMvPa, fsVoltage })
   return res.json()
 }
 
 export async function clearCalibration(sessionId: string, audioId: string): Promise<void> {
   await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/calibrate`, { method: 'DELETE' })
+  invalidateAudio(audioId)
   await recovery.recordCalibration(sessionId, audioId, null)
 }

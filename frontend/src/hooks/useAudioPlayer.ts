@@ -14,6 +14,11 @@ export interface PlayerState {
  */
 export const audioCurrentTimeRef = { current: 0 }
 
+/** The <audio> element of the current file, and callbacks run whenever its time changes (playing, seeking, ending). */
+export const audioElementRef: { current: HTMLAudioElement | null } = { current: null }
+export const audioTimeListeners = new Set<() => void>()
+const notifyTime = () => audioTimeListeners.forEach((f) => f())
+
 export function useAudioPlayer(src: string | null, onError?: () => void) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const onErrorRef = useRef(onError)
@@ -30,14 +35,17 @@ export function useAudioPlayer(src: string | null, onError?: () => void) {
   useEffect(() => {
     const audio = new Audio()
     audioRef.current = audio
+    audioElementRef.current = audio
 
     const sync = () => {
       audioCurrentTimeRef.current = audio.currentTime
       setState((s) => ({ ...s, currentTime: audio.currentTime, duration: audio.duration || 0 }))
+      notifyTime()
     }
     const onEnded = () => {
       audioCurrentTimeRef.current = 0
       setState((s) => ({ ...s, isPlaying: false, currentTime: 0 }))
+      notifyTime()
     }
     const onLoaded = () => setState((s) => ({ ...s, duration: audio.duration || 0 }))
 
@@ -52,6 +60,8 @@ export function useAudioPlayer(src: string | null, onError?: () => void) {
     return () => {
       audio.pause()
       audioCurrentTimeRef.current = 0
+      if (audioElementRef.current === audio) audioElementRef.current = null
+      notifyTime()
       audio.removeEventListener('timeupdate', sync)
       audio.removeEventListener('ended', onEnded)
       audio.removeEventListener('loadedmetadata', onLoaded)

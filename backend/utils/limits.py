@@ -28,7 +28,9 @@ import ctypes
 import os
 import sys
 import threading
-from typing import Dict, Iterator, Optional, Tuple
+import time
+import uuid
+from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
 
 class ResourceLimitError(Exception):
@@ -37,6 +39,10 @@ class ResourceLimitError(Exception):
 
 class ServerBusyError(Exception):
     """The single heavy-compute slot stayed busy for too long (HTTP 503)."""
+
+
+class RequestCancelled(Exception):
+    """The browser gave up on the request before its turn came, so it was not calculated."""
 
 
 # ── Detection ─────────────────────────────────────────────────────────────────
@@ -213,20 +219,76 @@ def check_budget(kind: str, duration_s: float, sample_rate: int, audio_ram_mb: f
 # ── One heavy job at a time ───────────────────────────────────────────────────
 
 _HEAVY = threading.Semaphore(1)
+_STATE = threading.Lock()
+_QUEUE: List[str] = []                      # jobs waiting for the slot, oldest first
+_RUNNING: Optional[Dict[str, object]] = None
 
 
 @contextlib.contextmanager
-def heavy_slot() -> Iterator[None]:
-    """Only one memory-hungry computation at a time; the others queue for up to HEAVY_WAIT_S."""
+def heavy_slot(cancelled: Optional[Callable[[], bool]] = None, job: str = "", kind: str = "") -> Iterator[None]:
+    """Only one memory-hungry computation at a time; the others queue for up to HEAVY_WAIT_S.
+
+    cancelled: asked while waiting; when it says the browser is gone, the request leaves the queue
+    without being calculated (a user who drags the section around leaves old requests behind).
+    job / kind: name of the request and of what it calculates, shown in /api/health so the browser can
+    tell its user whether the calculation is running or waiting, and for how long.
+    """
+    global _RUNNING
     if not ENABLED:
         yield
         return
-    if not _HEAVY.acquire(timeout=HEAVY_WAIT_S):
-        raise ServerBusyError("The server is busy with another calculation. Try again in a moment.")
+    tag = job or uuid.uuid4().hex[:12]
+    deadline = time.monotonic() + HEAVY_WAIT_S
+    with _STATE:
+        _QUEUE.append(tag)
     try:
+        while not _HEAVY.acquire(timeout=0.25):
+            if cancelled is not None and cancelled():
+                raise RequestCancelled()
+            if time.monotonic() > deadline:
+                raise ServerBusyError("The server is busy with another calculation. Try again in a moment.")
+    finally:
+        with _STATE:
+            if tag in _QUEUE:
+                _QUEUE.remove(tag)
+    try:
+        if cancelled is not None and cancelled():       # it left while we were taking the slot
+            raise RequestCancelled()
+        with _STATE:
+            _RUNNING = {"job": tag, "kind": kind, "since": time.monotonic()}
         yield
     finally:
+        with _STATE:
+            _RUNNING = None
         _HEAVY.release()
+
+
+def heavy_state() -> Dict[str, object]:
+    """Who holds the compute slot and who waits for it (for /api/health)."""
+    with _STATE:
+        running = _RUNNING
+        return {
+            "running_job": running["job"] if running else None,
+            "running_kind": running["kind"] if running else None,
+            "running_for_s": round(time.monotonic() - float(running["since"]), 1) if running else None,
+            "queue": list(_QUEUE),
+            "tracked": ENABLED,          # False on a local server: there is no compute slot, so no queue to show
+        }
+
+
+# ── How long calculations usually take ────────────────────────────────────────
+# Seconds of calculation per second of audio, averaged over the latest runs on this server, so the
+# browser can say "usually about 15 s" instead of drawing a bar that only pretends to advance.
+
+_TIMING: Dict[str, float] = {}
+
+
+def record_timing(kind: str, audio_s: float, secs: float) -> None:
+    if audio_s <= 0 or secs < 0:
+        return
+    rate = secs / audio_s
+    previous = _TIMING.get(kind)
+    _TIMING[kind] = rate if previous is None else 0.5 * previous + 0.5 * rate
 
 
 # ── Upload checks ─────────────────────────────────────────────────────────────
@@ -270,4 +332,6 @@ def describe(audio_ram_mb: float = 0.0) -> Dict[str, object]:
         "session_idle_min": SESSION_IDLE_MIN,
         "max_export_cells": MAX_EXPORT_CELLS,
         "allocator_tuned": ALLOCATOR_TUNED,
+        "heavy": heavy_state(),
+        "timing_s_per_audio_s": {k: round(v, 3) for k, v in _TIMING.items()},
     }

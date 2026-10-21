@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { AudioFile, ViewMode, MetricKey, FieldType, Section, SpectrogramParams, EnvelopeParams } from '../types'
 import { forgetSession } from '../api/recovery'
+import { clearViewCache } from '../api/viewCache'
 
 const DEFAULT_SPECTROGRAM: SpectrogramParams = {
   nfft: 2048,
@@ -134,6 +135,7 @@ export const useStore = create<AppState>((set, get) => ({
   setAudioPlayback: (audioIsPlaying, audioDuration) => set({ audioIsPlaying, audioDuration }),
   clearSession: () => {
     void forgetSession(get().sessionId)     // also drop this browser's copy, or it would be restored again
+    clearViewCache()
     set({ files: [], selectedId: null, compareId: null, calibrations: {}, sections: {} })
   },
   // After a reload: the files the server (or this browser's copy) still has, with their calibrations

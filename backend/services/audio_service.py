@@ -6,6 +6,7 @@ import io
 import math
 import os
 import tempfile
+import time
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple
@@ -465,7 +466,8 @@ def _calibrated_mono(entry: AudioEntry) -> np.ndarray:
 
 
 def compute_metric(entry: AudioEntry, metric_key: str, field_type: str = "free",
-                   t0: Optional[float] = None, t1: Optional[float] = None) -> Dict[str, Any]:
+                   t0: Optional[float] = None, t1: Optional[float] = None,
+                   cancelled: Optional[Any] = None, job: str = "") -> Dict[str, Any]:
     """Dispatch to the correct psychoacoustic computation (on the whole file, or on one section of it)."""
     sec = _section(entry, t0, t1)
     cal_tag = f"cal{entry.calibration_pa:.6f}" if entry.calibration_pa else "raw"
@@ -476,14 +478,16 @@ def compute_metric(entry: AudioEntry, metric_key: str, field_type: str = "free",
         return entry._cache[cache_key]
 
     # One memory-hungry computation at a time; the others wait for the slot.
-    with limits.heavy_slot():
+    with limits.heavy_slot(cancelled, job, metric_key):
         if cache_key in entry._cache:          # finished by a request that was ahead in the queue
             return entry._cache[cache_key]
         part = sec.entry
         limits.check_budget(metric_key, part.duration_s, part.sample_rate, audio_ram_mb())
         mono = _calibrated_mono(part)
         sr   = part.sample_rate
+        started = time.monotonic()
         result = _dispatch_metric(mono, sr, metric_key, field_type=field_type)
+        limits.record_timing(metric_key, part.duration_s, time.monotonic() - started)
         if not sec.whole:
             result = _shift_time(result, sec.offset_s)
             result["section"] = sec.span

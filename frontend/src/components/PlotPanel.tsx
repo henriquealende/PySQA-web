@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Plot from 'react-plotly.js'
 import { Loader2, Settings } from 'lucide-react'
 import { useStore } from '../store/useStore'
-import { audioCurrentTimeRef } from '../hooks/useAudioPlayer'
-import { SessionExpiredError } from '../api/audioApi'
+import { audioElementRef, audioTimeListeners } from '../hooks/useAudioPlayer'
+import { SessionExpiredError, isAbort } from '../api/audioApi'
+import { newClientId } from '../api/http'
 import {
   fetchWaveform, fetchSpectrum, fetchSpectrogram,
   fetchOctave, fetchEnvelope, fetchMetric,
@@ -14,6 +15,7 @@ import type {
   SpectrogramParams, EnvelopeParams, Section,
 } from '../types'
 import SectionBar, { sectionKey, toSection } from './SectionBar'
+import MetricProgress from './MetricProgress'
 
 // ─── Colors ─────────────────────────────────────────────────────────────────
 const C_TEAL   = '#50b89e'   // primary time
@@ -50,8 +52,6 @@ const PLOT_CONFIG = {
   displaylogo: false,
   responsive: true,
 }
-
-const TAU_MS = 10_000
 
 // ─── Bark ↔ Hz ──────────────────────────────────────────────────────────────
 function hz2bark(f: number): number {
@@ -108,30 +108,6 @@ function HarmonicInput({ f0, onChange }: { f0: number|null; onChange: (v: number
 }
 
 // ─── Helper components ───────────────────────────────────────────────────────
-function MetricProgressBar({ label }: { label?: string }) {
-  const [pct, setPct] = useState(0)
-  const startRef = useRef(Date.now())
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPct(90*(1-Math.exp(-(Date.now()-startRef.current)/TAU_MS)))
-    }, 120)
-    return () => clearInterval(id)
-  }, [])
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-10">
-      <div className="flex items-center gap-2 text-xs text-muted">
-        <Loader2 size={14} className="animate-spin text-teal shrink-0" />
-        <span>{label ? `Computing ${label}…` : 'Computing…'}</span>
-      </div>
-      <div className="w-full max-w-xs h-1.5 bg-panel rounded-full overflow-hidden border border-border">
-        <div className="h-full rounded-full transition-all duration-300 ease-out"
-          style={{ width: `${pct.toFixed(1)}%`, background: 'linear-gradient(90deg,#50b89e,#3dd6b0)' }} />
-      </div>
-      <span className="text-[10px] text-muted/50 tabular-nums">{Math.round(pct)}%</span>
-    </div>
-  )
-}
-
 function Spinner() {
   return (
     <div className="flex flex-1 items-center justify-center gap-2 text-muted">
@@ -153,6 +129,30 @@ function SessionExpiredMsg() {
       <button onClick={clearSession} className="px-4 py-1.5 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">
         Clear &amp; Re-upload files
       </button>
+    </div>
+  )
+}
+
+// Shown after the user cancels a slow calculation
+function CancelledPanel({ wasRunning, onRetry, onBack }: { wasRunning: boolean; onRetry: () => void; onBack: () => void }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center px-6 h-full">
+      <p className="text-xs text-muted max-w-sm">
+        Calculation cancelled.{' '}
+        {wasRunning
+          ? 'The server had already started it, so it finishes in the background and asking again will then be instant.'
+          : 'It was taken out of the server\'s queue before it started.'}
+      </p>
+      <div className="flex gap-2">
+        <button onClick={onRetry}
+          className="px-4 py-1.5 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">
+          Calculate again
+        </button>
+        <button onClick={onBack}
+          className="px-3 py-1.5 text-xs text-muted hover:text-white border border-border rounded transition-colors">
+          Back to the waveform
+        </button>
+      </div>
     </div>
   )
 }
@@ -293,7 +293,7 @@ function makePinAnnotation(p: {x: number; y: number}, isLogX: boolean, xFmt: str
 function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   sessionId: string; audioId: string; compareId: string|null; compareName: string; section: Section|null
 }) {
-  const { calibrations, audioIsPlaying, audioDuration, setSection } = useStore()
+  const { calibrations, audioIsPlaying, setSection } = useStore()
   const secKey = sectionKey(section)
   const isCalibrated = !!calibrations[audioId]
   const [wf,    setWf]    = useState<WaveformData|null>(null)
@@ -308,27 +308,48 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   const [wfDrag, setWfDrag] = useState<'select'|'zoom'|'pan'>('select')
   // Zoom of the waveform's time axis, kept here because every re-render hands Plotly a fresh layout
   const wfRange = useRef<[number, number] | null>(null)
-  // Playback cursor — updated at 60 fps via RAF while playing
-  const [cursorTime, setCursorTime] = useState<number | null>(null)
-  const rafRef = useRef<number>(0)
+  // Playback cursor. It is moved straight on the page (a thin line over the waveform and a clock in the
+  // toolbar), not through React and Plotly: redrawing both charts every frame just to move a line made
+  // playback choppy, and the time it read only changed a few times a second anyway.
+  const wfGraph = useRef<any>(null)                       // the waveform's Plotly graph
+  const cursorLine = useRef<HTMLDivElement>(null)
+  const cursorClock = useRef<HTMLSpanElement>(null)
+  const drawCursor = useRef<() => void>(() => {})
 
-  // RAF loop: runs only while audioIsPlaying, reads module-level ref (no store churn)
   useEffect(() => {
-    if (!audioIsPlaying) {
-      setCursorTime(audioCurrentTimeRef.current > 0 ? audioCurrentTimeRef.current : null)
-      cancelAnimationFrame(rafRef.current)
-      return
+    const draw = () => {
+      const gd = wfGraph.current, line = cursorLine.current, clock = cursorClock.current
+      const t = audioElementRef.current?.currentTime ?? 0
+      const xa = gd?._fullLayout?.xaxis, ya = gd?._fullLayout?.yaxis
+      const shown = !!(xa?.range && ya && (audioIsPlaying || t > 0))
+      const x = shown ? xa._offset + ((t - xa.range[0]) / (xa.range[1] - xa.range[0])) * xa._length : 0
+      const inside = shown && x >= xa._offset - 1 && x <= xa._offset + xa._length + 1       // zoomed past it: hidden
+      if (line) {
+        line.style.display = inside ? 'block' : 'none'
+        if (inside) {
+          line.style.transform = `translateX(${x}px)`
+          line.style.top = `${ya._offset}px`
+          line.style.height = `${ya._length}px`
+        }
+      }
+      if (clock) {
+        clock.style.display = shown ? '' : 'none'
+        if (shown) clock.textContent = `▶ ${t.toFixed(2)} s`
+      }
     }
-    const tick = () => {
-      setCursorTime(audioCurrentTimeRef.current)
-      rafRef.current = requestAnimationFrame(tick)
+    drawCursor.current = draw
+    draw()
+    audioTimeListeners.add(draw)           // a seek while paused
+    let raf = 0
+    if (audioIsPlaying) {
+      const tick = () => { draw(); raf = requestAnimationFrame(tick) }
+      raf = requestAnimationFrame(tick)
     }
-    rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
+    return () => { audioTimeListeners.delete(draw); cancelAnimationFrame(raf) }
   }, [audioIsPlaying])
 
-  // Reset cursor when file changes
-  useEffect(() => { setCursorTime(null); wfRange.current = null }, [sessionId, audioId])
+  // New file: forget the zoom
+  useEffect(() => { wfRange.current = null }, [sessionId, audioId])
 
   // ESC clears all pins
   useEffect(() => {
@@ -344,22 +365,26 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
 
   // Waveform: re-fetch when the file or its calibration changes (the server scales it to Pa when calibrated)
   useEffect(() => {
+    let alive = true
+    const ctrl = new AbortController()
     setWf(null); setWfCmp(null)
-    const primary  = fetchWaveform(sessionId, audioId).then(setWf)
-    const compare  = compareId ? fetchWaveform(sessionId, compareId).then(setWfCmp) : Promise.resolve()
+    const primary  = fetchWaveform(sessionId, audioId, ctrl.signal).then(d => { if (alive) setWf(d) })
+    const compare  = compareId ? fetchWaveform(sessionId, compareId, ctrl.signal).then(d => { if (alive) setWfCmp(d) }) : Promise.resolve()
     Promise.all([primary, compare])
-      .catch(e => setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message))
+      .catch(e => { if (alive && !isAbort(e)) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
+    return () => { alive = false; ctrl.abort() }
   }, [sessionId, audioId, compareId, calKey])
 
   // Spectrum: re-fetch when calibration or the section changes (backend applies calibration_pa and the section)
   useEffect(() => {
     let alive = true
+    const ctrl = new AbortController()
     setSp(null); setSpCmp(null); setErr('')
-    const primary  = fetchSpectrum(sessionId, audioId, section).then(d => { if (alive) setSp(d) })
-    const compare  = compareId ? fetchSpectrum(sessionId, compareId, section).then(d => { if (alive) setSpCmp(d) }) : Promise.resolve()
+    const primary  = fetchSpectrum(sessionId, audioId, section, ctrl.signal).then(d => { if (alive) setSp(d) })
+    const compare  = compareId ? fetchSpectrum(sessionId, compareId, section, ctrl.signal).then(d => { if (alive) setSpCmp(d) }) : Promise.resolve()
     Promise.all([primary, compare])
-      .catch(e => { if (alive) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
-    return () => { alive = false }
+      .catch(e => { if (alive && !isAbort(e)) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
+    return () => { alive = false; ctrl.abort() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, audioId, compareId, calKey, secKey])
 
@@ -403,15 +428,6 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   const showLegend = !!compareId
   const totalPins = spPins.length + wfPins.length
 
-  // Playback cursor shape for waveform — only shown when cursorTime is valid
-  const cursorShape: any[] = (cursorTime !== null && audioDuration > 0)
-    ? [{
-        type: 'line', xref: 'x', yref: 'paper',
-        x0: cursorTime, x1: cursorTime, y0: 0, y1: 1,
-        line: { color: '#ed693b', width: 1.5, dash: 'solid' },
-      }]
-    : []
-
   // The section being analysed, shaded on the (always whole) waveform
   const sectionShape: any[] = section
     ? [{
@@ -435,26 +451,33 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
           <CompareBadge name={compareName} color={C_BLUE} />
         </div>
       )}
+      <div className="relative flex-1 min-h-0">
       <Plot data={wfData}
         layout={{ ...BASE_LAYOUT,
           xaxis: { ...BASE_LAYOUT.xaxis, title: 'Time (s)', ...(wfRange.current ? { range: wfRange.current, autorange: false } : {}) },
           yaxis: { ...BASE_LAYOUT.yaxis, title: isCalibrated ? 'Pressure (Pa)' : 'Amplitude' },
-          shapes: [...sectionShape, ...cursorShape],
+          shapes: sectionShape,
           annotations: wfPins.map(p => makePinAnnotation(p, false, '.3f', '.4f')),
           dragmode: wfDrag, selectdirection: 'h',
           newselection: { mode: 'gradual' },
           activeselection: { fillcolor: 'rgba(80,184,158,0.10)', opacity: 0.3 },
           showlegend: showLegend, legend: { font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' } } as any}
-        config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler
+        config={PLOT_CONFIG} className="w-full h-full" useResizeHandler
         onClick={(evt: any) => { const pt = evt.points?.[0]; if (!pt) return; setWfPins(p => [...p, {x: pt.x, y: pt.y}]) }}
         onSelected={dragSection}
+        onInitialized={(_f: any, gd: any) => { wfGraph.current = gd; drawCursor.current() }}
+        onUpdate={(_f: any, gd: any) => { wfGraph.current = gd; drawCursor.current() }}
         onRelayout={(e: any) => {
           if (e?.dragmode === 'select' || e?.dragmode === 'zoom' || e?.dragmode === 'pan') setWfDrag(e.dragmode)
           if (e?.['xaxis.range[0]'] != null) wfRange.current = [e['xaxis.range[0]'], e['xaxis.range[1]']]
           else if (e?.['xaxis.range']) wfRange.current = e['xaxis.range']
           else if (e?.['xaxis.autorange']) wfRange.current = null
+          drawCursor.current()
         }}
         style={{ width:'100%', height:'100%' }} />
+      <div ref={cursorLine} className="absolute left-0 w-[1.5px] bg-orange pointer-events-none"
+        style={{ display: 'none', top: 0, height: 0 }} />
+      </div>
       <Plot data={spData}
         layout={{ ...BASE_LAYOUT,
           xaxis: { ...BASE_LAYOUT.xaxis, title: 'Frequency (Hz)', type: 'log' },
@@ -469,11 +492,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
 
       {/* Toolbar row */}
       <div className="flex items-center gap-2 px-2 shrink-0 flex-wrap">
-        {cursorTime !== null && (
-          <span className="text-[10px] font-mono tabular-nums text-orange shrink-0">
-            ▶ {cursorTime.toFixed(2)} s
-          </span>
-        )}
+        <span ref={cursorClock} className="text-[10px] font-mono tabular-nums text-orange shrink-0" style={{ display: 'none' }} />
         <span className="text-[10px] text-muted">f₀</span>
         <HarmonicInput f0={f0} onChange={setF0} />
         <div className="flex items-center gap-1 ml-2 text-[10px]" role="group" aria-label="What dragging on the waveform does">
@@ -519,8 +538,14 @@ function BarkBadge({ isHMS }: { isHMS: boolean }) {
 function MetricView({ sessionId, audioId, metricKey, compareId, compareName, section }: {
   sessionId: string; audioId: string; metricKey: string; compareId: string|null; compareName: string; section: Section|null
 }) {
-  const { fieldType } = useStore()
+  const { fieldType, files, setMetricKey } = useStore()
   const secKey = sectionKey(section)
+  const workSeconds = section ? section[1] - section[0] : (files.find(f => f.audio_id === audioId)?.duration_s ?? 0)
+  // `job` is this request's name on the server (it tells where it is in the queue); `retry` asks again after a cancel
+  const [job, setJob] = useState('')
+  const [retry, setRetry] = useState(0)
+  const [cancelled, setCancelled] = useState<{ wasRunning: boolean } | null>(null)
+  const ctrlRef = useRef<AbortController | null>(null)
   const [data,     setData]    = useState<MetricResult|null>(null)
   const [dataCmp,  setDataCmp] = useState<MetricResult|null>(null)
   const [err,      setErr]     = useState('')
@@ -539,20 +564,28 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
 
   useEffect(() => {
     let alive = true      // a slow answer for an old section must not replace the newer one
+    const ctrl = new AbortController()
+    ctrlRef.current = ctrl
+    const name = newClientId()
+    setJob(name); setCancelled(null)
     setData(null); setDataCmp(null); setErr('')
-    const primary = fetchMetric(sessionId, audioId, metricKey as any, fieldType, section).then(d => { if (alive) setData(d) })
+    const primary = fetchMetric(sessionId, audioId, metricKey as any, fieldType, section, { signal: ctrl.signal, job: name }).then(d => { if (alive) setData(d) })
     const compare = compareId
-      ? fetchMetric(sessionId, compareId, metricKey as any, fieldType, section).then(d => { if (alive) setDataCmp(d) })
+      ? fetchMetric(sessionId, compareId, metricKey as any, fieldType, section, { signal: ctrl.signal }).then(d => { if (alive) setDataCmp(d) })
       : Promise.resolve()
     Promise.all([primary, compare])
-      .catch(e => { if (alive) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
-    return () => { alive = false }
+      .catch(e => { if (alive && !isAbort(e)) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
+    return () => { alive = false; ctrl.abort() }       // leaving (or a new section) cancels what is still on its way
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, audioId, metricKey, fieldType, compareId, secKey])
+  }, [sessionId, audioId, metricKey, fieldType, compareId, secKey, retry])
 
   if (err === '__session_expired__') return <SessionExpiredMsg />
   if (err) return <ErrorMsg msg={err} />
-  if (!data) return <MetricProgressBar label={metricKey.replace(/_/g,' ')} />
+  if (cancelled) return <CancelledPanel wasRunning={cancelled.wasRunning} onRetry={() => setRetry(n => n + 1)} onBack={() => setMetricKey('none')} />
+  if (!data) return (
+    <MetricProgress label={metricKey.replace(/_/g, ' ')} metricKey={metricKey} job={job} duration={workSeconds}
+      onCancel={(wasRunning) => { setCancelled({ wasRunning }); ctrlRef.current?.abort() }} />
+  )
   if (data.error) return <ErrorMsg msg={data.error + (data.requires ? ` (requires ${data.requires})` : '')} />
 
   const xLabel   = (data.x_label ?? '').toLowerCase()
@@ -697,10 +730,11 @@ function SpectrogramView({ sessionId, audioId, section }: { sessionId: string; a
 
   useEffect(() => {
     let alive = true
+    const ctrl = new AbortController()
     setData(null); setErr('')
-    fetchSpectrogram(sessionId, audioId, applied, section).then(d => { if (alive) setData(d) })
-      .catch(e => { if (alive) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
-    return () => { alive = false }
+    fetchSpectrogram(sessionId, audioId, applied, section, ctrl.signal).then(d => { if (alive) setData(d) })
+      .catch(e => { if (alive && !isAbort(e)) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
+    return () => { alive = false; ctrl.abort() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, audioId, applied, secKey])
 
@@ -747,10 +781,11 @@ function OctaveView({ sessionId, audioId, section }: { sessionId: string; audioI
 
   useEffect(() => {
     let alive = true
+    const ctrl = new AbortController()
     setData(null); setErr('')
-    fetchOctave(sessionId, audioId, octaveWeighting, section).then(d => { if (alive) setData(d) })
-      .catch(e => { if (alive) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
-    return () => { alive = false }
+    fetchOctave(sessionId, audioId, octaveWeighting, section, ctrl.signal).then(d => { if (alive) setData(d) })
+      .catch(e => { if (alive && !isAbort(e)) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
+    return () => { alive = false; ctrl.abort() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, audioId, octaveWeighting, calKey, secKey])
 
@@ -805,10 +840,11 @@ function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audi
 
   useEffect(() => {
     let alive = true
+    const ctrl = new AbortController()
     setData(null); setErr('')
-    fetchEnvelope(sessionId, audioId, applied, section).then(d => { if (alive) setData(d) })
-      .catch(e => { if (alive) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
-    return () => { alive = false }
+    fetchEnvelope(sessionId, audioId, applied, section, ctrl.signal).then(d => { if (alive) setData(d) })
+      .catch(e => { if (alive && !isAbort(e)) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
+    return () => { alive = false; ctrl.abort() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, audioId, applied, secKey])
 
