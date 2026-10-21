@@ -10,6 +10,9 @@ export type ViewMode = 'normal' | 'spectrogram' | 'octave' | 'envelope'
 
 export type FieldType = 'free' | 'diffuse'
 
+/** The part of a file to analyse, [start, end] in seconds; no section means the whole file. */
+export type Section = [number, number]
+
 export type MetricKey =
   | 'none'
   | 'loudness_zwk'
@@ -50,6 +53,7 @@ export interface MetricResult {
   threshold_label?: string
   error?: string
   requires?: string
+  section?: Section | null
 }
 
 export interface WaveformData {
@@ -67,12 +71,14 @@ export interface SpectrumData {
   magnitude_db: number[]  // per-bucket peak when the spectrum was reduced for plotting
   average_db?: number[]   // per-bucket power mean (noise floor); present when reduced
   calibrated?: boolean
+  section?: Section | null
 }
 
 export interface OctaveData {
   centres_hz: number[]
   levels_db: (number | null)[]
   calibrated?: boolean
+  section?: Section | null
 }
 
 export interface SpectrogramData {
@@ -83,6 +89,7 @@ export interface SpectrogramData {
   z_max: number
   cmap?: string
   freq_scale?: string
+  section?: Section | null
 }
 
 export interface EnvelopeData {
@@ -92,6 +99,7 @@ export interface EnvelopeData {
   envelope: number[]
   f_env: number[]
   env_spec_db: number[]
+  section?: Section | null
 }
 
 export interface BatchRow {

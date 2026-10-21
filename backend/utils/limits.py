@@ -141,8 +141,13 @@ def estimate_mb(kind: str, duration_s: float, sample_rate: int) -> Optional[floa
     return (cost[0] + cost[1] * seconds) * SAFETY
 
 
-def check_budget(kind: str, duration_s: float, sample_rate: int, audio_ram_mb: float = 0.0) -> None:
-    """Refuse a computation that would not fit in the memory still free."""
+def check_budget(kind: str, duration_s: float, sample_rate: int, audio_ram_mb: float = 0.0,
+                 can_select: bool = True) -> None:
+    """Refuse a computation that would not fit in the memory still free.
+
+    can_select: the request can be narrowed to a section of the file, so the hint says so
+    (processing a whole file into a new one cannot, and suggests trimming it instead).
+    """
     if not ENABLED or MEMORY_LIMIT_MB is None:
         return
     need = estimate_mb(kind, duration_s, sample_rate)
@@ -156,7 +161,9 @@ def check_budget(kind: str, duration_s: float, sample_rate: int, audio_ram_mb: f
     rate_factor = max(sample_rate, 48_000) / 48_000
     fits_s = max(0.0, (free / SAFETY - base) / per_s) / rate_factor if per_s > 0 else 0.0
     need_one_s = estimate_mb(kind, 1.0, sample_rate)
-    if fits_s >= 1.0:
+    if fits_s >= 1.0 and can_select:
+        hint = f"Select a section of up to about {fits_s:.1f} s (the Section bar above the chart) or run PySQA locally."
+    elif fits_s >= 1.0:
         hint = f"Trim the file to about {fits_s:.1f} s (Processing, Windowing) or run PySQA locally."
     elif need_one_s is not None and need_one_s > MEMORY_LIMIT_MB - RESERVE_MB - BASELINE_MB:
         hint = (f"Even 1 s of audio needs about {need_one_s:.0f} MB, more than this server can spare. "

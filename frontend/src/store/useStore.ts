@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { AudioFile, ViewMode, MetricKey, FieldType, SpectrogramParams, EnvelopeParams } from '../types'
+import { AudioFile, ViewMode, MetricKey, FieldType, Section, SpectrogramParams, EnvelopeParams } from '../types'
 import { forgetSession } from '../api/recovery'
 
 const DEFAULT_SPECTROGRAM: SpectrogramParams = {
@@ -30,6 +30,7 @@ interface AppState {
   spectrogramParams: SpectrogramParams
   envelopeParams: EnvelopeParams
   calibrations: Record<string, number | null>  // audio_id → sensitivity_mv_pa
+  sections: Record<string, Section | undefined> // audio_id → the part of the file every analysis looks at
   batchEnabled: boolean
   isLoading: boolean
   loadingMessage: string
@@ -51,6 +52,7 @@ interface AppState {
   setSpectrogramParams: (p: Partial<SpectrogramParams>) => void
   setEnvelopeParams: (p: Partial<EnvelopeParams>) => void
   setCalibration: (audioId: string, mVPa: number | null) => void
+  setSection: (audioId: string, section: Section | null) => void
   setBatchEnabled: (v: boolean) => void
   setLoading: (v: boolean, msg?: string) => void
   setAudioPlayback: (isPlaying: boolean, duration: number) => void
@@ -81,6 +83,7 @@ export const useStore = create<AppState>((set, get) => ({
   spectrogramParams: DEFAULT_SPECTROGRAM,
   envelopeParams: DEFAULT_ENVELOPE,
   calibrations: {},
+  sections: {},
   batchEnabled: false,
   isLoading: false,
   loadingMessage: '',
@@ -101,7 +104,9 @@ export const useStore = create<AppState>((set, get) => ({
     const files = s.files.filter((f) => f.audio_id !== id)
     const selectedId = s.selectedId === id ? (files[0]?.audio_id ?? null) : s.selectedId
     const compareId = s.compareId === id ? null : s.compareId
-    return { files, selectedId, compareId }
+    const sections = { ...s.sections }
+    delete sections[id]
+    return { files, selectedId, compareId, sections }
   }),
   selectFile: (id) => set({ selectedId: id }),
   setCompareId: (compareId) => set({ compareId }),
@@ -115,12 +120,21 @@ export const useStore = create<AppState>((set, get) => ({
   setCalibration: (audioId, mVPa) => set((s) => ({
     calibrations: { ...s.calibrations, [audioId]: mVPa },
   })),
+  setSection: (audioId, section) => set((s) => {
+    const prev = s.sections[audioId]
+    if (!section && !prev) return s
+    if (section && prev && prev[0] === section[0] && prev[1] === section[1]) return s
+    const sections = { ...s.sections }
+    if (section) sections[audioId] = section
+    else delete sections[audioId]
+    return { sections }
+  }),
   setBatchEnabled: (batchEnabled) => set({ batchEnabled }),
   setLoading: (isLoading, loadingMessage = '') => set({ isLoading, loadingMessage }),
   setAudioPlayback: (audioIsPlaying, audioDuration) => set({ audioIsPlaying, audioDuration }),
   clearSession: () => {
     void forgetSession(get().sessionId)     // also drop this browser's copy, or it would be restored again
-    set({ files: [], selectedId: null, compareId: null, calibrations: {} })
+    set({ files: [], selectedId: null, compareId: null, calibrations: {}, sections: {} })
   },
   // After a reload: the files the server (or this browser's copy) still has, with their calibrations
   hydrate: (incoming, calibrations) => set((s) => {

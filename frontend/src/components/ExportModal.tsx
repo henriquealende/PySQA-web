@@ -22,6 +22,7 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
     return {
       viewMode: s.viewMode, metricKey: s.metricKey, fieldType: s.fieldType, octaveWeighting: s.octaveWeighting,
       spectrogramParams: s.spectrogramParams, envelopeParams: s.envelopeParams,
+      section: s.sections[audioId] ?? null,
     }
   })
 
@@ -68,7 +69,9 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
     if (!data || !sheet) return
     setBusy('csv')
     try {
-      downloadCsv(sheet.columns, `${base}_${slug(sheet.name)}.csv`)
+      // The analysis tables of a section say so in the file name; the waveform is always the whole file
+      const part = view.section && sheet.name !== 'Waveform' ? `_section-${slug(`${view.section[0]}-${view.section[1]}`)}` : ''
+      downloadCsv(sheet.columns, `${base}_${slug(sheet.name)}${part}.csv`)
       toast.success('CSV file ready')
       onClose()
     } catch (e) {

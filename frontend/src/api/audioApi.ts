@@ -1,4 +1,4 @@
-import { AudioFile, WaveformData, SpectrumData, SpectrogramData, OctaveData, EnvelopeData, MetricResult, MetricKey, SpectrogramParams, EnvelopeParams, FieldType } from '../types'
+import { AudioFile, WaveformData, SpectrumData, SpectrogramData, OctaveData, EnvelopeData, MetricResult, MetricKey, Section, SpectrogramParams, EnvelopeParams, FieldType } from '../types'
 import { apiFetch, checkResponse, newClientId, SessionExpiredError, watched } from './http'
 import * as recovery from './recovery'
 
@@ -35,8 +35,15 @@ export async function fetchWaveform(sessionId: string, audioId: string): Promise
   return res.json()
 }
 
-export async function fetchSpectrum(sessionId: string, audioId: string): Promise<SpectrumData> {
-  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/spectrum`)
+/** `t0` and `t1` (seconds) ask the server to analyse only that part of the file; nothing means the whole file. */
+function withSection(q: URLSearchParams, section?: Section | null): URLSearchParams {
+  if (section) { q.set('t0', String(section[0])); q.set('t1', String(section[1])) }
+  return q
+}
+
+export async function fetchSpectrum(sessionId: string, audioId: string, section?: Section | null): Promise<SpectrumData> {
+  const qs = withSection(new URLSearchParams(), section).toString()
+  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/spectrum${qs ? '?' + qs : ''}`)
   await checkResponse(res)
   return res.json()
 }
@@ -45,6 +52,7 @@ export async function fetchSpectrogram(
   sessionId: string,
   audioId: string,
   params?: Partial<SpectrogramParams>,
+  section?: Section | null,
 ): Promise<SpectrogramData> {
   const q = new URLSearchParams()
   if (params?.nfft      != null) q.set('nfft',       String(params.nfft))
@@ -55,7 +63,7 @@ export async function fetchSpectrogram(
   if (params?.freq_scale!= null) q.set('freq_scale', params.freq_scale)
   if (params?.fmax      != null) q.set('fmax',       String(params.fmax))
   if (params?.dyn_range != null) q.set('dyn_range',  String(params.dyn_range))
-  const qs = q.toString()
+  const qs = withSection(q, section).toString()
   const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/spectrogram${qs ? '?' + qs : ''}`)
   await checkResponse(res)
   return res.json()
@@ -65,8 +73,10 @@ export async function fetchOctave(
   sessionId: string,
   audioId: string,
   weighting = 'Z',
+  section?: Section | null,
 ): Promise<OctaveData> {
-  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/octave?weighting=${weighting}`)
+  const qs = withSection(new URLSearchParams({ weighting }), section).toString()
+  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/octave?${qs}`)
   await checkResponse(res)
   return res.json()
 }
@@ -75,11 +85,12 @@ export async function fetchEnvelope(
   sessionId: string,
   audioId: string,
   params?: Partial<EnvelopeParams>,
+  section?: Section | null,
 ): Promise<EnvelopeData> {
   const q = new URLSearchParams()
   if (params?.smoothing_ms != null) q.set('smoothing_ms', String(params.smoothing_ms))
   if (params?.lpf_hz       != null) q.set('lpf_hz',       String(params.lpf_hz))
-  const qs = q.toString()
+  const qs = withSection(q, section).toString()
   const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/envelope${qs ? '?' + qs : ''}`)
   await checkResponse(res)
   return res.json()
@@ -90,11 +101,12 @@ export async function fetchMetric(
   audioId: string,
   metricKey: MetricKey,
   fieldType: FieldType = 'free',
+  section?: Section | null,
 ): Promise<MetricResult> {
   const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/metrics`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ metric_key: metricKey, field_type: fieldType }),
+    body: JSON.stringify({ metric_key: metricKey, field_type: fieldType, ...(section ? { t0: section[0], t1: section[1] } : {}) }),
   })
   await checkResponse(res)
   return res.json()
@@ -105,6 +117,7 @@ export async function fetchBatch(
   audioIds: string[],
   metricKeys: MetricKey[],
   fieldType: FieldType = 'free',
+  sections?: Record<string, Section>,      // audio_id → the part of that file to use (files not listed use all of it)
 ): Promise<{
   rows: any[]
   metric_keys: string[]
@@ -113,7 +126,7 @@ export async function fetchBatch(
   const res = await apiFetch(sessionId, `${BASE}/${sessionId}/batch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ audio_ids: audioIds, metric_keys: metricKeys, field_type: fieldType }),
+    body: JSON.stringify({ audio_ids: audioIds, metric_keys: metricKeys, field_type: fieldType, ...(sections && Object.keys(sections).length ? { sections } : {}) }),
   })
   await checkResponse(res)
   return res.json()

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import io
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import soundfile as sf
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, Query
@@ -32,12 +32,15 @@ class AudioMeta(BaseModel):
 class MetricRequest(BaseModel):
     metric_key: str
     field_type: str = "free"   # "free" | "diffuse"
+    t0: Optional[float] = None  # analyse only [t0, t1] seconds of the file
+    t1: Optional[float] = None
 
 
 class BatchRequest(BaseModel):
     audio_ids: List[str]
     metric_keys: List[str]
     field_type: str = "free"
+    sections: Optional[Dict[str, List[float]]] = None   # audio_id → [t0, t1]: files that use only a section
 
 
 class CalibrateRequest(BaseModel):
@@ -138,8 +141,12 @@ def waveform(session_id: str, audio_id: str):
 
 
 @router.get("/{session_id}/{audio_id}/spectrum")
-def spectrum(session_id: str, audio_id: str):
-    return svc.compute_spectrum(_get(session_id, audio_id))
+def spectrum(
+    session_id: str, audio_id: str,
+    t0: Optional[float] = Query(None, ge=0),    # analyse only [t0, t1] seconds (the waveform stays whole)
+    t1: Optional[float] = Query(None, ge=0),
+):
+    return svc.compute_spectrum(_get(session_id, audio_id), t0=t0, t1=t1)
 
 
 @router.get("/{session_id}/{audio_id}/spectrogram")
@@ -153,18 +160,22 @@ def spectrogram(
     freq_scale: str   = Query("log"),
     fmax:       Optional[float] = Query(None),
     dyn_range:  float = Query(90.0, ge=20, le=160),
+    t0:         Optional[float] = Query(None, ge=0),
+    t1:         Optional[float] = Query(None, ge=0),
 ):
     params = dict(nfft=nfft, overlap=overlap, window=window, kaiser_beta=kaiser_beta,
                   cmap=cmap, freq_scale=freq_scale, fmax=fmax, dyn_range=dyn_range)
-    return svc.compute_spectrogram(_get(session_id, audio_id), params=params)
+    return svc.compute_spectrogram(_get(session_id, audio_id), params=params, t0=t0, t1=t1)
 
 
 @router.get("/{session_id}/{audio_id}/octave")
 def octave(
     session_id: str, audio_id: str,
     weighting: str = Query("Z"),   # "Z" | "A" | "C"
+    t0: Optional[float] = Query(None, ge=0),
+    t1: Optional[float] = Query(None, ge=0),
 ):
-    return svc.compute_octave_bands(_get(session_id, audio_id), weighting=weighting)
+    return svc.compute_octave_bands(_get(session_id, audio_id), weighting=weighting, t0=t0, t1=t1)
 
 
 @router.get("/{session_id}/{audio_id}/envelope")
@@ -172,11 +183,14 @@ def envelope(
     session_id: str, audio_id: str,
     smoothing_ms: float = Query(0.0, ge=0),
     lpf_hz:       Optional[float] = Query(None),
+    t0:           Optional[float] = Query(None, ge=0),
+    t1:           Optional[float] = Query(None, ge=0),
 ):
     return svc.compute_envelope(
         _get(session_id, audio_id),
         smoothing_ms=smoothing_ms,
         lpf_hz=lpf_hz,
+        t0=t0, t1=t1,
     )
 
 
@@ -186,11 +200,11 @@ def envelope(
 def compute_metric(session_id: str, audio_id: str, body: MetricRequest, background_tasks: BackgroundTasks):
     entry = _get(session_id, audio_id)
     try:
-        result = svc.compute_metric(entry, body.metric_key, field_type=body.field_type)
+        result = svc.compute_metric(entry, body.metric_key, field_type=body.field_type, t0=body.t0, t1=body.t1)
         background_tasks.add_task(persist_session, session_id)
         return result
-    except (limits.ResourceLimitError, limits.ServerBusyError):
-        raise                                  # answered as 413 / 503 with a readable message
+    except (limits.ResourceLimitError, limits.ServerBusyError, svc.SectionError):
+        raise                                  # answered as 413 / 503 / 400 with a readable message
     except Exception as e:
         raise HTTPException(500, str(e))
 
@@ -226,9 +240,20 @@ def batch_metrics(session_id: str, body: BatchRequest, background_tasks: Backgro
         if not entry:
             continue
         row = {"audio_id": aid, "name": entry.name}
+        span = (body.sections or {}).get(aid)
+        t0, t1 = (span[0], span[1]) if span and len(span) == 2 else (None, None)
+        try:
+            row["section"] = svc.section_span(entry, t0, t1)      # None: the whole file
+        except svc.SectionError as exc:
+            for mk in body.metric_keys:
+                row[mk] = None
+            row["section"] = None
+            skipped.append({"audio_id": aid, "name": entry.name, "metric": "section", "reason": str(exc)})
+            rows.append(row)
+            continue
         for mk in body.metric_keys:
             try:
-                res = svc.compute_metric(entry, mk, field_type=body.field_type)
+                res = svc.compute_metric(entry, mk, field_type=body.field_type, t0=t0, t1=t1)
                 row[mk] = res.get("global")
             except (limits.ResourceLimitError, limits.ServerBusyError) as exc:
                 row[mk] = None

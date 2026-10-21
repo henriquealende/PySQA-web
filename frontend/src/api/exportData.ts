@@ -3,7 +3,7 @@
  * server endpoints the plots use (metrics are cached on the server, so this is cheap).
  */
 import type {
-  EnvelopeParams, FieldType, MetricKey, SpectrogramParams, ViewMode,
+  EnvelopeParams, FieldType, MetricKey, Section, SpectrogramParams, ViewMode,
   WaveformData, SpectrumData,
 } from '../types'
 import { metricLabel } from '../components/MetricSelector'
@@ -24,6 +24,7 @@ export interface ExportRequest {
   octaveWeighting: string
   spectrogramParams: SpectrogramParams
   envelopeParams: EnvelopeParams
+  section?: Section | null      // analyse only this part of the file (the waveform is always the whole file)
 }
 
 /** Rows of the longest column. */
@@ -57,17 +58,21 @@ function spectrumSheet(sp: SpectrumData): Sheet {
   return { name: 'Spectrum', columns }
 }
 
-export async function buildExport(req: ExportRequest): Promise<ExportData> {
+async function buildSheets(req: ExportRequest): Promise<ExportData> {
   const { sessionId: sid, audioId: aid } = req
+  const section = req.section ?? null
 
   // A metric is open: its summary, its values by band and its time series
   if (req.viewMode === 'normal' && req.metricKey !== 'none') {
     const label = metricLabel(req.metricKey)
-    const r = await fetchMetric(sid, aid, req.metricKey, req.fieldType)
+    const r = await fetchMetric(sid, aid, req.metricKey, req.fieldType, section)
     if (r.error) throw new Error(r.error)
     const sheets: Sheet[] = [{
       name: 'Summary',
-      columns: { Metric: [label], 'Global value': [r.global ?? null], Unit: [r.unit ?? ''], 'Field type': [req.fieldType] },
+      columns: {
+        Metric: [label], 'Global value': [r.global ?? null], Unit: [r.unit ?? ''], 'Field type': [req.fieldType],
+        Section: [section ? `${section[0]}-${section[1]} s` : 'Whole file'],
+      },
     }]
     if (r.x_axis && r.y_axis) {
       sheets.push({ name: 'By band', columns: { [r.x_label ?? 'x']: r.x_axis, [r.y_label ?? 'y']: r.y_axis } })
@@ -79,14 +84,14 @@ export async function buildExport(req: ExportRequest): Promise<ExportData> {
   }
 
   if (req.viewMode === 'spectrogram') {
-    const d = await fetchSpectrogram(sid, aid, req.spectrogramParams)
+    const d = await fetchSpectrogram(sid, aid, req.spectrogramParams, section)
     const columns: Record<string, Column> = { 'Frequency (Hz)': d.f }
     d.t.forEach((time, j) => { columns[`${time.toFixed(3)} s`] = d.power_db.map((row) => row[j]) })
     return { label: 'Spectrogram (dB)', sheets: [{ name: 'Spectrogram', columns }] }
   }
 
   if (req.viewMode === 'octave') {
-    const d = await fetchOctave(sid, aid, req.octaveWeighting)
+    const d = await fetchOctave(sid, aid, req.octaveWeighting, section)
     const w = req.octaveWeighting
     const unit = d.calibrated
       ? (w === 'A' ? 'dB(A) SPL' : w === 'C' ? 'dB(C) SPL' : 'dB SPL re 20 µPa')
@@ -98,7 +103,7 @@ export async function buildExport(req: ExportRequest): Promise<ExportData> {
   }
 
   if (req.viewMode === 'envelope') {
-    const d = await fetchEnvelope(sid, aid, req.envelopeParams)
+    const d = await fetchEnvelope(sid, aid, req.envelopeParams, section)
     const env = d.reduced ? d.envelope.filter((_, i) => i % 2 === 0) : d.envelope   // the reduced envelope repeats each value twice
     let signal: Sheet
     if (d.reduced) {
@@ -114,6 +119,13 @@ export async function buildExport(req: ExportRequest): Promise<ExportData> {
   }
 
   // Default view: waveform and spectrum
-  const [wf, sp] = await Promise.all([fetchWaveform(sid, aid), fetchSpectrum(sid, aid)])
+  const [wf, sp] = await Promise.all([fetchWaveform(sid, aid), fetchSpectrum(sid, aid, section)])
   return { label: 'Waveform and spectrum', sheets: [waveformSheet(wf), spectrumSheet(sp)] }
+}
+
+/** The tables of the view on screen. With a section, the analysis tables cover only that part. */
+export async function buildExport(req: ExportRequest): Promise<ExportData> {
+  const data = await buildSheets(req)
+  if (!req.section) return data
+  return { ...data, label: `${data.label} (section ${req.section[0]}-${req.section[1]} s)` }
 }

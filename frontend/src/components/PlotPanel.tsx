@@ -11,8 +11,9 @@ import {
 import type {
   WaveformData, SpectrumData, SpectrogramData,
   OctaveData, EnvelopeData, MetricResult,
-  SpectrogramParams, EnvelopeParams,
+  SpectrogramParams, EnvelopeParams, Section,
 } from '../types'
+import SectionBar, { sectionKey, toSection } from './SectionBar'
 
 // ─── Colors ─────────────────────────────────────────────────────────────────
 const C_TEAL   = '#50b89e'   // primary time
@@ -289,10 +290,11 @@ function makePinAnnotation(p: {x: number; y: number}, isLogX: boolean, xFmt: str
   }
 }
 
-function NormalView({ sessionId, audioId, compareId, compareName }: {
-  sessionId: string; audioId: string; compareId: string|null; compareName: string
+function NormalView({ sessionId, audioId, compareId, compareName, section }: {
+  sessionId: string; audioId: string; compareId: string|null; compareName: string; section: Section|null
 }) {
-  const { calibrations, audioIsPlaying, audioDuration } = useStore()
+  const { calibrations, audioIsPlaying, audioDuration, setSection } = useStore()
+  const secKey = sectionKey(section)
   const isCalibrated = !!calibrations[audioId]
   const [wf,    setWf]    = useState<WaveformData|null>(null)
   const [sp,    setSp]    = useState<SpectrumData|null>(null)
@@ -302,6 +304,10 @@ function NormalView({ sessionId, audioId, compareId, compareName }: {
   const [f0,    setF0]    = useState<number|null>(null)
   const [spPins, setSpPins] = useState<{x: number; y: number}[]>([])
   const [wfPins, setWfPins] = useState<{x: number; y: number}[]>([])
+  // What dragging on the waveform does: mark a section to analyse (default), or zoom / pan
+  const [wfDrag, setWfDrag] = useState<'select'|'zoom'|'pan'>('select')
+  // Zoom of the waveform's time axis, kept here because every re-render hands Plotly a fresh layout
+  const wfRange = useRef<[number, number] | null>(null)
   // Playback cursor — updated at 60 fps via RAF while playing
   const [cursorTime, setCursorTime] = useState<number | null>(null)
   const rafRef = useRef<number>(0)
@@ -322,7 +328,7 @@ function NormalView({ sessionId, audioId, compareId, compareName }: {
   }, [audioIsPlaying])
 
   // Reset cursor when file changes
-  useEffect(() => { setCursorTime(null) }, [sessionId, audioId])
+  useEffect(() => { setCursorTime(null); wfRange.current = null }, [sessionId, audioId])
 
   // ESC clears all pins
   useEffect(() => {
@@ -345,14 +351,17 @@ function NormalView({ sessionId, audioId, compareId, compareName }: {
       .catch(e => setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message))
   }, [sessionId, audioId, compareId, calKey])
 
-  // Spectrum: re-fetch when calibration changes (backend applies calibration_pa)
+  // Spectrum: re-fetch when calibration or the section changes (backend applies calibration_pa and the section)
   useEffect(() => {
+    let alive = true
     setSp(null); setSpCmp(null); setErr('')
-    const primary  = fetchSpectrum(sessionId, audioId).then(setSp)
-    const compare  = compareId ? fetchSpectrum(sessionId, compareId).then(setSpCmp) : Promise.resolve()
+    const primary  = fetchSpectrum(sessionId, audioId, section).then(d => { if (alive) setSp(d) })
+    const compare  = compareId ? fetchSpectrum(sessionId, compareId, section).then(d => { if (alive) setSpCmp(d) }) : Promise.resolve()
     Promise.all([primary, compare])
-      .catch(e => setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message))
-  }, [sessionId, audioId, compareId, calKey])
+      .catch(e => { if (alive) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, audioId, compareId, calKey, secKey])
 
   if (err === '__session_expired__') return <SessionExpiredMsg />
   if (err) return <ErrorMsg msg={err} />
@@ -403,6 +412,22 @@ function NormalView({ sessionId, audioId, compareId, compareName }: {
       }]
     : []
 
+  // The section being analysed, shaded on the (always whole) waveform
+  const sectionShape: any[] = section
+    ? [{
+        type: 'rect', xref: 'x', yref: 'paper', x0: section[0], x1: section[1], y0: 0, y1: 1,
+        fillcolor: 'rgba(80,184,158,0.16)', line: { color: C_TEAL, width: 1, dash: 'dot' }, layer: 'below',
+      }]
+    : []
+
+  // A drag on the waveform marks the section (a drag that covers the file clears it; a tiny one is ignored)
+  const dragSection = (e: any) => {
+    const r = e?.range?.x
+    if (!r) return
+    const next = toSection(r[0], r[1], wf.duration_s, Math.max(0.01, wf.duration_s * 0.005))   // a drag near an edge means the edge
+    if (next !== undefined) setSection(audioId, next)
+  }
+
   return (
     <div className="flex flex-col h-full gap-1">
       {compareId && (
@@ -412,13 +437,23 @@ function NormalView({ sessionId, audioId, compareId, compareName }: {
       )}
       <Plot data={wfData}
         layout={{ ...BASE_LAYOUT,
-          xaxis: { ...BASE_LAYOUT.xaxis, title: 'Time (s)' },
+          xaxis: { ...BASE_LAYOUT.xaxis, title: 'Time (s)', ...(wfRange.current ? { range: wfRange.current, autorange: false } : {}) },
           yaxis: { ...BASE_LAYOUT.yaxis, title: isCalibrated ? 'Pressure (Pa)' : 'Amplitude' },
-          shapes: cursorShape,
+          shapes: [...sectionShape, ...cursorShape],
           annotations: wfPins.map(p => makePinAnnotation(p, false, '.3f', '.4f')),
-          showlegend: showLegend, legend: { font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' } }}
+          dragmode: wfDrag, selectdirection: 'h',
+          newselection: { mode: 'gradual' },
+          activeselection: { fillcolor: 'rgba(80,184,158,0.10)', opacity: 0.3 },
+          showlegend: showLegend, legend: { font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' } } as any}
         config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler
         onClick={(evt: any) => { const pt = evt.points?.[0]; if (!pt) return; setWfPins(p => [...p, {x: pt.x, y: pt.y}]) }}
+        onSelected={dragSection}
+        onRelayout={(e: any) => {
+          if (e?.dragmode === 'select' || e?.dragmode === 'zoom' || e?.dragmode === 'pan') setWfDrag(e.dragmode)
+          if (e?.['xaxis.range[0]'] != null) wfRange.current = [e['xaxis.range[0]'], e['xaxis.range[1]']]
+          else if (e?.['xaxis.range']) wfRange.current = e['xaxis.range']
+          else if (e?.['xaxis.autorange']) wfRange.current = null
+        }}
         style={{ width:'100%', height:'100%' }} />
       <Plot data={spData}
         layout={{ ...BASE_LAYOUT,
@@ -433,7 +468,7 @@ function NormalView({ sessionId, audioId, compareId, compareName }: {
         style={{ width:'100%', height:'100%' }} />
 
       {/* Toolbar row */}
-      <div className="flex items-center gap-2 px-2 shrink-0">
+      <div className="flex items-center gap-2 px-2 shrink-0 flex-wrap">
         {cursorTime !== null && (
           <span className="text-[10px] font-mono tabular-nums text-orange shrink-0">
             ▶ {cursorTime.toFixed(2)} s
@@ -441,6 +476,15 @@ function NormalView({ sessionId, audioId, compareId, compareName }: {
         )}
         <span className="text-[10px] text-muted">f₀</span>
         <HarmonicInput f0={f0} onChange={setF0} />
+        <div className="flex items-center gap-1 ml-2 text-[10px]" role="group" aria-label="What dragging on the waveform does">
+          <span className="text-muted">Drag to</span>
+          {(['select', 'zoom'] as const).map(m => (
+            <button key={m} onClick={() => setWfDrag(m)} aria-pressed={wfDrag === m}
+              className={`px-1.5 py-0.5 rounded border transition-colors ${wfDrag === m ? 'bg-teal/20 border-teal/50 text-teal' : 'border-border text-muted hover:text-white'}`}>
+              {m === 'select' ? 'select a section' : 'zoom'}
+            </button>
+          ))}
+        </div>
         {wf.peak !== undefined && (
           <span
             className={`ml-2 text-[10px] tabular-nums ${wf.peak >= 0.999 ? 'text-orange font-semibold' : 'text-muted'}`}
@@ -472,10 +516,11 @@ function BarkBadge({ isHMS }: { isHMS: boolean }) {
       </span>
 }
 
-function MetricView({ sessionId, audioId, metricKey, compareId, compareName }: {
-  sessionId: string; audioId: string; metricKey: string; compareId: string|null; compareName: string
+function MetricView({ sessionId, audioId, metricKey, compareId, compareName, section }: {
+  sessionId: string; audioId: string; metricKey: string; compareId: string|null; compareName: string; section: Section|null
 }) {
   const { fieldType } = useStore()
+  const secKey = sectionKey(section)
   const [data,     setData]    = useState<MetricResult|null>(null)
   const [dataCmp,  setDataCmp] = useState<MetricResult|null>(null)
   const [err,      setErr]     = useState('')
@@ -493,14 +538,17 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName }: {
   }, [])
 
   useEffect(() => {
+    let alive = true      // a slow answer for an old section must not replace the newer one
     setData(null); setDataCmp(null); setErr('')
-    const primary = fetchMetric(sessionId, audioId, metricKey as any, fieldType).then(setData)
+    const primary = fetchMetric(sessionId, audioId, metricKey as any, fieldType, section).then(d => { if (alive) setData(d) })
     const compare = compareId
-      ? fetchMetric(sessionId, compareId, metricKey as any, fieldType).then(setDataCmp)
+      ? fetchMetric(sessionId, compareId, metricKey as any, fieldType, section).then(d => { if (alive) setDataCmp(d) })
       : Promise.resolve()
     Promise.all([primary, compare])
-      .catch(e => setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message))
-  }, [sessionId, audioId, metricKey, fieldType, compareId])
+      .catch(e => { if (alive) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, audioId, metricKey, fieldType, compareId, secKey])
 
   if (err === '__session_expired__') return <SessionExpiredMsg />
   if (err) return <ErrorMsg msg={err} />
@@ -638,8 +686,9 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName }: {
   )
 }
 
-function SpectrogramView({ sessionId, audioId }: { sessionId: string; audioId: string }) {
+function SpectrogramView({ sessionId, audioId, section }: { sessionId: string; audioId: string; section: Section|null }) {
   const { spectrogramParams, setSpectrogramParams } = useStore()
+  const secKey = sectionKey(section)
   const [data, setData]               = useState<SpectrogramData|null>(null)
   const [err, setErr]                 = useState('')
   const [showSettings, setShowSettings] = useState(false)
@@ -647,10 +696,13 @@ function SpectrogramView({ sessionId, audioId }: { sessionId: string; audioId: s
   const [applied, setApplied]         = useState(spectrogramParams)
 
   useEffect(() => {
+    let alive = true
     setData(null); setErr('')
-    fetchSpectrogram(sessionId, audioId, applied).then(setData)
-      .catch(e => setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message))
-  }, [sessionId, audioId, applied])
+    fetchSpectrogram(sessionId, audioId, applied, section).then(d => { if (alive) setData(d) })
+      .catch(e => { if (alive) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, audioId, applied, secKey])
 
   const handleApply = () => { setSpectrogramParams(pending); setApplied({...pending}); setShowSettings(false) }
 
@@ -684,8 +736,9 @@ function SpectrogramView({ sessionId, audioId }: { sessionId: string; audioId: s
   )
 }
 
-function OctaveView({ sessionId, audioId }: { sessionId: string; audioId: string }) {
+function OctaveView({ sessionId, audioId, section }: { sessionId: string; audioId: string; section: Section|null }) {
   const { octaveWeighting, setOctaveWeighting, calibrations } = useStore()
+  const secKey = sectionKey(section)
   const [data, setData]               = useState<OctaveData|null>(null)
   const [err, setErr]                 = useState('')
   const [showSettings, setShowSettings] = useState(false)
@@ -693,10 +746,13 @@ function OctaveView({ sessionId, audioId }: { sessionId: string; audioId: string
   const calKey = calibrations[audioId] ?? null
 
   useEffect(() => {
+    let alive = true
     setData(null); setErr('')
-    fetchOctave(sessionId, audioId, octaveWeighting).then(setData)
-      .catch(e => setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message))
-  }, [sessionId, audioId, octaveWeighting, calKey])
+    fetchOctave(sessionId, audioId, octaveWeighting, section).then(d => { if (alive) setData(d) })
+      .catch(e => { if (alive) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, audioId, octaveWeighting, calKey, secKey])
 
   const handleApply = () => { setOctaveWeighting(pending); setShowSettings(false) }
   if (err === '__session_expired__') return <SessionExpiredMsg />
@@ -738,8 +794,9 @@ function OctaveView({ sessionId, audioId }: { sessionId: string; audioId: string
   )
 }
 
-function EnvelopeView({ sessionId, audioId }: { sessionId: string; audioId: string }) {
+function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audioId: string; section: Section|null }) {
   const { envelopeParams, setEnvelopeParams } = useStore()
+  const secKey = sectionKey(section)
   const [data, setData]               = useState<EnvelopeData|null>(null)
   const [err, setErr]                 = useState('')
   const [showSettings, setShowSettings] = useState(false)
@@ -747,10 +804,13 @@ function EnvelopeView({ sessionId, audioId }: { sessionId: string; audioId: stri
   const [applied, setApplied]         = useState(envelopeParams)
 
   useEffect(() => {
+    let alive = true
     setData(null); setErr('')
-    fetchEnvelope(sessionId, audioId, applied).then(setData)
-      .catch(e => setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message))
-  }, [sessionId, audioId, applied])
+    fetchEnvelope(sessionId, audioId, applied, section).then(d => { if (alive) setData(d) })
+      .catch(e => { if (alive) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, audioId, applied, secKey])
 
   const handleApply = () => { setEnvelopeParams(pending); setApplied({...pending}); setShowSettings(false) }
   if (err === '__session_expired__') return <SessionExpiredMsg />
@@ -791,7 +851,7 @@ function EnvelopeView({ sessionId, audioId }: { sessionId: string; audioId: stri
 
 // ─── Root ────────────────────────────────────────────────────────────────────
 export default function PlotPanel() {
-  const { sessionId, selectedId, viewMode, metricKey, compareId, files } = useStore()
+  const { sessionId, selectedId, viewMode, metricKey, compareId, files, sections } = useStore()
   const compareName = compareId ? (files.find(f => f.audio_id === compareId)?.name ?? '') : ''
 
   if (!selectedId) {
@@ -802,12 +862,28 @@ export default function PlotPanel() {
     )
   }
 
+  const section = sections[selectedId] ?? null
+  const duration = files.find(f => f.audio_id === selectedId)?.duration_s ?? 0
+
+  let view: React.ReactNode = null
   if (viewMode === 'normal' && metricKey !== 'none') {
-    return <MetricView sessionId={sessionId} audioId={selectedId} metricKey={metricKey} compareId={compareId} compareName={compareName} />
+    view = <MetricView sessionId={sessionId} audioId={selectedId} metricKey={metricKey} compareId={compareId} compareName={compareName} section={section} />
+  } else if (viewMode === 'normal') {
+    view = <NormalView sessionId={sessionId} audioId={selectedId} compareId={compareId} compareName={compareName} section={section} />
+  } else if (viewMode === 'spectrogram') {
+    view = <SpectrogramView sessionId={sessionId} audioId={selectedId} section={section} />
+  } else if (viewMode === 'octave') {
+    view = <OctaveView sessionId={sessionId} audioId={selectedId} section={section} />
+  } else if (viewMode === 'envelope') {
+    view = <EnvelopeView sessionId={sessionId} audioId={selectedId} section={section} />
   }
-  if (viewMode === 'normal')      return <NormalView      sessionId={sessionId} audioId={selectedId} compareId={compareId} compareName={compareName} />
-  if (viewMode === 'spectrogram') return <SpectrogramView sessionId={sessionId} audioId={selectedId} />
-  if (viewMode === 'octave')      return <OctaveView      sessionId={sessionId} audioId={selectedId} />
-  if (viewMode === 'envelope')    return <EnvelopeView    sessionId={sessionId} audioId={selectedId} />
-  return null
+
+  return (
+    <div className="flex flex-col h-full gap-1">
+      <SectionBar key={selectedId} audioId={selectedId} duration={duration} />
+      <div className="relative flex-1 min-h-0">
+        <div className="absolute inset-0">{view}</div>
+      </div>
+    </div>
+  )
 }

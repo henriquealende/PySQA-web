@@ -124,6 +124,12 @@ refused up front with a message instead of crashing the process. Measured on a 5
 Loudness ISO 532-1 and Sharpness accept about 4-5 s of audio, Loudness ECMA-418-2 about 1.7 s, and
 Roughness / Tonality ECMA-418-2 do not fit at all (they need roughly 440 and 540 MB per second of audio).
 
+A longer file can still be analysed in pieces: select a section (drag on the waveform in the Normal view, or
+type the limits in the Section bar). Every analysis (spectrum, spectrogram, 1/3-octave, envelope, metrics,
+batch) then runs on that part only, and the memory check is made on the length of the section. The API takes
+the same `t0` / `t1` (seconds) on the view endpoints and in the body of `/metrics`, and `sections`
+(`audio_id` -> `[t0, t1]`) in the body of `/batch`.
+
 ---
 
 ## Session recovery
@@ -199,6 +205,7 @@ PySQA web/
 | Tonality ECMA-418-2 | Done (requires sottek_hearing_model) |
 | Filters (HP / LP / BP / Notch) | Done |
 | Time windowing | Done |
+| Analyse only a section of a file (drag on the waveform or type the limits) | Done |
 | Loudness adjustment | Done |
 | Microphone calibration (mV/Pa) | Done |
 | Field type selector (free / diffuse) | Done |

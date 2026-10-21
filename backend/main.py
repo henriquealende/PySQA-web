@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from routers import audio, processing, export
+from services.audio_service import SectionError
 from services.session_store import InvalidIdError, audio_ram_mb, load_all_sessions, start_janitor
 from utils import limits
 
@@ -46,6 +47,11 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 @app.exception_handler(InvalidIdError)
 async def invalid_id_handler(request: Request, exc: InvalidIdError):
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+@app.exception_handler(SectionError)
+async def section_handler(request: Request, exc: SectionError):
     return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 

@@ -61,7 +61,7 @@ function BatchProgress({ step, total, label }: { step: number; total: number; la
 }
 
 export default function BatchPanel() {
-  const { sessionId, files, fieldType, setFieldType } = useStore()
+  const { sessionId, files, fieldType, setFieldType, sections } = useStore()
 
   // File selection
   const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set(files.map(f => f.audio_id)))
@@ -72,6 +72,9 @@ export default function BatchPanel() {
   const toggleAll  = () => setCheckedIds(allChecked ? new Set() : new Set(files.map(f => f.audio_id)))
 
   const selectedFiles = files.filter(f => checkedIds.has(f.audio_id))
+  // A file with a section selected in the Normal view is analysed on that part only
+  const withSection = selectedFiles.filter(f => sections[f.audio_id])
+  const sectionMap = Object.fromEntries(withSection.map(f => [f.audio_id, sections[f.audio_id]!]))
 
   // Metric + annoyance selection
   const [selected,  setSelected]  = useState<MetricKey[]>(['loudness_zwk','sharpness_din'])
@@ -119,6 +122,7 @@ export default function BatchPanel() {
         selectedFiles.map(f => f.audio_id),
         metrics,
         fieldType,
+        sectionMap,
       )
       // Merge names into rows (server rows only have audio_id)
       const named = result.rows.map(row => ({
@@ -167,6 +171,7 @@ export default function BatchPanel() {
     if (!augRows) return
     try {
       const columns: Record<string,any[]> = { 'File': augRows.map(r => r.name) }
+      if (augRows.some(r => r.section)) columns['Section (s)'] = augRows.map(r => r.section ? `${r.section[0]}-${r.section[1]}` : 'whole file')
       displayKeys.forEach(k => { columns[colHeader(k)] = augRows.map(r => r[k]??'') })
       await exportXlsx(sessionId, selectedFiles.map(f => f.audio_id), [{ sheet_name:'Batch Results', columns }])
       toast.success('XLSX exported')
@@ -201,8 +206,15 @@ export default function BatchPanel() {
                 ? <CheckSquare size={13} className="text-teal shrink-0" />
                 : <Square size={13} className="shrink-0" />
               }
-              <span className="text-xs truncate" title={f.name}>
-                {f.name.replace(/\.wav$/i,'')}
+              <span className="flex flex-col min-w-0">
+                <span className="text-xs truncate" title={f.name}>
+                  {f.name.replace(/\.wav$/i,'')}
+                </span>
+                {sections[f.audio_id] && (
+                  <span className="text-[10px] text-teal/80 truncate">
+                    section {sections[f.audio_id]![0]}–{sections[f.audio_id]![1]} s
+                  </span>
+                )}
               </span>
             </button>
           ))}
@@ -277,6 +289,13 @@ export default function BatchPanel() {
             )}
           </div>
 
+          {withSection.length > 0 && (
+            <p className="text-[10px] text-muted">
+              Using only the selected section of <span className="text-teal">{withSection.length} file{withSection.length > 1 ? 's' : ''}</span>
+              {' '}(change it in the Normal view, Section bar).
+            </p>
+          )}
+
           {/* Auto-added notice */}
           {autoAdded.length > 0 && (
             <p className="text-[10px] text-muted">
@@ -349,6 +368,7 @@ export default function BatchPanel() {
                         title={row.name}
                         style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
                         {row.name.replace(/\.wav$/i,'')}
+                        {row.section && <span className="block text-[10px] text-teal/80">section {row.section[0]}–{row.section[1]} s</span>}
                       </td>
                       {displayKeys.map(k => (
                         <td key={k} className={clsx(

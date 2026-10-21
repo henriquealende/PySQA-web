@@ -1,12 +1,14 @@
 """High-level audio analysis helpers called by the routers."""
 from __future__ import annotations
 
+import copy
 import io
+import math
 import os
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 
 import numpy as np
 from scipy.io import wavfile
@@ -102,6 +104,72 @@ def _mono(data: np.ndarray) -> np.ndarray:
     return data[:, 0]
 
 
+# ── Sections ──────────────────────────────────────────────────────────────────
+# The user may analyse only a part of a file. The computations below take an optional
+# [t0, t1] (seconds) and run on that slice of the signal. A numpy slice is a view, so a
+# section costs no extra memory, and the memory budget is judged on its own duration:
+# that is what lets a long file be analysed in pieces on a small server.
+
+MIN_SECTION_S = 0.05
+_MAX_SECTION_RESULTS = 8        # section results kept per file (the oldest are dropped)
+
+
+class SectionError(ValueError):
+    """The requested section cannot be analysed (HTTP 400)."""
+
+
+class _Slice(NamedTuple):
+    entry: AudioEntry           # what to compute on: the entry itself, or a view of one section of it
+    offset_s: float             # time of its first sample inside the whole file
+    start: int                  # first sample (inclusive) and last sample (exclusive) in the whole file
+    end: int
+    whole: bool
+
+    @property
+    def span(self) -> Optional[List[float]]:
+        """[t0, t1] in seconds, or None when the whole file is analysed."""
+        if self.whole:
+            return None
+        return [round(self.offset_s, 6), round(self.end / self.entry.sample_rate, 6)]
+
+
+def _section(entry: AudioEntry, t0: Optional[float] = None, t1: Optional[float] = None) -> _Slice:
+    n = entry.data.shape[0]
+    sr = entry.sample_rate
+    if t0 is None and t1 is None:
+        return _Slice(entry, 0.0, 0, n, True)
+    lo = 0.0 if t0 is None else float(t0)
+    hi = n / sr if t1 is None else float(t1)
+    if not (math.isfinite(lo) and math.isfinite(hi)):
+        raise SectionError("The section limits must be numbers.")
+    start = int(round(max(lo, 0.0) * sr))
+    end = min(int(round(hi * sr)), n)
+    if start >= n:
+        raise SectionError(f"The section starts at {lo:.2f} s but this file lasts only {n / sr:.2f} s.")
+    if end - start < max(1, int(MIN_SECTION_S * sr)):
+        raise SectionError(f"The section must last at least {MIN_SECTION_S:g} s.")
+    if start == 0 and end == n:
+        return _Slice(entry, 0.0, 0, n, True)
+    view = copy.copy(entry)
+    view.data = entry.data[start:end]
+    view.duration_s = (end - start) / sr
+    view._cache = {}                # results of a section are cached on the real entry, under a key of their own
+    return _Slice(view, start / sr, start, end, False)
+
+
+def section_span(entry: AudioEntry, t0: Optional[float], t1: Optional[float]) -> Optional[List[float]]:
+    """The [t0, t1] that will really be analysed (clamped to the file), or None for the whole file."""
+    return _section(entry, t0, t1).span
+
+
+def _shift_time(result: Dict[str, Any], offset_s: float) -> Dict[str, Any]:
+    """Time axes of a section start at 0; put them back on the timeline of the whole file."""
+    td = result.get("time_data")
+    if td and "t" in td:
+        td["t"] = [round(x + offset_s, 6) for x in td["t"]]
+    return result
+
+
 # ── Waveform ──────────────────────────────────────────────────────────────────
 
 _SPECTRUM_MAX_POINTS = 2_400
@@ -172,7 +240,9 @@ def compute_waveform(entry: AudioEntry) -> Dict[str, Any]:
 
 # ── Spectrum (FFT) ────────────────────────────────────────────────────────────
 
-def compute_spectrum(entry: AudioEntry) -> Dict[str, Any]:
+def compute_spectrum(entry: AudioEntry, t0: Optional[float] = None, t1: Optional[float] = None) -> Dict[str, Any]:
+    sec = _section(entry, t0, t1)
+    entry = sec.entry
     limits.check_budget("spectrum", entry.duration_s, entry.sample_rate, audio_ram_mb())
     mono = _mono(entry.data)
     calibrated = entry.calibration_pa is not None
@@ -191,7 +261,7 @@ def compute_spectrum(entry: AudioEntry) -> Dict[str, Any]:
     def to_db(v):
         return np.round(20 * np.log10(v / ref + 1e-12), 2)
 
-    out: Dict[str, Any] = {"calibrated": calibrated}
+    out: Dict[str, Any] = {"calibrated": calibrated, "section": sec.span}
     if len(freqs) > _SPECTRUM_MAX_POINTS:
         # magnitude_db is the per-bucket peak (tones never disappear);
         # average_db is the per-bucket power mean (the noise floor).
@@ -207,7 +277,10 @@ def compute_spectrum(entry: AudioEntry) -> Dict[str, Any]:
 
 # ── Spectrogram ───────────────────────────────────────────────────────────────
 
-def compute_spectrogram(entry: AudioEntry, params: dict | None = None) -> Dict[str, Any]:
+def compute_spectrogram(entry: AudioEntry, params: dict | None = None,
+                        t0: Optional[float] = None, t1: Optional[float] = None) -> Dict[str, Any]:
+    sec = _section(entry, t0, t1)
+    entry = sec.entry
     limits.check_budget("spectrogram", entry.duration_s, entry.sample_rate, audio_ram_mb())
     p         = params or {}
     nfft      = int(p.get("nfft", 2048))
@@ -253,19 +326,23 @@ def compute_spectrogram(entry: AudioEntry, params: dict | None = None) -> Dict[s
         Sxx_db = Sxx_db[:, ::step]
 
     return {
-        "t": t.tolist(),
+        "t": np.round(t + sec.offset_s, 6).tolist(),
         "f": f.tolist(),
         "power_db": Sxx_db.tolist(),
         "z_min": vmin,
         "z_max": vmax,
         "cmap": str(p.get("cmap", "magma")),
         "freq_scale": str(p.get("freq_scale", "log")),
+        "section": sec.span,
     }
 
 
 # ── 1/3-Octave bands ─────────────────────────────────────────────────────────
 
-def compute_octave_bands(entry: AudioEntry, weighting: str = "Z") -> Dict[str, Any]:
+def compute_octave_bands(entry: AudioEntry, weighting: str = "Z",
+                         t0: Optional[float] = None, t1: Optional[float] = None) -> Dict[str, Any]:
+    sec = _section(entry, t0, t1)
+    entry = sec.entry
     limits.check_budget("octave", entry.duration_s, entry.sample_rate, audio_ram_mb())
     from processing.filtering import THIRD_OCTAVE_CENTRES_HZ, apply_filter, FilterType, apply_weighting
 
@@ -310,6 +387,7 @@ def compute_octave_bands(entry: AudioEntry, weighting: str = "Z") -> Dict[str, A
         "levels_db": levels_db,
         "weighting": weighting.upper(),
         "calibrated": calibrated,
+        "section": sec.span,
     }
 
 
@@ -319,8 +397,12 @@ def compute_envelope(
     entry: AudioEntry,
     smoothing_ms: float = 0.0,
     lpf_hz: float | None = None,
+    t0: Optional[float] = None,
+    t1: Optional[float] = None,
 ) -> Dict[str, Any]:
     from scipy.signal import butter, filtfilt
+    sec = _section(entry, t0, t1)
+    entry = sec.entry
     mono = _mono(entry.data)
     sr   = entry.sample_rate
     n    = len(mono)
@@ -363,7 +445,8 @@ def compute_envelope(
 
     return {
         "reduced": n > _WAVEFORM_MAX_POINTS,
-        "t": np.round(t, 6).tolist(),
+        "section": sec.span,
+        "t": np.round(t + sec.offset_s, 6).tolist(),
         "signal": np.round(sig_ds, 6).tolist(),
         "envelope": np.round(env_ds, 6).tolist(),
         "f_env": np.round(f_env, 3).tolist(),
@@ -381,10 +464,14 @@ def _calibrated_mono(entry: AudioEntry) -> np.ndarray:
     return mono
 
 
-def compute_metric(entry: AudioEntry, metric_key: str, field_type: str = "free") -> Dict[str, Any]:
-    """Dispatch to the correct psychoacoustic computation."""
+def compute_metric(entry: AudioEntry, metric_key: str, field_type: str = "free",
+                   t0: Optional[float] = None, t1: Optional[float] = None) -> Dict[str, Any]:
+    """Dispatch to the correct psychoacoustic computation (on the whole file, or on one section of it)."""
+    sec = _section(entry, t0, t1)
     cal_tag = f"cal{entry.calibration_pa:.6f}" if entry.calibration_pa else "raw"
     cache_key = f"metric_{metric_key}_{field_type}_{cal_tag}"
+    if not sec.whole:
+        cache_key += f"|s{sec.start}-{sec.end}"            # sample indices: the same section always hits the same entry
     if cache_key in entry._cache:
         return entry._cache[cache_key]
 
@@ -392,12 +479,24 @@ def compute_metric(entry: AudioEntry, metric_key: str, field_type: str = "free")
     with limits.heavy_slot():
         if cache_key in entry._cache:          # finished by a request that was ahead in the queue
             return entry._cache[cache_key]
-        limits.check_budget(metric_key, entry.duration_s, entry.sample_rate, audio_ram_mb())
-        mono = _calibrated_mono(entry)
-        sr   = entry.sample_rate
+        part = sec.entry
+        limits.check_budget(metric_key, part.duration_s, part.sample_rate, audio_ram_mb())
+        mono = _calibrated_mono(part)
+        sr   = part.sample_rate
         result = _dispatch_metric(mono, sr, metric_key, field_type=field_type)
+        if not sec.whole:
+            result = _shift_time(result, sec.offset_s)
+            result["section"] = sec.span
+            _remember_section(entry, cache_key)
         entry._cache[cache_key] = result
         return result
+
+
+def _remember_section(entry: AudioEntry, new_key: str) -> None:
+    """Keep only the latest few section results: every selection the user drags would add one."""
+    keys = [k for k in entry._cache if "|s" in k and k != new_key]
+    for old in keys[: max(0, len(keys) + 1 - _MAX_SECTION_RESULTS)]:
+        entry._cache.pop(old, None)
 
 
 def _dispatch_metric(mono: np.ndarray, sr: int, key: str, field_type: str = "free") -> Dict[str, Any]:
@@ -724,7 +823,7 @@ def apply_loudness_adj_to_entry(entry: AudioEntry, ref: AudioEntry, audio_id: Op
     # same compute slot and passes the same budget check.
     with limits.heavy_slot():
         for e in (entry, ref):
-            limits.check_budget("loudness_zwk", e.duration_s, e.sample_rate, audio_ram_mb())
+            limits.check_budget("loudness_zwk", e.duration_s, e.sample_rate, audio_ram_mb(), can_select=False)
         try:
             _, ref_global, _, _ = loud.loudnessZWK(ref_mono, ref.sample_rate)
             _, src_global, _, _ = loud.loudnessZWK(mono, entry.sample_rate)
