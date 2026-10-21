@@ -101,7 +101,7 @@ Without it, those three metrics are disabled; all other features work normally.
 
 ## Hosted deployment: resource limits
 
-On a small container (for example Render Free, 512 MiB) the server protects itself instead of
+On a small container (for example a 512 MiB Render instance, such as the Starter plan) the server protects itself instead of
 running out of memory. The limits switch on automatically when a memory limit is detected (the
 container's cgroup limit, `PYSQA_MEMORY_MB`, or the `RENDER` variable) and stay off on a local
 machine. `GET /api/health` reports the limits in force.
@@ -122,6 +122,23 @@ Only one heavy calculation runs at a time, and a calculation whose estimated mem
 refused up front with a message instead of crashing the process. Measured on a 512 MiB container:
 Loudness ISO 532-1 and Sharpness accept about 4-5 s of audio, Loudness ECMA-418-2 about 1.7 s, and
 Roughness / Tonality ECMA-418-2 do not fit at all (they need roughly 440 and 540 MB per second of audio).
+
+---
+
+## Session recovery
+
+The server keeps uploaded files in memory and on a temporary disk, so a restart, a deploy or an
+out-of-memory kill wipes every session. To make that invisible, the browser keeps what is needed to
+rebuild its session in its own IndexedDB: a copy of each uploaded WAV and the processing steps applied
+to it (nothing is sent anywhere else). The browser also chooses the id of every file it uploads or
+creates, so a restored file comes back under the same id and nothing on screen changes.
+
+- After a page reload the file list, selection and microphone calibrations come back.
+- When the server answers 404 for a file it forgot, the missing files are re-uploaded and the processing
+  steps replayed (parents first), then the request is repeated; a banner shows the progress.
+- A request that stays pending while `/api/health` does not answer shows a "server is not responding" banner.
+- Copies of sessions untouched for 7 days are deleted; **Clear & re-upload** forgets the current session's copy.
+- Recordings made in Data Acquisition are copied the same way once they are sent to Post-Processing.
 
 ---
 

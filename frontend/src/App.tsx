@@ -1,9 +1,14 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
+import { rehydrateSession } from './api/http'
 import PostProcessingPage from './pages/PostProcessing/PostProcessingPage'
 import RecordingPage from './pages/DataAcquisition/RecordingPage'
 
 export default function App() {
+  // After a reload (or a server restart) bring the file list back
+  useEffect(() => { void rehydrateSession() }, [])
+
   return (
     <Routes>
       <Route path="/" element={<Layout />}>

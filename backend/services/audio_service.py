@@ -12,7 +12,7 @@ import numpy as np
 from scipy.io import wavfile
 from scipy.signal import spectrogram as scipy_spectrogram, hilbert
 
-from services.session_store import AudioEntry, audio_ram_mb, new_audio_id, persist_session
+from services.session_store import AudioEntry, audio_ram_mb, new_audio_id, persist_session, usable_audio_id
 from utils import limits
 
 # ── Pre-warmed metric singletons ──────────────────────────────────────────────
@@ -62,7 +62,7 @@ _WAVEFORM_MAX_POINTS = 8_000
 
 # ── I/O ───────────────────────────────────────────────────────────────────────
 
-def load_wav(file_bytes: bytes, filename: str) -> AudioEntry:
+def load_wav(file_bytes: bytes, filename: str, audio_id: Optional[str] = None) -> AudioEntry:
     """Parse WAV bytes, normalise to float64 [-1,1], save tmp file."""
     sr, data = wavfile.read(io.BytesIO(file_bytes))
     # Normalise to float64
@@ -80,8 +80,8 @@ def load_wav(file_bytes: bytes, filename: str) -> AudioEntry:
     duration_s = n_samples / sr
 
     # Save to tmp file for streaming
-    audio_id = new_audio_id()
-    tmp_path = TMP_DIR / f"{audio_id}.wav"
+    audio_id = usable_audio_id(audio_id) or new_audio_id()
+    tmp_path = TMP_DIR / f"{uuid.uuid4().hex}.wav"      # the file name never comes from client input
     wavfile.write(str(tmp_path), sr, (norm * 32767).astype(np.int16))
 
     return AudioEntry(
@@ -634,12 +634,12 @@ def _metric_ipm(mono, sr):
 
 # ── Processing helpers ────────────────────────────────────────────────────────
 
-def _derive(entry: AudioEntry, new_data: np.ndarray, tag: str) -> AudioEntry:
+def _derive(entry: AudioEntry, new_data: np.ndarray, tag: str, audio_id: Optional[str] = None) -> AudioEntry:
     """Create a new AudioEntry derived from *entry* with *new_data* and a name tag."""
     import copy, uuid
     import soundfile as sf
     new_entry = copy.copy(entry)
-    new_entry.audio_id = uuid.uuid4().hex[:12]
+    new_entry.audio_id = usable_audio_id(audio_id) or uuid.uuid4().hex[:12]
     base = entry.name.rsplit('.', 1)[0]
     new_entry.name = f"{base}{tag}.wav"
     if new_data.ndim == 1 and entry.data.ndim == 2:
@@ -647,7 +647,7 @@ def _derive(entry: AudioEntry, new_data: np.ndarray, tag: str) -> AudioEntry:
     new_entry.data = new_data
     new_entry.duration_s = new_data.shape[0] / entry.sample_rate
     new_entry._cache = {}
-    tmp = TMP_DIR / f"{new_entry.audio_id}.wav"
+    tmp = TMP_DIR / f"{uuid.uuid4().hex}.wav"
     sf.write(str(tmp), new_entry.data, entry.sample_rate)
     new_entry.raw_path = tmp
     return new_entry
@@ -661,6 +661,7 @@ def apply_filter_to_entry(
     fundamental: float | None = None,
     q_factor: float = 30.0,
     octave_gains_db=None,
+    audio_id: Optional[str] = None,
 ) -> AudioEntry:
     from processing.filtering import apply_filter, FilterType
     ft = FilterType.from_label(filter_type)
@@ -682,7 +683,7 @@ def apply_filter_to_entry(
         q_factor=q_factor,
     )
     tag = f"[{filter_type.replace(' ', '_').lower()}]"
-    return _derive(entry, filtered, tag)
+    return _derive(entry, filtered, tag, audio_id)
 
 
 def apply_window_to_entry(
@@ -690,6 +691,7 @@ def apply_window_to_entry(
     start_sample: int,
     end_sample: int,
     window_type: str,
+    audio_id: Optional[str] = None,
 ) -> AudioEntry:
     from processing.windowing import apply_window
     mono = _mono(entry.data)
@@ -698,30 +700,35 @@ def apply_window_to_entry(
                                end_sample=end_sample,
                                window_type=window_type)
     tag = f"[win_{window_type.lower()}]"
-    return _derive(entry, windowed, tag)
+    return _derive(entry, windowed, tag, audio_id)
 
 
-def apply_weighting_to_entry(entry: AudioEntry, curve: str) -> AudioEntry:
+def apply_weighting_to_entry(entry: AudioEntry, curve: str, audio_id: Optional[str] = None) -> AudioEntry:
     from processing.filtering import apply_weighting
     mono = _mono(entry.data)
     weighted = apply_weighting(mono, entry.sample_rate, curve)
     tag = f"[{curve.upper()}-weight]"
-    return _derive(entry, weighted, tag)
+    return _derive(entry, weighted, tag, audio_id)
 
 
-def apply_loudness_adj_to_entry(entry: AudioEntry, ref: AudioEntry) -> AudioEntry:
+def apply_loudness_adj_to_entry(entry: AudioEntry, ref: AudioEntry, audio_id: Optional[str] = None) -> AudioEntry:
     loud = _LOUD or __import__('psychoacoustics.loudness', fromlist=['Loudness']).Loudness()
     mono = _mono(entry.data)
     ref_mono = _mono(ref.data)
-    try:
-        _, ref_global, _, _ = loud.loudnessZWK(ref_mono, ref.sample_rate)
-        _, src_global, _, _ = loud.loudnessZWK(mono, entry.sample_rate)
-    except Exception:
-        _, ref_global, _ = loud.loudnessZWK(ref_mono, ref.sample_rate)
-        _, src_global, _ = loud.loudnessZWK(mono, entry.sample_rate)
+    # Two full ISO 532-1 runs: the same memory cost as the metric itself, so it takes the
+    # same compute slot and passes the same budget check.
+    with limits.heavy_slot():
+        for e in (entry, ref):
+            limits.check_budget("loudness_zwk", e.duration_s, e.sample_rate, audio_ram_mb())
+        try:
+            _, ref_global, _, _ = loud.loudnessZWK(ref_mono, ref.sample_rate)
+            _, src_global, _, _ = loud.loudnessZWK(mono, entry.sample_rate)
+        except Exception:
+            _, ref_global, _ = loud.loudnessZWK(ref_mono, ref.sample_rate)
+            _, src_global, _ = loud.loudnessZWK(mono, entry.sample_rate)
     if src_global < 1e-6:
-        return _derive(entry, mono, "[loudness_adj]")
+        return _derive(entry, mono, "[loudness_adj]", audio_id)
     scale = ref_global / src_global
     adjusted = mono * scale
     tag = "[loudness_adj]"
-    return _derive(entry, adjusted, tag)
+    return _derive(entry, adjusted, tag, audio_id)

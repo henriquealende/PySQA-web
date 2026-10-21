@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 import services.audio_service as svc
 from services.session_store import (
-    add_entry, ensure_room, get_entry, list_entries, new_audio_id, remove_entry, persist_session
+    add_entry, check_session_id, ensure_room, get_entry, list_entries, new_audio_id, remove_entry, persist_session
 )
 from utils import limits
 
@@ -66,9 +66,11 @@ async def _read_upload(f: UploadFile) -> bytes:
 async def upload_audio(
     session_id: str = Form(...),
     files: List[UploadFile] = File(...),
+    audio_ids: List[str] = Form(default=[]),     # optional, one per file, in the same order
 ):
+    check_session_id(session_id)
     results = []
-    for f in files:
+    for index, f in enumerate(files):
         if not f.filename.lower().endswith(".wav"):
             raise HTTPException(400, f"{f.filename} is not a WAV file")
         data = await _read_upload(f)
@@ -79,7 +81,7 @@ async def upload_audio(
         if info is not None and info.samplerate:
             limits.check_upload_audio(f.filename, info.frames / info.samplerate)
             ensure_room(session_id, info.frames * info.channels * 8 / 1048576)
-        entry = svc.load_wav(data, f.filename)
+        entry = svc.load_wav(data, f.filename, audio_ids[index] if index < len(audio_ids) else None)
         add_entry(session_id, entry)
         results.append(AudioMeta(
             audio_id=entry.audio_id,

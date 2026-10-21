@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ToastContainer from './ToastContainer'
+import StatusBanner from './StatusBanner'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Activity, Mic, BarChart2, Menu, X } from 'lucide-react'
 import clsx from 'clsx'
@@ -81,6 +82,8 @@ export default function Layout() {
           ))}
         </div>
       )}
+
+      <StatusBanner />
 
       {/* ── Page content ─────────────────────────────────────────────── */}
       <main className="flex flex-1 overflow-hidden">

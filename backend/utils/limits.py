@@ -1,4 +1,4 @@
-"""Resource limits for small hosted instances (for example Render Free, 512 MiB).
+"""Resource limits for small hosted instances (for example a 512 MiB Render instance).
 
 The server keeps every uploaded file in RAM as float64 and a few metrics need hundreds of
 MB, so on a 512 MiB container one heavy request used to kill the process (OOM) and take
@@ -55,7 +55,7 @@ def _detect_memory_limit_mb() -> Optional[float]:
         value = _read_number(path)
         if value and value < (1 << 40):          # unlimited cgroups report "max" or a huge number
             return value / 1048576
-    if os.environ.get("RENDER"):                  # Render sets RENDER=true; the Free instance has 512 MiB
+    if os.environ.get("RENDER"):                  # Render sets RENDER=true; if the cgroup limit cannot be read, assume 512 MiB (its smallest size)
         return 512.0
     return None
 

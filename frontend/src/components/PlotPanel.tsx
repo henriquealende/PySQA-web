@@ -148,7 +148,7 @@ function SessionExpiredMsg() {
   const clearSession = useStore(s => s.clearSession)
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center px-4">
-      <p className="text-xs text-amber-400 max-w-xs">Your files are no longer on the server (it restarted or the session expired).</p>
+      <p className="text-xs text-amber-400 max-w-xs">Your files are no longer on the server and this browser could not restore them.</p>
       <button onClick={clearSession} className="px-4 py-1.5 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">
         Clear &amp; Re-upload files
       </button>

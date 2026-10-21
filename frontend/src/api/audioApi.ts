@@ -1,39 +1,28 @@
 import { AudioFile, WaveformData, SpectrumData, SpectrogramData, OctaveData, EnvelopeData, MetricResult, MetricKey, SpectrogramParams, EnvelopeParams, FieldType } from '../types'
+import { apiFetch, checkResponse, newClientId, SessionExpiredError, watched } from './http'
+import * as recovery from './recovery'
 
-export class SessionExpiredError extends Error {
-  constructor() { super('Session expired — please re-upload your files.') }
-}
-
-// FastAPI answers errors as {"detail": "..."}; show the sentence, not the JSON.
-async function errorText(res: Response): Promise<string> {
-  const text = await res.text()
-  try {
-    const body = JSON.parse(text)
-    if (typeof body.detail === 'string') return body.detail
-    if (Array.isArray(body.detail)) return body.detail.map((d: any) => d?.msg ?? String(d)).join('; ')
-  } catch { /* not JSON */ }
-  return text || `Request failed (${res.status})`
-}
-
-async function checkResponse(res: Response): Promise<Response> {
-  if (res.status === 404) throw new SessionExpiredError()
-  if (!res.ok) throw new Error(await errorText(res))
-  return res
-}
+export { SessionExpiredError }
 
 const BASE = '/api/audio'
 
 export async function uploadFiles(sessionId: string, files: File[]): Promise<AudioFile[]> {
+  const ids = files.map(() => newClientId())      // the browser names what it uploads, so a restore can reuse the ids
   const form = new FormData()
   form.append('session_id', sessionId)
+  ids.forEach((id) => form.append('audio_ids', id))
   files.forEach((f) => form.append('files', f))
-  const res = await fetch(`${BASE}/upload`, { method: 'POST', body: form })
+  const res = await apiFetch(sessionId, `${BASE}/upload`, { method: 'POST', body: form }, false)
   await checkResponse(res)
-  return res.json()
+  const uploaded: AudioFile[] = await res.json()
+  // Keep a copy in this browser so the file can be put back if the server forgets it
+  await Promise.all(uploaded.map((u, i) => recovery.recordUpload(sessionId, u, files[i])))
+  return uploaded
 }
 
 export async function deleteAudio(sessionId: string, audioId: string): Promise<void> {
-  await fetch(`${BASE}/${sessionId}/${audioId}`, { method: 'DELETE' })
+  await watched(() => fetch(`${BASE}/${sessionId}/${audioId}`, { method: 'DELETE' }))
+  await recovery.recordDelete(sessionId, audioId)
 }
 
 export function getStreamUrl(sessionId: string, audioId: string): string {
@@ -41,13 +30,13 @@ export function getStreamUrl(sessionId: string, audioId: string): string {
 }
 
 export async function fetchWaveform(sessionId: string, audioId: string): Promise<WaveformData> {
-  const res = await fetch(`${BASE}/${sessionId}/${audioId}/waveform`)
+  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/waveform`)
   await checkResponse(res)
   return res.json()
 }
 
 export async function fetchSpectrum(sessionId: string, audioId: string): Promise<SpectrumData> {
-  const res = await fetch(`${BASE}/${sessionId}/${audioId}/spectrum`)
+  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/spectrum`)
   await checkResponse(res)
   return res.json()
 }
@@ -67,7 +56,7 @@ export async function fetchSpectrogram(
   if (params?.fmax      != null) q.set('fmax',       String(params.fmax))
   if (params?.dyn_range != null) q.set('dyn_range',  String(params.dyn_range))
   const qs = q.toString()
-  const res = await fetch(`${BASE}/${sessionId}/${audioId}/spectrogram${qs ? '?' + qs : ''}`)
+  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/spectrogram${qs ? '?' + qs : ''}`)
   await checkResponse(res)
   return res.json()
 }
@@ -77,7 +66,7 @@ export async function fetchOctave(
   audioId: string,
   weighting = 'Z',
 ): Promise<OctaveData> {
-  const res = await fetch(`${BASE}/${sessionId}/${audioId}/octave?weighting=${weighting}`)
+  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/octave?weighting=${weighting}`)
   await checkResponse(res)
   return res.json()
 }
@@ -91,7 +80,7 @@ export async function fetchEnvelope(
   if (params?.smoothing_ms != null) q.set('smoothing_ms', String(params.smoothing_ms))
   if (params?.lpf_hz       != null) q.set('lpf_hz',       String(params.lpf_hz))
   const qs = q.toString()
-  const res = await fetch(`${BASE}/${sessionId}/${audioId}/envelope${qs ? '?' + qs : ''}`)
+  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/envelope${qs ? '?' + qs : ''}`)
   await checkResponse(res)
   return res.json()
 }
@@ -102,7 +91,7 @@ export async function fetchMetric(
   metricKey: MetricKey,
   fieldType: FieldType = 'free',
 ): Promise<MetricResult> {
-  const res = await fetch(`${BASE}/${sessionId}/${audioId}/metrics`, {
+  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/metrics`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ metric_key: metricKey, field_type: fieldType }),
@@ -121,7 +110,7 @@ export async function fetchBatch(
   metric_keys: string[]
   skipped?: { audio_id: string; name: string; metric: string; reason: string }[]
 }> {
-  const res = await fetch(`${BASE}/${sessionId}/batch`, {
+  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/batch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ audio_ids: audioIds, metric_keys: metricKeys, field_type: fieldType }),
@@ -136,15 +125,17 @@ export async function setCalibration(
   sensitivityMvPa: number,
   fsVoltage = 1.0,
 ): Promise<{ calibration_pa: number }> {
-  const res = await fetch(`${BASE}/${sessionId}/${audioId}/calibrate`, {
+  const res = await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/calibrate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sensitivity_mv_pa: sensitivityMvPa, fs_voltage: fsVoltage }),
   })
   await checkResponse(res)
+  await recovery.recordCalibration(sessionId, audioId, { sensitivityMvPa, fsVoltage })
   return res.json()
 }
 
 export async function clearCalibration(sessionId: string, audioId: string): Promise<void> {
-  await fetch(`${BASE}/${sessionId}/${audioId}/calibrate`, { method: 'DELETE' })
+  await apiFetch(sessionId, `${BASE}/${sessionId}/${audioId}/calibrate`, { method: 'DELETE' })
+  await recovery.recordCalibration(sessionId, audioId, null)
 }

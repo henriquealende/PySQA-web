@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import threading
 import time
 import uuid
@@ -26,6 +27,24 @@ from utils import limits
 # PYSQA_TMP_DIR moves the session files (tests use it to stay out of the project folder)
 TMP_DIR = Path(os.environ.get("PYSQA_TMP_DIR") or Path(__file__).parent.parent / "tmp_sessions")
 TMP_DIR.mkdir(parents=True, exist_ok=True)
+
+# Ids chosen by the browser end up in dictionary keys and file names: accept plain identifiers only.
+_SAFE_ID = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
+
+
+class InvalidIdError(ValueError):
+    """A client-supplied session id is not a plain identifier (HTTP 400)."""
+
+
+def check_session_id(session_id: str) -> None:
+    if not isinstance(session_id, str) or not _SAFE_ID.match(session_id):
+        raise InvalidIdError("Invalid session id.")
+
+
+def usable_audio_id(hint) -> Optional[str]:
+    """The browser may pick the id of the audio it uploads, so a restored file keeps its old id.
+    Anything that is not a plain identifier is ignored and the server makes one up."""
+    return hint if isinstance(hint, str) and _SAFE_ID.match(hint) else None
 
 
 @dataclass
@@ -166,6 +185,7 @@ def load_all_sessions() -> None:
 
 def get_or_create_session(session_id: str) -> Dict[str, AudioEntry]:
     if session_id not in _sessions:
+        check_session_id(session_id)
         _sessions[session_id] = {}
     _touch(session_id)
     return _sessions[session_id]
@@ -183,13 +203,16 @@ def add_entry(session_id: str, entry: AudioEntry) -> None:
     try:
         with _state_lock:
             session = get_or_create_session(session_id)
-            if limits.MAX_FILES_PER_SESSION and len(session) >= limits.MAX_FILES_PER_SESSION:
+            previous = session.get(entry.audio_id)          # a restored file re-uses its old id
+            if limits.MAX_FILES_PER_SESSION and previous is None and len(session) >= limits.MAX_FILES_PER_SESSION:
                 raise limits.ResourceLimitError(
                     f"A session holds at most {int(limits.MAX_FILES_PER_SESSION)} files. "
                     "Remove some before adding more."
                 )
-            ensure_room(session_id, _entry_mb(entry))
+            ensure_room(session_id, max(0.0, _entry_mb(entry) - (_entry_mb(previous) if previous else 0.0)))
             session[entry.audio_id] = entry
+            if previous is not None and previous.raw_path != entry.raw_path:
+                previous.raw_path.unlink(missing_ok=True)
     except limits.ResourceLimitError:
         entry.raw_path.unlink(missing_ok=True)      # the WAV was already written; do not leak it
         raise

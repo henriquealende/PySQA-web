@@ -4,6 +4,7 @@ import clsx from 'clsx'
 import { useStore } from '../../store/useStore'
 import { toast } from '../../store/useToast'
 import { uploadFiles, deleteAudio, setCalibration as apiSetCalibration, clearCalibration as apiClearCalibration } from '../../api/audioApi'
+import { restoreSession } from '../../api/http'
 import { AudioFile, ViewMode, MetricKey, FieldType } from '../../types'
 import FileDropzone from '../../components/FileDropzone'
 import AudioList from '../../components/AudioList'
@@ -66,7 +67,10 @@ export default function PostProcessingPage() {
   const handleProcessed = useCallback((newFile: AudioFile) => {
     addFiles([newFile])
     selectFile(newFile.audio_id)
-  }, [addFiles, selectFile])
+    // The server copies the calibration of the file it was made from into the new one
+    const inherited = editId ? calibrations[editId] : null
+    if (inherited != null) setCalibration(newFile.audio_id, inherited)
+  }, [addFiles, selectFile, editId, calibrations, setCalibration])
 
   const handleCalibrate = async () => {
     if (!selectedId) return
@@ -277,7 +281,7 @@ export default function PostProcessingPage() {
                   <PlotPanel />
                 </div>
                 {selectedFile && (
-                  <AudioPlayer src={streamUrl} fileName={selectedFile.name} />
+                  <AudioPlayer src={streamUrl} fileName={selectedFile.name} onError={() => { void restoreSession(sessionId) }} />
                 )}
               </div>
             )

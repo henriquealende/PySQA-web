@@ -23,6 +23,7 @@ class FilterRequest(BaseModel):
     q_factor: float = 30.0
     # 1/3-Octave EQ
     octave_gains_db: Optional[List[float]] = None
+    new_audio_id: Optional[str] = None   # lets the browser re-create this file under the same id
 
 
 class WindowRequest(BaseModel):
@@ -31,18 +32,21 @@ class WindowRequest(BaseModel):
     start_sample: int
     end_sample: int
     window_type: str
+    new_audio_id: Optional[str] = None
 
 
 class WeightingRequest(BaseModel):
     session_id: str
     audio_id: str
     curve: str   # "A" | "C"
+    new_audio_id: Optional[str] = None
 
 
 class LoudnessAdjRequest(BaseModel):
     session_id: str
     audio_id: str
     reference_audio_id: str
+    new_audio_id: Optional[str] = None
 
 
 def _entry(session_id, audio_id):
@@ -63,6 +67,7 @@ def apply_filter(body: FilterRequest):
         fundamental=body.fundamental,
         q_factor=body.q_factor,
         octave_gains_db=body.octave_gains_db,
+        audio_id=body.new_audio_id,
     )
     add_entry(body.session_id, new_entry)
     return {
@@ -78,7 +83,7 @@ def apply_filter(body: FilterRequest):
 def apply_window(body: WindowRequest):
     entry = _entry(body.session_id, body.audio_id)
     new_entry = svc.apply_window_to_entry(
-        entry, body.start_sample, body.end_sample, body.window_type
+        entry, body.start_sample, body.end_sample, body.window_type, audio_id=body.new_audio_id
     )
     add_entry(body.session_id, new_entry)
     return {
@@ -93,7 +98,7 @@ def apply_window(body: WindowRequest):
 @router.post("/weighting")
 def apply_weighting(body: WeightingRequest):
     entry = _entry(body.session_id, body.audio_id)
-    new_entry = svc.apply_weighting_to_entry(entry, body.curve)
+    new_entry = svc.apply_weighting_to_entry(entry, body.curve, audio_id=body.new_audio_id)
     add_entry(body.session_id, new_entry)
     return {
         "audio_id": new_entry.audio_id,
@@ -108,7 +113,7 @@ def apply_weighting(body: WeightingRequest):
 def loudness_adjustment(body: LoudnessAdjRequest):
     entry = _entry(body.session_id, body.audio_id)
     ref = _entry(body.session_id, body.reference_audio_id)
-    new_entry = svc.apply_loudness_adj_to_entry(entry, ref)
+    new_entry = svc.apply_loudness_adj_to_entry(entry, ref, audio_id=body.new_audio_id)
     add_entry(body.session_id, new_entry)
     return {
         "audio_id": new_entry.audio_id,

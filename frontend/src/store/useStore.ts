@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { AudioFile, ViewMode, MetricKey, FieldType, SpectrogramParams, EnvelopeParams } from '../types'
+import { forgetSession } from '../api/recovery'
 
 const DEFAULT_SPECTROGRAM: SpectrogramParams = {
   nfft: 2048,
@@ -34,6 +35,8 @@ interface AppState {
   loadingMessage: string
   audioIsPlaying: boolean
   audioDuration: number
+  restore: { done: number; total: number } | null   // files being put back after the server forgot them
+  serverWaking: boolean                              // the server is not answering: a cold start
 
   setFiles: (files: AudioFile[]) => void
   addFiles: (files: AudioFile[]) => void
@@ -51,6 +54,9 @@ interface AppState {
   setLoading: (v: boolean, msg?: string) => void
   setAudioPlayback: (isPlaying: boolean, duration: number) => void
   clearSession: () => void
+  hydrate: (files: AudioFile[], calibrations: Record<string, number | null>) => void
+  setRestore: (r: { done: number; total: number } | null) => void
+  setServerWaking: (v: boolean) => void
 }
 
 // Stable session ID per tab — persists across hot-reloads in dev
@@ -61,7 +67,7 @@ const SESSION_ID = (() => {
   return id
 })()
 
-export const useStore = create<AppState>((set) => ({
+export const useStore = create<AppState>((set, get) => ({
   sessionId: SESSION_ID,
   files: [],
   selectedId: null,
@@ -78,6 +84,8 @@ export const useStore = create<AppState>((set) => ({
   loadingMessage: '',
   audioIsPlaying: false,
   audioDuration: 0,
+  restore: null,
+  serverWaking: false,
 
   setFiles: (files) => set({ files }),
   addFiles: (incoming) => set((s) => {
@@ -107,5 +115,20 @@ export const useStore = create<AppState>((set) => ({
   setBatchEnabled: (batchEnabled) => set({ batchEnabled }),
   setLoading: (isLoading, loadingMessage = '') => set({ isLoading, loadingMessage }),
   setAudioPlayback: (audioIsPlaying, audioDuration) => set({ audioIsPlaying, audioDuration }),
-  clearSession: () => set({ files: [], selectedId: null }),
+  clearSession: () => {
+    void forgetSession(get().sessionId)     // also drop this browser's copy, or it would be restored again
+    set({ files: [], selectedId: null, compareId: null, calibrations: {} })
+  },
+  // After a reload: the files the server (or this browser's copy) still has, with their calibrations
+  hydrate: (incoming, calibrations) => set((s) => {
+    const ids = new Set(incoming.map((f) => f.audio_id))
+    const files = [...incoming, ...s.files.filter((f) => !ids.has(f.audio_id))]
+    return {
+      files,
+      selectedId: s.selectedId ?? files[0]?.audio_id ?? null,
+      calibrations: { ...calibrations, ...s.calibrations },
+    }
+  }),
+  setRestore: (restore) => set({ restore }),
+  setServerWaking: (serverWaking) => set({ serverWaking }),
 }))

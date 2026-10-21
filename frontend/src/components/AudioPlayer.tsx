@@ -7,6 +7,7 @@ import clsx from 'clsx'
 interface Props {
   src: string | null
   fileName?: string
+  onError?: () => void     // the stream could not be loaded (for example the server forgot the file)
 }
 
 function fmtTime(s: number) {
@@ -16,8 +17,8 @@ function fmtTime(s: number) {
   return `${m}:${sec}`
 }
 
-export default function AudioPlayer({ src, fileName }: Props) {
-  const { state, play, pause, stop, seek, setVolume, toggleMute } = useAudioPlayer(src)
+export default function AudioPlayer({ src, fileName, onError }: Props) {
+  const { state, play, pause, stop, seek, setVolume, toggleMute } = useAudioPlayer(src, onError)
   const { isPlaying, currentTime, duration, volume, isMuted } = state
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
   const setAudioPlayback = useStore((s) => s.setAudioPlayback)

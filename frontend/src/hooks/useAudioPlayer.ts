@@ -14,8 +14,10 @@ export interface PlayerState {
  */
 export const audioCurrentTimeRef = { current: 0 }
 
-export function useAudioPlayer(src: string | null) {
+export function useAudioPlayer(src: string | null, onError?: () => void) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const onErrorRef = useRef(onError)
+  onErrorRef.current = onError
   const [state, setState] = useState<PlayerState>({
     isPlaying: false,
     currentTime: 0,
@@ -42,6 +44,8 @@ export function useAudioPlayer(src: string | null) {
     audio.addEventListener('timeupdate', sync)
     audio.addEventListener('ended', onEnded)
     audio.addEventListener('loadedmetadata', onLoaded)
+    const onFail = () => onErrorRef.current?.()
+    audio.addEventListener('error', onFail)
 
     if (src) audio.src = src
 
@@ -51,11 +55,14 @@ export function useAudioPlayer(src: string | null) {
       audio.removeEventListener('timeupdate', sync)
       audio.removeEventListener('ended', onEnded)
       audio.removeEventListener('loadedmetadata', onLoaded)
+      audio.removeEventListener('error', onFail)
     }
   }, [src])
 
   const play = useCallback(() => {
-    audioRef.current?.play()
+    const a = audioRef.current
+    if (a?.error) a.load()          // the stream failed earlier (for example the server was asleep): try again
+    a?.play()?.catch(() => setState((s) => ({ ...s, isPlaying: false })))
     setState((s) => ({ ...s, isPlaying: true }))
   }, [])
 
