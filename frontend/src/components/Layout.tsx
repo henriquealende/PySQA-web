@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import ToastContainer from './ToastContainer'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Activity, Mic, BarChart2, Menu, X, LogOut } from 'lucide-react'
+import { NavLink, Outlet } from 'react-router-dom'
+import { Activity, Mic, BarChart2, Menu, X } from 'lucide-react'
 import clsx from 'clsx'
-import { useAuthStore } from '../store/useAuthStore'
 
 const NAV = [
   { to: '/post-processing',  label: 'Post-Processing',  Icon: Activity },
@@ -13,13 +12,6 @@ const NAV = [
 
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const { user, logout } = useAuthStore()
-  const navigate = useNavigate()
-
-  function handleLogout() {
-    logout()
-    navigate('/login', { replace: true })
-  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-dark">
@@ -55,21 +47,6 @@ export default function Layout() {
         </nav>
 
         <div className="flex-1" />
-
-        {/* User + logout */}
-        {user && (
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="text-xs text-muted">{user.displayName}</span>
-            <button
-              onClick={handleLogout}
-              title="Sign out"
-              className="flex items-center gap-1 px-2 py-1.5 rounded text-xs text-muted hover:text-white hover:bg-panel transition-colors"
-            >
-              <LogOut size={13} />
-              Sign out
-            </button>
-          </div>
-        )}
 
         {/* Mobile hamburger */}
         <button
