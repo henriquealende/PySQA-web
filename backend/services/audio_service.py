@@ -392,12 +392,13 @@ def _metric_loudness_zwk(mono, sr, diffuse=False, compute_time_varying=True):
     return out
 
 
-def _metric_loudness_ecma(mono, sr):
+def _metric_loudness_ecma(mono, sr, diffuse=False):
     from psychoacoustics.loudness import Loudness
     loud = Loudness()
     # Try Sottek Hearing Model (ECMA-418-2 production); fall back to MoSQITo if unavailable.
     try:
-        bark, global_val, specific, time_data = loud.loudnessECMA_Shm(mono, sr)
+        bark, global_val, specific, time_data = loud.loudnessECMA_Shm(
+            mono, sr, field_type="diffuse" if diffuse else "free")
     except Exception:
         # MoSQITo fallback (loudness_ecma)
         try:
