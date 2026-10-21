@@ -36,6 +36,14 @@ const GROUPS: Group[] = [
   },
 ]
 
+export function metricLabel(key: MetricKey): string {
+  for (const g of GROUPS) {
+    const item = g.items.find((i) => i.key === key)
+    if (item) return item.fullLabel
+  }
+  return key
+}
+
 interface Props {
   value: MetricKey
   onChange: (k: MetricKey) => void

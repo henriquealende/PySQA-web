@@ -157,10 +157,14 @@ def compute_waveform(entry: AudioEntry) -> Dict[str, Any]:
         mono_ds = mono
         t_ds = np.arange(n) / entry.sample_rate
 
+    calibrated = entry.calibration_pa is not None
+    scale = entry.calibration_pa if calibrated else 1.0     # Pa when calibrated (the axis says so), full scale otherwise
     return {
         "t": np.round(t_ds, 6).tolist(),
-        "amplitude": np.round(mono_ds, 6).tolist(),
-        "peak": float(np.max(np.abs(mono))) if n else 0.0,
+        "amplitude": np.round(mono_ds * scale, 6).tolist(),
+        "peak": float(np.max(np.abs(mono))) if n else 0.0,  # always in full scale: it is compared with clipping
+        "reduced": n > _WAVEFORM_MAX_POINTS,                # True: min and max of each bucket, interleaved
+        "calibrated": calibrated,
         "duration_s": entry.duration_s,
         "sample_rate": entry.sample_rate,
     }
@@ -358,6 +362,7 @@ def compute_envelope(
     env_spec_db = 20 * np.log10(mag_env / (n / 2) + 1e-12)
 
     return {
+        "reduced": n > _WAVEFORM_MAX_POINTS,
         "t": np.round(t, 6).tolist(),
         "signal": np.round(sig_ds, 6).tolist(),
         "envelope": np.round(env_ds, 6).tolist(),

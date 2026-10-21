@@ -115,6 +115,7 @@ machine. `GET /api/health` reports the limits in force.
 | `PYSQA_MAX_AUDIO_RAM_MB` | 120 | float64 audio held in RAM across all sessions |
 | `PYSQA_SESSION_IDLE_MIN` | 30 | Minutes without activity before a session is dropped |
 | `PYSQA_HEAVY_WAIT_S` | 120 | How long a heavy calculation waits for its turn |
+| `PYSQA_MAX_EXPORT_CELLS` | 100000 | Largest Excel table the server builds (CSV is made in the browser) |
 | `PYSQA_TMP_DIR` | `backend/tmp_sessions` | Where session files are kept |
 
 Set a limit to `0` to disable it alone; larger containers get proportionally larger defaults.

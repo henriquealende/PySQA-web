@@ -3,7 +3,6 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import { rehydrateSession } from './api/http'
 import PostProcessingPage from './pages/PostProcessing/PostProcessingPage'
-import RecordingPage from './pages/DataAcquisition/RecordingPage'
 
 export default function App() {
   // After a reload (or a server restart) bring the file list back
@@ -14,7 +13,7 @@ export default function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={<Navigate to="/post-processing" replace />} />
         <Route path="post-processing" element={<PostProcessingPage />} />
-        <Route path="data-acquisition" element={<RecordingPage />} />
+        <Route path="data-acquisition" element={null} />
         <Route path="system-analysis"  element={<ComingSoon label="System Analysis" />} />
       </Route>
       {/* There is no sign-in any more: old /login bookmarks and unknown addresses go to the app */}

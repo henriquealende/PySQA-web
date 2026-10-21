@@ -18,6 +18,7 @@ import {
 import { useStore } from '../../store/useStore'
 import { uploadFiles } from '../../api/audioApi'
 import { toast } from '../../store/useToast'
+import { saveTake, deleteTake, loadTakes } from '../../api/recordingsStore'
 import { useNavigate } from 'react-router-dom'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ const dbToLinear = (db: number) => Math.pow(10, db/20)
 
 // ── VU Meter — with peak-hold and decay ───────────────────────────────────────
 
-function VUMeter({ analyser, onClip }: { analyser: AnalyserNode|null; onClip:()=>void }) {
+function VUMeter({ analyser, onClip, height = 64 }: { analyser: AnalyserNode|null; onClip:()=>void; height?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef    = useRef<number>(0)
 
@@ -120,7 +121,7 @@ function VUMeter({ analyser, onClip }: { analyser: AnalyserNode|null; onClip:()=
       const cw = W / dpr, ch = H / dpr
 
       // Background
-      const BAR_Y = ch * 0.15, BAR_H = ch * 0.42
+      const BAR_Y = Math.max(12, ch * 0.2), BAR_H = Math.max(14, ch * 0.4)
       ctx.fillStyle = '#0f1923'; ctx.fillRect(0, 0, cw, ch)
       ctx.fillStyle = '#1c2a38'; ctx.beginPath()
       ;(ctx as any).roundRect(0, BAR_Y, cw, BAR_H, 3); ctx.fill()
@@ -173,7 +174,7 @@ function VUMeter({ analyser, onClip }: { analyser: AnalyserNode|null; onClip:()=
   }, [analyser, onClip])
 
   return (
-    <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '64px' }} />
+    <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: `${height}px` }} />
   )
 }
 
@@ -605,7 +606,7 @@ function WorkletBadge({ active }: { active: boolean }) {
 
 const MAX_SR = 96000
 
-export default function RecordingPage() {
+export default function RecordingPage({ active = true }: { active?: boolean }) {
   const { sessionId, addFiles } = useStore()
   const navigate = useNavigate()
 
@@ -655,6 +656,7 @@ export default function RecordingPage() {
 
   // Recordings
   const [recordings,   setRecordings]   = useState<Recording[]>([])
+  const [settingsOpen, setSettingsOpen] = useState(true)
   const [pendingRec,   setPendingRec]   = useState<Recording|null>(null)
   const [playingId,    setPlayingId]    = useState<string|null>(null)
   const [playVolume,   setPlayVolume]   = useState<number>(0.8)
@@ -706,6 +708,47 @@ export default function RecordingPage() {
   useEffect(() => { overloadDbRef.current= overloadDb },  [overloadDb])
   useEffect(() => { selectedDevRef.current = selectedDev }, [selectedDev])
   useEffect(() => { captureModeRef.current = captureMode }, [captureMode])
+
+  // ── Takes kept in this browser ──────────────────────────────────────────────
+  // Accepted recordings are saved in IndexedDB, so leaving the page or reloading does not lose them.
+  useEffect(() => {
+    let alive = true
+    loadTakes().then(stored => {
+      if (!alive || !stored.length) return
+      setRecordings(prev => {
+        const have = new Set(prev.map(r => r.id))
+        const restored = stored.filter(t => !have.has(t.id)).map(t => ({ ...t, url: URL.createObjectURL(t.blob) }))
+        return [...restored, ...prev]
+      })
+    })
+    return () => { alive = false }
+  }, [])
+
+  // Warn before closing the tab or reloading with a take that has not been kept yet
+  const hasUnsaved = ['waiting', 'recording', 'busy', 'reviewing'].includes(recState) || avgCount > 0 || !!pendingRec
+  useEffect(() => {
+    if (!hasUnsaved) return
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [hasUnsaved])
+
+  // The page stays mounted while the user visits other pages (see Layout): stop playback when hidden
+  useEffect(() => {
+    if (!active) { audioElRef.current?.pause(); setPlayingId(null) }
+  }, [active])
+
+  // Tell the rest of the app whether the microphone is in use (the navigation shows a dot)
+  useEffect(() => {
+    useStore.getState().setDaqState(recState === 'recording' ? 'recording' : ['armed', 'waiting'].includes(recState) ? 'monitoring' : 'idle')
+  }, [recState])
+  useEffect(() => () => useStore.getState().setDaqState('idle'), [])
+
+  // Settings fold away once the microphone is open and come back when it closes
+  useEffect(() => {
+    if (recState === 'armed') setSettingsOpen(false)
+    if (recState === 'idle') setSettingsOpen(true)
+  }, [recState])
 
   // ── Play-cursor RAF loop ────────────────────────────────────────────────────
   useEffect(() => {
@@ -909,7 +952,12 @@ export default function RecordingPage() {
     if (workletNodeRef.current) {
       workletNodeRef.current.port.postMessage({ type: 'stop' })
       setTimeout(() => finalizeWorklet(), 120)
-    } else { mediaRecRef.current?.stop() }
+    } else if (mediaRecRef.current?.state === 'recording') {
+      mediaRecRef.current.stop()
+    } else {
+      // The capture was cut (device lost, stream closed): keep what was recorded so far instead of hanging in 'busy'
+      void finalizeWorklet()
+    }
   }
 
   const discardCurrentRecording = () => {
@@ -1011,12 +1059,23 @@ export default function RecordingPage() {
     stopStream(); setRecState('reviewing')
   }
 
+  // Add a take to the list and keep a copy of it in this browser
+  const keepTake = (rec: Recording) => {
+    setRecordings(prev => [...prev, rec])
+    saveTake({
+      id: rec.id, name: rec.name, blob: rec.blob, durationSec: rec.durationSec, bitDepth: rec.bitDepth,
+      sr: rec.sr, device: rec.device, capturedAt: rec.capturedAt, mode: rec.mode,
+    }).then(ok => {
+      if (!ok) toast.info("Couldn't keep a copy of this recording in the browser: send it to Post-Processing or download it before leaving.")
+    })
+  }
+
   const acceptRecording = () => {
     if (!pendingRec) return
 
     // If this is the final averaged result, save it directly
     if (pendingRec.mode.includes('average') && avgTakesRef.current.length === 0) {
-      setRecordings(prev => [...prev, pendingRec])
+      keepTake(pendingRec)
       setPendingRec(null); pendingPcmRef.current = null; setRecName(''); setRecState('idle')
       toast.success(`"${pendingRec.name}" saved`)
       return
@@ -1055,7 +1114,7 @@ export default function RecordingPage() {
         setTimeout(() => armStream(), 300)
       }
     } else {
-      setRecordings(prev => [...prev, pendingRec])
+      keepTake(pendingRec)
       setPendingRec(null); pendingPcmRef.current = null; setRecName(''); setRecState('idle')
       toast.success(`"${pendingRec.name}" saved`)
     }
@@ -1191,6 +1250,7 @@ export default function RecordingPage() {
   const deleteRecording = (id: string) => {
     setRecordings(prev => { const r=prev.find(x=>x.id===id); if(r) URL.revokeObjectURL(r.url); return prev.filter(x=>x.id!==id) })
     setDeleteConfId(null)
+    void deleteTake(id)
     if (playingId===id) { audioElRef.current?.pause(); setPlayingId(null) }
   }
 
@@ -1220,8 +1280,100 @@ export default function RecordingPage() {
         <h1 className="text-base font-semibold">Data Acquisition</h1>
       </div>
 
-      {/* ── Device + Settings ── */}
-      <div className="bg-surface border border-border rounded-lg p-4 flex flex-col gap-3">
+      {/* ── Sticky transport bar: Record, Stop, time and level stay in reach while scrolling ── */}
+      <div className="sticky -top-4 z-20 -mx-4 px-4 py-2 bg-dark/95 backdrop-blur border-b border-border flex flex-col gap-1.5">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 shrink-0">
+            {recState==='idle' && (
+              <button onClick={armStream}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-teal/20 text-teal text-sm font-medium hover:bg-teal/30 transition-colors">
+                <Mic size={14}/> Monitor
+              </button>
+            )}
+            {isArmed && captureMode==='immediate' && (<>
+              <button onClick={startRecording}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-orange text-white text-sm font-medium hover:bg-orange/80 transition-colors">
+                <span className="w-2.5 h-2.5 rounded-full bg-white"/> Record
+              </button>
+              <button onClick={()=>{stopStream();setRecState('idle')}}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-panel border border-border text-muted text-sm hover:text-white transition-colors">
+                Cancel
+              </button>
+            </>)}
+            {isArmed && captureMode==='triggered' && (<>
+              <button onClick={startWaiting}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-amber/20 text-amber text-sm font-medium hover:bg-amber/30 transition-colors">
+                <Zap size={14}/> Watch
+              </button>
+              <button onClick={()=>{stopStream();setRecState('idle')}}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-panel border border-border text-muted text-sm hover:text-white transition-colors">
+                Cancel
+              </button>
+            </>)}
+            {isWaiting && (
+              <button onClick={cancelWaiting}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-panel border border-amber/40 text-amber text-sm hover:bg-amber/10 transition-colors">
+                <Square size={13} fill="currentColor"/> Cancel
+              </button>
+            )}
+            {isRecording && (
+              <button onClick={stopRecording}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-panel border border-border text-white text-sm font-medium hover:bg-orange/20 hover:border-orange/50 transition-colors">
+                <Square size={13} fill="currentColor"/> Stop
+              </button>
+            )}
+            {isBusy && (
+              <div className="flex items-center gap-2 text-sm text-muted">
+                <RefreshCw size={13} className="animate-spin"/> Encoding WAV…
+              </div>
+            )}
+            {isReviewing && pendingRec && (<>
+              <button onClick={acceptRecording}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-teal text-dark text-sm font-semibold hover:bg-teal/80 transition-colors">
+                <CheckCircle size={14}/> Accept
+              </button>
+              <button onClick={declineRecording}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-panel border border-orange/40 text-orange text-sm font-medium hover:bg-orange/10 transition-colors">
+                <XCircle size={14}/> Discard
+              </button>
+            </>)}
+          </div>
+
+          {isRecording && (
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="w-2 h-2 rounded-full bg-orange animate-pulse"/>
+              <span className="text-sm font-mono text-orange">{fmtTime(displayTime)}</span>
+              {isCountdown && <span className="text-xs text-muted">remaining</span>}
+              {!isCountdown && durMode==='fixed' && <span className="text-xs text-muted">/ {fmtTime(durSeconds)}</span>}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider shrink-0">Level</span>
+            <div className="flex-1"><VUMeter analyser={analyser} onClip={handleClip} height={48}/></div>
+            <ClipIndicator clipping={clipping}/>
+            <WorkletBadge active={workletActive}/>
+          </div>
+        </div>
+        {isRecording && durMode==='fixed' && (
+          <div className="h-1 bg-panel rounded overflow-hidden">
+            <div className="h-full bg-orange transition-all" style={{width:`${Math.min(100,(elapsed/durSeconds)*100)}%`}}/>
+          </div>
+        )}
+      </div>
+
+      {/* ── Device + Settings (fold away while the microphone is open) ── */}
+      <div className="bg-surface border border-border rounded-lg">
+        <button type="button" onClick={() => setSettingsOpen(o => !o)} aria-expanded={settingsOpen}
+          className="flex w-full items-center gap-2 px-4 py-2.5 text-left">
+          <ChevronRight size={14} className={`shrink-0 text-muted transition-transform ${settingsOpen ? 'rotate-90' : ''}`}/>
+          <span className="text-xs font-semibold text-muted uppercase tracking-wider shrink-0">Settings</span>
+          <span className="text-xs text-muted truncate">
+            {(sampleRate/1000).toFixed(1)} kHz · {channels===1?'Mono':'Stereo→Mono'} · {bitDepth}-bit · {captureMode==='immediate'?'Immediate':'Level trigger'}{durMode==='fixed'?` · ${durSeconds} s`:''}{avgEnabled?` · average of ${avgTotal}`:''}
+          </span>
+        </button>
+        {settingsOpen && (
+      <div className="px-4 pb-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-muted uppercase tracking-wider">Input Device</span>
           <button onClick={refreshDevices} className="flex items-center gap-1 text-xs text-muted hover:text-white transition-colors">
@@ -1398,17 +1550,12 @@ export default function RecordingPage() {
           </div>
         </div>
       </div>
+        )}
+      </div>
 
-      {/* ── Monitoring panel ── */}
+      {/* ── Live plots: only while the microphone is open ── */}
+      {isActive && (
       <div className="bg-surface border border-border rounded-lg p-4 flex flex-col gap-3">
-
-        {/* VU meter row */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-muted uppercase tracking-wider shrink-0">Level</span>
-          <div className="flex-1"><VUMeter analyser={analyser} onClip={handleClip}/></div>
-          <ClipIndicator clipping={clipping}/>
-          <WorkletBadge active={workletActive}/>
-        </div>
 
         {/* Live plots */}
         {isActive && (
@@ -1453,73 +1600,8 @@ export default function RecordingPage() {
             className="bg-panel border border-border rounded px-2 py-1.5 text-sm text-white placeholder-muted focus:outline-none focus:border-teal"/>
         )}
 
-        {/* Timer / Countdown */}
-        {isRecording && (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-orange animate-pulse"/>
-              <span className="text-sm font-mono text-orange">{fmtTime(displayTime)}</span>
-              {isCountdown && <span className="text-xs text-muted">remaining</span>}
-              {!isCountdown && durMode==='fixed' && <span className="text-xs text-muted">/ {fmtTime(durSeconds)}</span>}
-              <span className="text-xs text-muted ml-auto">
-                {workletActive?'PCM':'MediaRec'} · {bitDepth}-bit · {(sampleRate/1000).toFixed(1)} kHz
-              </span>
-            </div>
-            {durMode==='fixed' && (
-              <div className="h-1 bg-panel rounded overflow-hidden">
-                <div className="h-full bg-orange transition-all" style={{width:`${Math.min(100,(elapsed/durSeconds)*100)}%`}}/>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Action buttons */}
-        <div className="flex gap-2 flex-wrap">
-          {recState==='idle' && (
-            <button onClick={armStream}
-              className="flex items-center gap-1.5 px-4 py-2 rounded bg-teal/20 text-teal text-sm font-medium hover:bg-teal/30 transition-colors">
-              <Mic size={14}/> Monitor
-            </button>
-          )}
-          {isArmed && captureMode==='immediate' && (<>
-            <button onClick={startRecording}
-              className="flex items-center gap-1.5 px-4 py-2 rounded bg-orange text-white text-sm font-medium hover:bg-orange/80 transition-colors">
-              <span className="w-2.5 h-2.5 rounded-full bg-white"/> Record
-            </button>
-            <button onClick={()=>{stopStream();setRecState('idle')}}
-              className="flex items-center gap-1.5 px-3 py-2 rounded bg-panel border border-border text-muted text-sm hover:text-white transition-colors">
-              Cancel
-            </button>
-          </>)}
-          {isArmed && captureMode==='triggered' && (<>
-            <button onClick={startWaiting}
-              className="flex items-center gap-1.5 px-4 py-2 rounded bg-amber/20 text-amber text-sm font-medium hover:bg-amber/30 transition-colors">
-              <Zap size={14}/> Watch
-            </button>
-            <button onClick={()=>{stopStream();setRecState('idle')}}
-              className="flex items-center gap-1.5 px-3 py-2 rounded bg-panel border border-border text-muted text-sm hover:text-white transition-colors">
-              Cancel
-            </button>
-          </>)}
-          {isWaiting && (
-            <button onClick={cancelWaiting}
-              className="flex items-center gap-1.5 px-3 py-2 rounded bg-panel border border-amber/40 text-amber text-sm hover:bg-amber/10 transition-colors">
-              <Square size={13} fill="currentColor"/> Cancel
-            </button>
-          )}
-          {isRecording && (
-            <button onClick={stopRecording}
-              className="flex items-center gap-1.5 px-4 py-2 rounded bg-panel border border-border text-white text-sm font-medium hover:bg-orange/20 hover:border-orange/50 transition-colors">
-              <Square size={13} fill="currentColor"/> Stop
-            </button>
-          )}
-          {isBusy && (
-            <div className="flex items-center gap-2 text-sm text-muted">
-              <RefreshCw size={13} className="animate-spin"/> Encoding WAV…
-            </div>
-          )}
-        </div>
       </div>
+      )}
 
       {/* ── Accept / Decline gate ── */}
       {isReviewing && pendingRec && (
@@ -1580,7 +1662,7 @@ export default function RecordingPage() {
       {recordings.length > 0 && (
         <div className="bg-surface border border-border rounded-lg p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Recordings ({recordings.length})</span>
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Recordings ({recordings.length})<span className="ml-2 normal-case font-normal tracking-normal text-muted/70">kept in this browser</span></span>
             <div className="flex items-center gap-1.5">
               <button onClick={()=>setPlayMuted(m=>!m)} className="text-muted hover:text-white transition-colors">
                 {playMuted?<VolumeX size={13}/>:<Volume2 size={13}/>}

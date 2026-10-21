@@ -56,6 +56,8 @@ export interface WaveformData {
   t: number[]
   amplitude: number[]
   peak?: number          // highest absolute sample of the whole file (full scale = 1)
+  reduced?: boolean      // true: min and max of each bucket, interleaved (long signals)
+  calibrated?: boolean   // amplitude is in Pa instead of full scale
   duration_s: number
   sample_rate: number
 }
@@ -84,6 +86,7 @@ export interface SpectrogramData {
 }
 
 export interface EnvelopeData {
+  reduced?: boolean
   t: number[]
   signal: number[]
   envelope: number[]

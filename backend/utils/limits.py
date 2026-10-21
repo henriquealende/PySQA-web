@@ -14,6 +14,7 @@ limit is detected, so local development stays unrestricted:
     PYSQA_MAX_AUDIO_RAM_MB      float64 audio kept in RAM across all sessions
     PYSQA_SESSION_IDLE_MIN      minutes without activity before a session is dropped
     PYSQA_HEAVY_WAIT_S          seconds a heavy job may wait for the single compute slot
+    PYSQA_MAX_EXPORT_CELLS      largest Excel table the server builds (CSV is made in the browser)
 
 Set one of them to 0 to disable that limit alone.
 """
@@ -82,6 +83,7 @@ MAX_FILES_PER_SESSION = _setting("PYSQA_MAX_FILES_PER_SESSION", 20 * _SCALE)
 MAX_AUDIO_RAM_MB      = _setting("PYSQA_MAX_AUDIO_RAM_MB",      120 * _SCALE)
 SESSION_IDLE_MIN      = _setting("PYSQA_SESSION_IDLE_MIN",      30)
 HEAVY_WAIT_S          = _setting("PYSQA_HEAVY_WAIT_S",          120) or 120.0
+MAX_EXPORT_CELLS      = _setting("PYSQA_MAX_EXPORT_CELLS",      100_000 * _SCALE)   # ~0.65 MB of RAM per 1000 cells
 
 BASELINE_MB = 160.0   # idle footprint of this app (FastAPI + numpy/scipy/mosqito), measured on Render
 RESERVE_MB  = 40.0    # head-room kept free for the interpreter, request buffers and JSON encoding
@@ -203,6 +205,15 @@ def check_upload_audio(filename: str, duration_s: float) -> None:
         )
 
 
+def check_export_size(cells: int) -> None:
+    """An .xlsx is built in memory cell by cell (about 0.65 MB per 1000 cells): refuse the huge ones."""
+    if MAX_EXPORT_CELLS and cells > MAX_EXPORT_CELLS:
+        raise ResourceLimitError(
+            f"This table has {cells:,} cells; the server builds Excel files of up to {MAX_EXPORT_CELLS:,.0f}. "
+            "Use CSV instead: it is made in your browser and has no limit."
+        )
+
+
 def describe(audio_ram_mb: float = 0.0) -> Dict[str, object]:
     """Snapshot for /api/health."""
     rss = rss_mb()
@@ -216,4 +227,5 @@ def describe(audio_ram_mb: float = 0.0) -> Dict[str, object]:
         "max_files_per_session": MAX_FILES_PER_SESSION,
         "max_audio_ram_mb": MAX_AUDIO_RAM_MB,
         "session_idle_min": SESSION_IDLE_MIN,
+        "max_export_cells": MAX_EXPORT_CELLS,
     }

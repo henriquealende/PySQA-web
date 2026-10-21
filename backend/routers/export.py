@@ -1,6 +1,7 @@
 """Export router — WAV, XLSX, CSV downloads."""
 from __future__ import annotations
 
+import csv
 import io
 from pathlib import Path
 from typing import List
@@ -10,6 +11,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from services.session_store import get_entry
+from utils import limits
 
 router = APIRouter()
 
@@ -123,7 +125,8 @@ def _build_xlsx(plot_data: List[dict]) -> io.BytesIO:
 
         # ── Column widths (auto-fit heuristic) ─────────────────────────
         for ci, col_name in enumerate(col_names, start=1):
-            first_line = display.split("\n")[0] if "\n" in display else display
+            shown = col_name if ("\n" in col_name or " " in col_name) else col_name.replace("_", " ").title()
+            first_line = shown.split("\n")[0]
             header_len = len(first_line) + 2
             max_content = 0
             for ri in range(min(n_rows, 500)):   # sample first 500 rows
@@ -134,15 +137,10 @@ def _build_xlsx(plot_data: List[dict]) -> io.BytesIO:
             ws.column_dimensions[get_column_letter(ci)].width = width
 
         # ── Header row height (taller for multi-line headers) ──
-        ws.row_dimensions[1].height = 32
+        ws.row_dimensions[1].height = 32 if any("\n" in c for c in col_names) else 20
 
         # ── Freeze header row ──────────────────────────────────────────
         ws.freeze_panes = "A2"
-
-        # ── Row height ─────────────────────────────────────────────────
-        ws.row_dimensions[1].height = 20
-        for ri in range(2, n_rows + 2):
-            ws.row_dimensions[ri].height = 16
 
     buf = io.BytesIO()
     wb.save(buf)
@@ -152,6 +150,8 @@ def _build_xlsx(plot_data: List[dict]) -> io.BytesIO:
 
 @router.post("/xlsx")
 def export_xlsx(body: XLSXRequest):
+    cells = sum(len(v) for sheet in body.plot_data for v in (sheet.get("columns") or {}).values())
+    limits.check_export_size(cells)
     buf = _build_xlsx(body.plot_data)
     return StreamingResponse(
         buf,
@@ -168,16 +168,14 @@ class CSVRequest(BaseModel):
 
 @router.post("/csv")
 def export_csv(body: CSVRequest):
-    lines = [",".join(body.columns.keys())]
+    out = io.StringIO()
+    writer = csv.writer(out)               # quotes headers that contain commas or line breaks
+    writer.writerow(body.columns.keys())
     rows = max((len(v) for v in body.columns.values()), default=0)
     for i in range(rows):
-        row = []
-        for vals in body.columns.values():
-            row.append(str(vals[i]) if i < len(vals) else "")
-        lines.append(",".join(row))
-    csv_str = "\n".join(lines)
+        writer.writerow(["" if i >= len(vals) or vals[i] is None else vals[i] for vals in body.columns.values()])
     return StreamingResponse(
-        io.BytesIO(csv_str.encode()),
+        io.BytesIO(out.getvalue().encode("utf-8-sig")),      # BOM so Excel reads accents correctly
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="pysqa_export.csv"'},
     )

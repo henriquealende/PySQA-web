@@ -37,6 +37,7 @@ interface AppState {
   audioDuration: number
   restore: { done: number; total: number } | null   // files being put back after the server forgot them
   serverWaking: boolean                              // the server is not answering: a cold start
+  daqState: 'idle' | 'monitoring' | 'recording'      // is the microphone in use on the Data Acquisition page?
 
   setFiles: (files: AudioFile[]) => void
   addFiles: (files: AudioFile[]) => void
@@ -57,6 +58,7 @@ interface AppState {
   hydrate: (files: AudioFile[], calibrations: Record<string, number | null>) => void
   setRestore: (r: { done: number; total: number } | null) => void
   setServerWaking: (v: boolean) => void
+  setDaqState: (s: 'idle' | 'monitoring' | 'recording') => void
 }
 
 // Stable session ID per tab — persists across hot-reloads in dev
@@ -86,6 +88,7 @@ export const useStore = create<AppState>((set, get) => ({
   audioDuration: 0,
   restore: null,
   serverWaking: false,
+  daqState: 'idle',
 
   setFiles: (files) => set({ files }),
   addFiles: (incoming) => set((s) => {
@@ -131,4 +134,5 @@ export const useStore = create<AppState>((set, get) => ({
   }),
   setRestore: (restore) => set({ restore }),
   setServerWaking: (serverWaking) => set({ serverWaking }),
+  setDaqState: (daqState) => set({ daqState }),
 }))

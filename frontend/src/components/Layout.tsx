@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import ToastContainer from './ToastContainer'
 import StatusBanner from './StatusBanner'
-import { NavLink, Outlet } from 'react-router-dom'
+import RecordingPage from '../pages/DataAcquisition/RecordingPage'
+import { useStore } from '../store/useStore'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Activity, Mic, BarChart2, Menu, X } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -11,8 +13,26 @@ const NAV = [
   { to: '/system-analysis',  label: 'System Analysis',  Icon: BarChart2 },
 ]
 
+/** Pulsing dot on the Data Acquisition tab while the microphone is open (also when you are on another page). */
+function DaqDot({ state }: { state: 'idle' | 'monitoring' | 'recording' }) {
+  if (state === 'idle') return null
+  return (
+    <span
+      className={clsx('w-1.5 h-1.5 rounded-full animate-pulse', state === 'recording' ? 'bg-orange' : 'bg-teal')}
+      title={state === 'recording' ? 'Recording' : 'Microphone is open'}
+    />
+  )
+}
+
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const daqState = useStore((s) => s.daqState)
+
+  // Data Acquisition stays mounted once opened (it is only hidden on other pages), so a recording,
+  // a take under review and the open microphone survive a visit to Post-Processing.
+  const isDaq = useLocation().pathname.startsWith('/data-acquisition')
+  const [daqVisited, setDaqVisited] = useState(isDaq)
+  useEffect(() => { if (isDaq) setDaqVisited(true) }, [isDaq])
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-dark">
@@ -43,6 +63,7 @@ export default function Layout() {
             >
               <Icon size={13} />
               {label}
+              {to === '/data-acquisition' && <DaqDot state={daqState} />}
             </NavLink>
           ))}
         </nav>
@@ -78,6 +99,7 @@ export default function Layout() {
             >
               <Icon size={15} />
               {label}
+              {to === '/data-acquisition' && <DaqDot state={daqState} />}
             </NavLink>
           ))}
         </div>
@@ -88,6 +110,11 @@ export default function Layout() {
       {/* ── Page content ─────────────────────────────────────────────── */}
       <main className="flex flex-1 overflow-hidden">
         <Outlet />
+        {daqVisited && (
+          <div className={isDaq ? 'flex flex-1 overflow-hidden' : 'hidden'}>
+            <RecordingPage active={isDaq} />
+          </div>
+        )}
       </main>
       <ToastContainer />
     </div>

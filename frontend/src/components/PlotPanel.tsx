@@ -336,14 +336,14 @@ function NormalView({ sessionId, audioId, compareId, compareName }: {
 
   const calKey = calibrations[audioId] ?? null
 
-  // Waveform: re-fetch only on file change (calibration doesn't affect raw signal shape)
+  // Waveform: re-fetch when the file or its calibration changes (the server scales it to Pa when calibrated)
   useEffect(() => {
     setWf(null); setWfCmp(null)
     const primary  = fetchWaveform(sessionId, audioId).then(setWf)
     const compare  = compareId ? fetchWaveform(sessionId, compareId).then(setWfCmp) : Promise.resolve()
     Promise.all([primary, compare])
       .catch(e => setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message))
-  }, [sessionId, audioId, compareId])
+  }, [sessionId, audioId, compareId, calKey])
 
   // Spectrum: re-fetch when calibration changes (backend applies calibration_pa)
   useEffect(() => {
