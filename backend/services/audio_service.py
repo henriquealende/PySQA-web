@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import os
 import tempfile
 import uuid
 from pathlib import Path
@@ -11,7 +12,8 @@ import numpy as np
 from scipy.io import wavfile
 from scipy.signal import spectrogram as scipy_spectrogram, hilbert
 
-from services.session_store import AudioEntry, new_audio_id, persist_session
+from services.session_store import AudioEntry, audio_ram_mb, new_audio_id, persist_session
+from utils import limits
 
 # ── Pre-warmed metric singletons ──────────────────────────────────────────────
 _LOUD = _SHARP = _ROUGH = _FS_CALC = _TON = _MPI = None
@@ -52,8 +54,8 @@ def _init_singletons():
 _init_singletons()
 
 # ── shared tmp dir ─────────────────────────────────────────────────────────
-TMP_DIR = Path(__file__).parent.parent / "tmp_sessions"
-TMP_DIR.mkdir(exist_ok=True)
+TMP_DIR = Path(os.environ.get("PYSQA_TMP_DIR") or Path(__file__).parent.parent / "tmp_sessions")
+TMP_DIR.mkdir(parents=True, exist_ok=True)
 
 # Max samples returned for waveform (down-sampled for rendering speed)
 _WAVEFORM_MAX_POINTS = 8_000
@@ -102,20 +104,63 @@ def _mono(data: np.ndarray) -> np.ndarray:
 
 # ── Waveform ──────────────────────────────────────────────────────────────────
 
+_SPECTRUM_MAX_POINTS = 2_400
+
+# Peak-preserving reduction for plotting. Plain decimation (x[::step]) drops whatever
+# falls between the kept samples: a clipped burst or a narrow tone can vanish from the
+# plot. These helpers keep the extremes of every bucket instead.
+
+def _bucket_edges(n: int, buckets: int) -> np.ndarray:
+    """Start index of each of *buckets* contiguous, near-equal slices of an n-sample signal."""
+    return np.linspace(0, n, buckets + 1, dtype=np.int64)[:-1]
+
+
+def _minmax_envelope(x: np.ndarray, sr: int, max_points: int) -> Tuple[np.ndarray, np.ndarray]:
+    """Reduce *x* to at most *max_points* samples without losing peaks.
+
+    Every bucket contributes its minimum and its maximum, both placed at the bucket
+    centre, so plotting the result as a line draws the true min/max envelope.
+    """
+    n = len(x)
+    idx = _bucket_edges(n, max(1, max_points // 2))
+    ends = np.append(idx[1:], n)
+    y = np.empty(2 * len(idx))
+    y[0::2] = np.minimum.reduceat(x, idx)
+    y[1::2] = np.maximum.reduceat(x, idx)
+    return np.repeat((idx + ends) / 2.0 / sr, 2), y
+
+
+def _log_reduce(freqs: np.ndarray, mag: np.ndarray, max_points: int):
+    """Reduce a linear-magnitude spectrum to ~max_points log-spaced buckets.
+
+    Returns (centre_freqs, peak, rms) per bucket. The peak keeps narrow tones at their
+    true level; the rms (power mean) keeps the noise floor honest. Buckets are laid out
+    in bin indices, so low frequencies (fewer bins than buckets) keep full resolution.
+    """
+    n = len(freqs)
+    edges = np.geomspace(freqs[1], freqs[-1], max_points + 1)
+    idx = np.unique(np.searchsorted(freqs, edges[:-1]))
+    idx = idx[idx >= 1]
+    ends = np.append(idx[1:], n)
+    peak = np.maximum.reduceat(mag, idx)
+    rms = np.sqrt(np.add.reduceat(mag ** 2, idx) / (ends - idx))
+    centre = (freqs[idx] + freqs[ends - 1]) / 2.0
+    return centre, peak, rms
+
+
 def compute_waveform(entry: AudioEntry) -> Dict[str, Any]:
     mono = _mono(entry.data)
     n = len(mono)
     if n > _WAVEFORM_MAX_POINTS:
-        step = n // _WAVEFORM_MAX_POINTS
-        mono_ds = mono[::step]
-        t_ds = np.linspace(0, entry.duration_s, len(mono_ds))
+        t_ds, mono_ds = _minmax_envelope(mono, entry.sample_rate, _WAVEFORM_MAX_POINTS)
     else:
         mono_ds = mono
-        t_ds = np.linspace(0, entry.duration_s, n)
+        t_ds = np.arange(n) / entry.sample_rate
 
     return {
-        "t": t_ds.tolist(),
-        "amplitude": mono_ds.tolist(),
+        "t": np.round(t_ds, 6).tolist(),
+        "amplitude": np.round(mono_ds, 6).tolist(),
+        "peak": float(np.max(np.abs(mono))) if n else 0.0,
         "duration_s": entry.duration_s,
         "sample_rate": entry.sample_rate,
     }
@@ -124,6 +169,7 @@ def compute_waveform(entry: AudioEntry) -> Dict[str, Any]:
 # ── Spectrum (FFT) ────────────────────────────────────────────────────────────
 
 def compute_spectrum(entry: AudioEntry) -> Dict[str, Any]:
+    limits.check_budget("spectrum", entry.duration_s, entry.sample_rate, audio_ram_mb())
     mono = _mono(entry.data)
     calibrated = entry.calibration_pa is not None
     if calibrated:
@@ -133,30 +179,32 @@ def compute_spectrum(entry: AudioEntry) -> Dict[str, Any]:
     window = np.hanning(n)
     fft = np.fft.rfft(mono * window)
     freqs = np.fft.rfftfreq(n, d=1.0 / entry.sample_rate)
+    mag = np.abs(fft)
 
-    if calibrated:
-        # dB SPL re 20 µPa — window amplitude correction: sum(window)/N
-        ref = 20e-6 * (n / 2)
-        magnitude_db = 20 * np.log10(np.abs(fft) / ref + 1e-12)
+    # dB SPL re 20 µPa when calibrated (window amplitude correction: sum(window)/N), else dBFS
+    ref = 20e-6 * (n / 2) if calibrated else (n / 2)
+
+    def to_db(v):
+        return np.round(20 * np.log10(v / ref + 1e-12), 2)
+
+    out: Dict[str, Any] = {"calibrated": calibrated}
+    if len(freqs) > _SPECTRUM_MAX_POINTS:
+        # magnitude_db is the per-bucket peak (tones never disappear);
+        # average_db is the per-bucket power mean (the noise floor).
+        centre, peak, rms = _log_reduce(freqs, mag, _SPECTRUM_MAX_POINTS)
+        out["freqs"] = np.round(centre, 3).tolist()
+        out["magnitude_db"] = to_db(peak).tolist()
+        out["average_db"] = to_db(rms).tolist()
     else:
-        magnitude_db = 20 * np.log10(np.abs(fft) / (n / 2) + 1e-12)
-
-    # Down-sample for rendering
-    if len(freqs) > 4096:
-        step = len(freqs) // 4096
-        freqs = freqs[::step]
-        magnitude_db = magnitude_db[::step]
-
-    return {
-        "freqs": freqs.tolist(),
-        "magnitude_db": magnitude_db.tolist(),
-        "calibrated": calibrated,
-    }
+        out["freqs"] = np.round(freqs, 3).tolist()
+        out["magnitude_db"] = to_db(mag).tolist()
+    return out
 
 
 # ── Spectrogram ───────────────────────────────────────────────────────────────
 
 def compute_spectrogram(entry: AudioEntry, params: dict | None = None) -> Dict[str, Any]:
+    limits.check_budget("spectrogram", entry.duration_s, entry.sample_rate, audio_ram_mb())
     p         = params or {}
     nfft      = int(p.get("nfft", 2048))
     overlap   = float(p.get("overlap", 75.0))
@@ -214,6 +262,7 @@ def compute_spectrogram(entry: AudioEntry, params: dict | None = None) -> Dict[s
 # ── 1/3-Octave bands ─────────────────────────────────────────────────────────
 
 def compute_octave_bands(entry: AudioEntry, weighting: str = "Z") -> Dict[str, Any]:
+    limits.check_budget("octave", entry.duration_s, entry.sample_rate, audio_ram_mb())
     from processing.filtering import THIRD_OCTAVE_CENTRES_HZ, apply_filter, FilterType, apply_weighting
 
     mono = _mono(entry.data)
@@ -272,6 +321,7 @@ def compute_envelope(
     sr   = entry.sample_rate
     n    = len(mono)
 
+    limits.check_budget("envelope", entry.duration_s, sr, audio_ram_mb())
     env_raw  = np.abs(hilbert(mono))   # compute once
     envelope = env_raw.copy()
 
@@ -289,34 +339,30 @@ def compute_envelope(
         except Exception:
             pass
 
-    # Downsample for rendering
+    # Downsample for rendering — keep the true min/max of the signal and the max of the envelope
     if n > _WAVEFORM_MAX_POINTS:
-        step   = n // _WAVEFORM_MAX_POINTS
-        t      = np.linspace(0, entry.duration_s, n // step)
-        sig_ds = mono[::step]
-        env_ds = envelope[::step]
+        t, sig_ds = _minmax_envelope(mono, sr, _WAVEFORM_MAX_POINTS)
+        idx    = _bucket_edges(n, max(1, _WAVEFORM_MAX_POINTS // 2))
+        env_ds = np.repeat(np.maximum.reduceat(envelope, idx), 2)
     else:
-        t      = np.linspace(0, entry.duration_s, n)
+        t      = np.arange(n) / sr
         sig_ds = mono
         env_ds = envelope
 
     # Envelope spectrum — reuse unsmoothed result (no second hilbert call)
-    env_full    = env_raw
-    fft_env     = np.fft.rfft(env_full * np.hanning(n))
-    f_env       = np.fft.rfftfreq(n, d=1.0 / sr)
-    env_spec_db = 20 * np.log10(np.abs(fft_env) / (n / 2) + 1e-12)
-
+    fft_env = np.fft.rfft(env_raw * np.hanning(n))
+    f_env   = np.fft.rfftfreq(n, d=1.0 / sr)
+    mag_env = np.abs(fft_env)
     if len(f_env) > 2048:
-        step2       = len(f_env) // 2048
-        f_env       = f_env[::step2]
-        env_spec_db = env_spec_db[::step2]
+        f_env, mag_env, _ = _log_reduce(f_env, mag_env, 2048)
+    env_spec_db = 20 * np.log10(mag_env / (n / 2) + 1e-12)
 
     return {
-        "t": t.tolist(),
-        "signal": sig_ds.tolist(),
-        "envelope": env_ds.tolist(),
-        "f_env": f_env.tolist(),
-        "env_spec_db": env_spec_db.tolist(),
+        "t": np.round(t, 6).tolist(),
+        "signal": np.round(sig_ds, 6).tolist(),
+        "envelope": np.round(env_ds, 6).tolist(),
+        "f_env": np.round(f_env, 3).tolist(),
+        "env_spec_db": np.round(env_spec_db, 2).tolist(),
     }
 
 
@@ -337,11 +383,16 @@ def compute_metric(entry: AudioEntry, metric_key: str, field_type: str = "free")
     if cache_key in entry._cache:
         return entry._cache[cache_key]
 
-    mono = _calibrated_mono(entry)
-    sr   = entry.sample_rate
-    result = _dispatch_metric(mono, sr, metric_key, field_type=field_type)
-    entry._cache[cache_key] = result
-    return result
+    # One memory-hungry computation at a time; the others wait for the slot.
+    with limits.heavy_slot():
+        if cache_key in entry._cache:          # finished by a request that was ahead in the queue
+            return entry._cache[cache_key]
+        limits.check_budget(metric_key, entry.duration_s, entry.sample_rate, audio_ram_mb())
+        mono = _calibrated_mono(entry)
+        sr   = entry.sample_rate
+        result = _dispatch_metric(mono, sr, metric_key, field_type=field_type)
+        entry._cache[cache_key] = result
+        return result
 
 
 def _dispatch_metric(mono: np.ndarray, sr: int, key: str, field_type: str = "free") -> Dict[str, Any]:

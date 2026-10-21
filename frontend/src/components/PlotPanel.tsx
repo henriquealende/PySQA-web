@@ -148,7 +148,7 @@ function SessionExpiredMsg() {
   const clearSession = useStore(s => s.clearSession)
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center px-4">
-      <p className="text-xs text-amber-400 max-w-xs">Backend restarted — session data was lost.</p>
+      <p className="text-xs text-amber-400 max-w-xs">Your files are no longer on the server (it restarted or the session expired).</p>
       <button onClick={clearSession} className="px-4 py-1.5 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">
         Clear &amp; Re-upload files
       </button>
@@ -372,10 +372,18 @@ function NormalView({ sessionId, audioId, compareId, compareName }: {
   const specCalibrated = sp.calibrated ?? false
   const specUnit = specCalibrated ? 'dB SPL' : 'dBFS'
 
+  // When the server reduced the spectrum for plotting it sends the per-bucket peak
+  // (tones stay at their true level) plus the power average (the noise floor).
+  const hasAvg = !!sp.average_db
   const spData: Plotly.Data[] = [
     { x: sp.freqs, y: sp.magnitude_db, type: 'scatter', mode: 'lines',
-      line: { color: C_ORANGE, width: 1 }, name: 'Spectrum',
+      line: { color: hasAvg ? 'rgba(237,105,59,0.55)' : C_ORANGE, width: 1 }, name: hasAvg ? 'Peak' : 'Spectrum',
       hovertemplate: `%{x:.1f} Hz — %{y:.1f} ${specUnit}<extra></extra>` },
+    ...(hasAvg ? [{
+      x: sp.freqs, y: sp.average_db, type: 'scatter' as const, mode: 'lines' as const,
+      line: { color: C_ORANGE, width: 1.6 }, name: 'Average',
+      hovertemplate: `%{x:.1f} Hz — %{y:.1f} ${specUnit}<extra></extra>`,
+    }] : []),
     ...(spCmp ? [{
       x: spCmp.freqs, y: spCmp.magnitude_db, type: 'scatter' as const, mode: 'lines' as const,
       line: { color: C_YELLOW, width: 1, dash: 'dot' as const }, name: `Spectrum (${compareName})`,
@@ -418,7 +426,8 @@ function NormalView({ sessionId, audioId, compareId, compareName }: {
           yaxis: { ...BASE_LAYOUT.yaxis, title: isCalibrated ? 'SPL (dB re 20 µPa)' : 'Magnitude (dBFS)' },
           shapes: f0 ? harmonicShapes(f0, C_ORANGE) : [],
           annotations: spPins.map(p => makePinAnnotation(p, true, '.0f', '.1f', specUnit)),
-          showlegend: showLegend, legend: { font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' } }}
+          showlegend: showLegend || hasAvg,
+          legend: { x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top', font: { size: 10, color: '#8ab4c9' }, bgcolor: 'rgba(17,28,40,0.7)' } }}
         config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler
         onClick={(evt: any) => { const pt = evt.points?.[0]; if (!pt) return; setSpPins(p => [...p, {x: pt.x, y: pt.y}]) }}
         style={{ width:'100%', height:'100%' }} />
@@ -432,6 +441,13 @@ function NormalView({ sessionId, audioId, compareId, compareName }: {
         )}
         <span className="text-[10px] text-muted">f₀</span>
         <HarmonicInput f0={f0} onChange={setF0} />
+        {wf.peak !== undefined && (
+          <span
+            className={`ml-2 text-[10px] tabular-nums ${wf.peak >= 0.999 ? 'text-orange font-semibold' : 'text-muted'}`}
+            title="Highest absolute sample of the whole file (0 dBFS = full scale)">
+            Peak {wf.peak > 0 ? (20 * Math.log10(wf.peak)).toFixed(1) : '−∞'} dBFS{wf.peak >= 0.999 ? ' · clipping' : ''}
+          </span>
+        )}
         {totalPins > 0 && (
           <button onClick={() => { setSpPins([]); setWfPins([]) }}
             className="ml-auto px-2 py-0.5 text-[10px] text-muted hover:text-white border border-border rounded transition-colors">
@@ -692,6 +708,13 @@ function OctaveView({ sessionId, audioId }: { sessionId: string; audioId: string
     : (octaveWeighting === 'A' ? 'dB(A)' : 'dBFS')
   const yLabel = `RMS Level (${octUnit})`
 
+  // Bars grow up from the bottom of the axis, so a louder band is a taller bar.
+  // (Plotly draws negative values from 0 dB downwards, which inverted the chart.)
+  const levels   = data?.levels_db ?? []
+  const valid    = levels.filter((v): v is number => v != null)
+  const floorDb  = valid.length ? Math.max(-160, Math.floor((Math.min(...valid) - 6) / 10) * 10) : -120
+  const topDb    = valid.length ? Math.ceil((Math.max(...valid) + 4) / 10) * 10 : 0
+
   return (
     <div className="relative w-full h-full">
       <GearButton onClick={() => { setPending(octaveWeighting); setShowSettings(!showSettings) }} />
@@ -702,12 +725,13 @@ function OctaveView({ sessionId, audioId }: { sessionId: string; audioId: string
         </SettingsOverlay>
       )}
       {!data ? <Spinner /> : (
-        <Plot data={[{ x: data.centres_hz.map(String), y: data.levels_db.map(v => v??-120),
+        <Plot data={[{ x: data.centres_hz.map(String), y: levels.map(v => v == null ? null : v - floorDb),
+          base: floorDb, customdata: levels,
           type: 'bar', marker: { color: C_ORANGE, opacity: 0.85 }, name: 'RMS Level',
-          hovertemplate: `%{x} Hz — %{y:.1f} ${octUnit}<extra></extra>` }]}
+          hovertemplate: `%{x} Hz — %{customdata:.1f} ${octUnit}<extra></extra>` } as any]}
           layout={{ ...BASE_LAYOUT,
             xaxis: { ...BASE_LAYOUT.xaxis, title: '1/3-Octave Band Centre (Hz)', type: 'category', tickangle: -45, tickfont: { size: 9 } },
-            yaxis: { ...BASE_LAYOUT.yaxis, title: yLabel }, bargap: 0.15 }}
+            yaxis: { ...BASE_LAYOUT.yaxis, title: yLabel, range: [floorDb, topDb] }, bargap: 0.15 }}
           config={PLOT_CONFIG} className="w-full h-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
       )}
     </div>

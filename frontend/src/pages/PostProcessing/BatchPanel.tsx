@@ -97,6 +97,7 @@ export default function BatchPanel() {
   const [keys,   setKeys]   = useState<string[]>([])
   const [busy,   setBusy]   = useState(false)
   const [error,  setError]  = useState('')
+  const [skipped, setSkipped] = useState<{ name: string; metric: string; reason: string }[]>([])
   const [pStep,  setPStep]  = useState(0)
   const [pTotal, setPTotal] = useState(0)
   const [pLabel, setPLabel] = useState('')
@@ -110,7 +111,7 @@ export default function BatchPanel() {
   const compute = async () => {
     const metrics = metricsToCompute()
     if (!metrics.length || !selectedFiles.length) return
-    setBusy(true); setError(''); setRows(null)
+    setBusy(true); setError(''); setRows(null); setSkipped([])
     setPStep(0); setPTotal(1); setPLabel('Computing all metrics on server…')
     try {
       const result = await fetchBatch(
@@ -125,6 +126,7 @@ export default function BatchPanel() {
         name: files.find(f => f.audio_id === row.audio_id)?.name ?? row.audio_id,
       }))
       setRows(named); setKeys(result.metric_keys as MetricKey[])
+      setSkipped(result.skipped ?? [])
       setPStep(1)
       toast.success('Batch analysis complete')
     } catch(e:any) {
@@ -147,6 +149,7 @@ export default function BatchPanel() {
     ...(annoyance.includes('zwk') ? ['annoyance_zwk'] : []),
   ]
   const failedKeys = augRows ? keys.filter(k => augRows.every(r => r[k]==null)) : []
+  const unexplainedFailures = failedKeys.filter(k => !skipped.some(s => s.metric === k))
 
   const METRIC_UNITS: Record<string,string> = {
     loudness_zwk: 'sone', loudness_ecma: 'sone',
@@ -296,9 +299,23 @@ export default function BatchPanel() {
             </div>
           )}
 
-          {failedKeys.length > 0 && (
+          {skipped.length > 0 && (
+            <div className="text-[11px] text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded px-3 py-2 space-y-1">
+              <p className="font-semibold">
+                {skipped.length} calculation{skipped.length > 1 ? 's were' : ' was'} skipped to protect the server
+              </p>
+              {skipped.slice(0, 4).map((s, i) => (
+                <p key={i} className="text-amber-300/80">
+                  {s.name.replace(/\.wav$/i, '')} · {keyLabel(s.metric)}: {s.reason}
+                </p>
+              ))}
+              {skipped.length > 4 && <p className="text-amber-300/60">+{skipped.length - 4} more</p>}
+            </div>
+          )}
+
+          {unexplainedFailures.length > 0 && (
             <p className="text-[11px] text-amber-400 bg-amber-400/10 border border-amber-400/30 rounded px-3 py-2">
-              Failed: {failedKeys.map(keyLabel).join(', ')} — run <code className="font-mono">pip install -r requirements.txt</code>
+              No result for: {unexplainedFailures.map(keyLabel).join(', ')}. Check the server log for details.
             </p>
           )}
 

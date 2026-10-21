@@ -4,9 +4,20 @@ export class SessionExpiredError extends Error {
   constructor() { super('Session expired — please re-upload your files.') }
 }
 
+// FastAPI answers errors as {"detail": "..."}; show the sentence, not the JSON.
+async function errorText(res: Response): Promise<string> {
+  const text = await res.text()
+  try {
+    const body = JSON.parse(text)
+    if (typeof body.detail === 'string') return body.detail
+    if (Array.isArray(body.detail)) return body.detail.map((d: any) => d?.msg ?? String(d)).join('; ')
+  } catch { /* not JSON */ }
+  return text || `Request failed (${res.status})`
+}
+
 async function checkResponse(res: Response): Promise<Response> {
   if (res.status === 404) throw new SessionExpiredError()
-  if (!res.ok) throw new Error(await res.text())
+  if (!res.ok) throw new Error(await errorText(res))
   return res
 }
 
@@ -105,7 +116,11 @@ export async function fetchBatch(
   audioIds: string[],
   metricKeys: MetricKey[],
   fieldType: FieldType = 'free',
-): Promise<{ rows: any[]; metric_keys: string[] }> {
+): Promise<{
+  rows: any[]
+  metric_keys: string[]
+  skipped?: { audio_id: string; name: string; metric: string; reason: string }[]
+}> {
   const res = await fetch(`${BASE}/${sessionId}/batch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

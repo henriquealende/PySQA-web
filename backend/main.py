@@ -11,12 +11,14 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from routers import audio, processing, export
-from services.session_store import load_all_sessions
+from services.session_store import audio_ram_mb, load_all_sessions, start_janitor
+from utils import limits
 
 # ── App ───────────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     load_all_sessions()
+    start_janitor()
     yield
 
 app = FastAPI(title="PySQA Web API", version="0.1.0", lifespan=lifespan)
@@ -41,6 +43,16 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         content={"detail": str(exc), "traceback": tb},
     )
 
+
+@app.exception_handler(limits.ResourceLimitError)
+async def resource_limit_handler(request: Request, exc: limits.ResourceLimitError):
+    return JSONResponse(status_code=413, content={"detail": str(exc)})
+
+
+@app.exception_handler(limits.ServerBusyError)
+async def server_busy_handler(request: Request, exc: limits.ServerBusyError):
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
 # ── API routers ───────────────────────────────────────────────────────────────
 app.include_router(audio.router,      prefix="/api/audio",      tags=["audio"])
 app.include_router(processing.router, prefix="/api/processing", tags=["processing"])
@@ -58,7 +70,7 @@ def health():
             status[dep] = getattr(m, "__version__", "ok")
         except ImportError as e:
             status[dep] = f"MISSING: {e}"
-    return {"status": "ok", "dependencies": status}
+    return {"status": "ok", "dependencies": status, "limits": limits.describe(audio_ram_mb())}
 
 
 # ── Serve built frontend (must come AFTER API routes) ─────────────────────────

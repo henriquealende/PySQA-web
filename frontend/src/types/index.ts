@@ -55,13 +55,15 @@ export interface MetricResult {
 export interface WaveformData {
   t: number[]
   amplitude: number[]
+  peak?: number          // highest absolute sample of the whole file (full scale = 1)
   duration_s: number
   sample_rate: number
 }
 
 export interface SpectrumData {
   freqs: number[]
-  magnitude_db: number[]
+  magnitude_db: number[]  // per-bucket peak when the spectrum was reduced for plotting
+  average_db?: number[]   // per-bucket power mean (noise floor); present when reduced
   calibrated?: boolean
 }
 

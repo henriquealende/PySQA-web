@@ -47,9 +47,11 @@ export default function AudioList({ files, selectedId, onSelect, onRemove, onEdi
             </span>
 
             {/* Action buttons — visible on hover */}
+            {/* Hidden until hover only where hovering exists; always visible on touch screens */}
             <div className={clsx(
               'absolute right-2 top-1/2 -translate-y-1/2 flex gap-1',
-              'opacity-0 group-hover:opacity-100 transition-opacity'
+              '[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100',
+              '[@media(hover:hover)]:group-focus-within:opacity-100 transition-opacity'
             )}>
               <button
                 className="p-1 rounded text-muted hover:text-teal hover:bg-teal/10 transition-colors"

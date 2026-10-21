@@ -1,17 +1,20 @@
 """Audio router — upload, info, visualisation endpoints."""
 from __future__ import annotations
 
+import io
 from pathlib import Path
 from typing import List, Optional
 
+import soundfile as sf
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 import services.audio_service as svc
 from services.session_store import (
-    add_entry, get_entry, list_entries, new_audio_id, remove_entry, persist_session
+    add_entry, ensure_room, get_entry, list_entries, new_audio_id, remove_entry, persist_session
 )
+from utils import limits
 
 router = APIRouter()
 
@@ -44,6 +47,21 @@ class CalibrateRequest(BaseModel):
 
 # ── Upload ────────────────────────────────────────────────────────────────────
 
+async def _read_upload(f: UploadFile) -> bytes:
+    """Read an upload in chunks so an oversized file is refused before it fills the memory."""
+    size = getattr(f, "size", None)
+    if size:
+        limits.check_upload_size(f.filename, size)
+    buf = bytearray()
+    while True:
+        chunk = await f.read(1024 * 1024)
+        if not chunk:
+            break
+        buf += chunk
+        limits.check_upload_size(f.filename, len(buf))
+    return bytes(buf)
+
+
 @router.post("/upload", response_model=List[AudioMeta])
 async def upload_audio(
     session_id: str = Form(...),
@@ -53,7 +71,14 @@ async def upload_audio(
     for f in files:
         if not f.filename.lower().endswith(".wav"):
             raise HTTPException(400, f"{f.filename} is not a WAV file")
-        data = await f.read()
+        data = await _read_upload(f)
+        try:                                   # header only: no decoding before the limits are checked
+            info = sf.info(io.BytesIO(data))
+        except Exception:
+            info = None
+        if info is not None and info.samplerate:
+            limits.check_upload_audio(f.filename, info.frames / info.samplerate)
+            ensure_room(session_id, info.frames * info.channels * 8 / 1048576)
         entry = svc.load_wav(data, f.filename)
         add_entry(session_id, entry)
         results.append(AudioMeta(
@@ -162,6 +187,8 @@ def compute_metric(session_id: str, audio_id: str, body: MetricRequest, backgrou
         result = svc.compute_metric(entry, body.metric_key, field_type=body.field_type)
         background_tasks.add_task(persist_session, session_id)
         return result
+    except (limits.ResourceLimitError, limits.ServerBusyError):
+        raise                                  # answered as 413 / 503 with a readable message
     except Exception as e:
         raise HTTPException(500, str(e))
 
@@ -191,6 +218,7 @@ def clear_calibration(session_id: str, audio_id: str, background_tasks: Backgrou
 @router.post("/{session_id}/batch")
 def batch_metrics(session_id: str, body: BatchRequest, background_tasks: BackgroundTasks):
     rows = []
+    skipped = []      # calculations refused to protect the server, with the reason
     for aid in body.audio_ids:
         entry = get_entry(session_id, aid)
         if not entry:
@@ -200,8 +228,11 @@ def batch_metrics(session_id: str, body: BatchRequest, background_tasks: Backgro
             try:
                 res = svc.compute_metric(entry, mk, field_type=body.field_type)
                 row[mk] = res.get("global")
+            except (limits.ResourceLimitError, limits.ServerBusyError) as exc:
+                row[mk] = None
+                skipped.append({"audio_id": aid, "name": entry.name, "metric": mk, "reason": str(exc)})
             except Exception:
                 row[mk] = None
         rows.append(row)
     background_tasks.add_task(persist_session, session_id)
-    return {"rows": rows, "metric_keys": body.metric_keys}
+    return {"rows": rows, "metric_keys": body.metric_keys, "skipped": skipped}
