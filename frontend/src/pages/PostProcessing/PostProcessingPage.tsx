@@ -108,6 +108,7 @@ export default function PostProcessingPage() {
 
   return (
     <div className="flex flex-1 overflow-hidden relative">
+      <h1 className="sr-only">Post-Processing</h1>
 
       {sidebarOpen && (
         <div
@@ -123,8 +124,8 @@ export default function PostProcessingPage() {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'
       )}>
         <FileDropzone onFiles={handleFiles} disabled={uploading} highlight={files.length === 0 && !uploading} />
-        {uploading    && <p className="text-[10px] text-teal text-center animate-pulse">Uploading…</p>}
-        {uploadError  && <p className="text-[10px] text-red-400 text-center">{uploadError}</p>}
+        {uploading    && <p className="text-[11px] text-teal text-center animate-pulse">Uploading…</p>}
+        {uploadError  && <p className="text-[11px] text-red-400 text-center">{uploadError}</p>}
 
         <AudioList
           files={files}
@@ -137,7 +138,7 @@ export default function PostProcessingPage() {
         {files.length > 0 && (
           <>
             <div className="border-t border-border pt-3 space-y-2">
-              <p className="text-[10px] text-muted uppercase tracking-wider">Metric</p>
+              <p className="text-[11px] text-muted uppercase tracking-wider">Metric</p>
               <MetricSelector
                 value={metricKey}
                 onChange={(k) => { setMetricKey(k); if (k !== 'none') setViewMode('normal') }}
@@ -146,7 +147,7 @@ export default function PostProcessingPage() {
             </div>
 
             <div className="border-t border-border pt-3 space-y-2">
-              <p className="text-[10px] text-muted uppercase tracking-wider">Field Type</p>
+              <p className="text-[11px] text-muted uppercase tracking-wider">Field Type</p>
               <div className="flex gap-1">
                 {(['free', 'diffuse'] as FieldType[]).map((ft) => (
                   <button
@@ -162,11 +163,11 @@ export default function PostProcessingPage() {
 
             {files.length > 1 && selectedId && !showBatch && (
               <div className="border-t border-border pt-3 space-y-2">
-                <p className="text-[10px] text-muted uppercase tracking-wider">Compare with</p>
+                <p className="text-[11px] text-muted uppercase tracking-wider">Compare with</p>
                 <select
                   value={compareId ?? ''}
                   onChange={e => setCompareId(e.target.value || null)}
-                  className="w-full bg-panel border border-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-teal"
+                  className="w-full bg-panel border border-field rounded px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal"
                 >
                   <option value="">— None —</option>
                   {files.filter(f => f.audio_id !== selectedId).map(f => (
@@ -176,7 +177,7 @@ export default function PostProcessingPage() {
                   ))}
                 </select>
                 {compareId && (
-                  <div className="flex items-center gap-1.5 text-[10px]">
+                  <div className="flex items-center gap-1.5 text-[11px]">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#60a5fa' }} />
                     <span className="text-muted truncate">{files.find(f => f.audio_id === compareId)?.name.replace(/\.wav$/i,'')}</span>
                     <button onClick={() => setCompareId(null)} className="ml-auto text-muted hover:text-red-400 transition-colors">✕</button>
@@ -187,7 +188,7 @@ export default function PostProcessingPage() {
 
             {selectedId && (
               <div className="border-t border-border pt-3 space-y-2">
-                <p className="text-[10px] text-muted uppercase tracking-wider">Mic Calibration</p>
+                <p className="text-[11px] text-muted uppercase tracking-wider">Mic Calibration</p>
                 {calibrations[selectedId] != null ? (
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] text-teal flex-1">
@@ -195,7 +196,7 @@ export default function PostProcessingPage() {
                     </span>
                     <button
                       onClick={handleClearCal}
-                      className="text-[10px] text-muted hover:text-red-400 transition-colors"
+                      className="text-[11px] text-muted hover:text-red-400 transition-colors"
                     >Clear</button>
                   </div>
                 ) : (
@@ -205,7 +206,7 @@ export default function PostProcessingPage() {
                       placeholder="mV/Pa"
                       value={calInput}
                       onChange={e => { setCalInput(e.target.value); setCalError('') }}
-                      className="flex-1 w-0 min-w-0 bg-panel border border-border rounded px-2 py-0.5 text-xs text-white placeholder:text-muted/70 focus:outline-none focus:border-teal"
+                      className="flex-1 w-0 min-w-0 bg-panel border border-field rounded px-2 py-0.5 text-xs text-white placeholder:text-muted/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal"
                     />
                     <button
                       onClick={handleCalibrate}
@@ -214,7 +215,7 @@ export default function PostProcessingPage() {
                     >Set</button>
                   </div>
                 )}
-                {calError && <p className="text-[10px] text-red-400">{calError}</p>}
+                {calError && <p className="text-[11px] text-red-400">{calError}</p>}
               </div>
             )}
 

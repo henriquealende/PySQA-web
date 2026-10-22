@@ -62,7 +62,7 @@ export default function SectionBar({ audioId, duration }: { audioId: string; dur
     if (e.key === 'Escape') { reset(); (e.target as HTMLInputElement).blur() }
   }
 
-  const inputCls = 'w-[4.5rem] bg-panel border border-border rounded px-1.5 py-0.5 text-xs text-white tabular-nums focus:outline-none focus:border-teal'
+  const inputCls = 'w-[4.5rem] bg-panel border border-field rounded px-1.5 py-0.5 text-xs text-white tabular-nums focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal'
 
   return (
     <div
@@ -71,7 +71,7 @@ export default function SectionBar({ audioId, duration }: { audioId: string; dur
       }`}
     >
       <Scissors size={12} className={section ? 'text-teal' : 'text-muted'} />
-      <span className="text-[10px] uppercase tracking-wider text-muted">Section</span>
+      <span className="text-[11px] uppercase tracking-wider text-muted">Section</span>
       <input
         type="number" min={0} step={0.1} value={from} aria-label="Section start (s)"
         onChange={(e) => setFrom(e.target.value)} onBlur={apply} onKeyDown={onKey} className={inputCls}
@@ -87,7 +87,7 @@ export default function SectionBar({ audioId, duration }: { audioId: string; dur
           <span className="text-teal">Analysing only this part · {(hi - lo).toFixed(2)} of {duration.toFixed(2)} s</span>
           <button
             onClick={() => setSection(audioId, null)}
-            className="px-2 py-0.5 text-[10px] text-muted hover:text-white border border-border rounded transition-colors"
+            className="px-2 py-0.5 text-[11px] text-muted hover:text-white border border-border rounded transition-colors"
           >
             Whole file
           </button>
@@ -95,7 +95,7 @@ export default function SectionBar({ audioId, duration }: { audioId: string; dur
       ) : (
         <>
           <span className="text-muted">Whole file · {duration.toFixed(2)} s</span>
-          <span className="ml-auto hidden md:inline text-[10px] text-muted/70">
+          <span className="ml-auto hidden md:inline text-[11px] text-muted/70">
             Drag on the waveform (Normal view) or type the limits to analyse only a part
           </span>
         </>

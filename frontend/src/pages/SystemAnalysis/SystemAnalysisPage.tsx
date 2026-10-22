@@ -23,9 +23,9 @@ const RESP_LABEL: Record<RespType, string> = {
   none: 'Not specified', acceleration: 'Acceleration', velocity: 'Velocity', displacement: 'Displacement',
 }
 
-const sel = 'w-full bg-panel border border-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-teal disabled:opacity-50'
-const num = 'w-full bg-panel border border-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-teal'
-const lab = 'text-[10px] text-muted uppercase tracking-wider'
+const sel = 'w-full bg-panel border border-field rounded px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50'
+const num = 'w-full bg-panel border border-field rounded px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal'
+const lab = 'text-[11px] text-muted uppercase tracking-wider'
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -57,7 +57,7 @@ function NumField({ label, value, onChange, step = 1, min, max, suffix }: {
 }) {
   return (
     <label className="flex flex-col gap-0.5 min-w-0">
-      <span className="text-[10px] text-muted">{label}{suffix ? ` (${suffix})` : ''}</span>
+      <span className="text-[11px] text-muted">{label}{suffix ? ` (${suffix})` : ''}</span>
       <input type="number" className={num} value={value ?? ''} step={step} min={min} max={max}
         onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) onChange(v) }} />
     </label>
@@ -127,6 +127,7 @@ export default function SystemAnalysisPage() {
   return (
     <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden text-white">
 
+      <h1 className="sr-only">System Analysis</h1>
       {/* ── Settings column ── */}
       <aside className="shrink-0 lg:w-80 lg:border-r border-border p-3 flex flex-col gap-3 lg:overflow-y-auto">
 
@@ -144,8 +145,8 @@ export default function SystemAnalysisPage() {
           <input ref={inputRef} type="file" multiple accept=".uff,.unv,.wav,.csv,.txt,.dat,.tsv" className="hidden"
             onChange={(e) => { onFiles(e.target.files); e.target.value = '' }} />
         </label>
-        {loading && <p className="text-[10px] text-teal text-center animate-pulse">Reading files…</p>}
-        <label className="flex items-center gap-2 text-[10px] text-muted" title="Only needed for CSV tables that have no time column">
+        {loading && <p className="text-[11px] text-teal text-center animate-pulse">Reading files…</p>}
+        <label className="flex items-center gap-2 text-[11px] text-muted" title="Only needed for CSV tables that have no time column">
           CSV sample rate (Hz)
           <input type="number" className={clsx(num, 'w-24')} placeholder="if no time column" value={s.csvFs}
             onChange={(e) => s.setCsvFs(e.target.value)} />
@@ -164,14 +165,14 @@ export default function SystemAnalysisPage() {
 
         {timeCh.length > 0 && (
           <Group title="Channels">
-            <div className="flex items-center text-[10px] text-muted gap-1 px-1">
+            <div className="flex items-center text-[11px] text-muted gap-1 px-1">
               <span className="flex-1">Record</span><span className="w-12 text-center">Input</span><span className="w-12 text-center">Output</span>
             </div>
             {timeCh.map((c) => (
               <div key={c.id} className="flex items-center gap-1 text-xs bg-panel/40 rounded px-1 py-1">
                 <span className="flex-1 min-w-0">
                   <span className="block truncate" title={c.name}>{c.name}</span>
-                  <span className="block text-[10px] text-muted">{c.fs?.toLocaleString("en-US")} Hz · {c.duration_s} s{c.unit ? ` · ${c.unit}` : ''}</span>
+                  <span className="block text-[11px] text-muted">{c.fs?.toLocaleString("en-US")} Hz · {c.duration_s} s{c.unit ? ` · ${c.unit}` : ''}</span>
                 </span>
                 <button className="w-12 flex justify-center" onClick={() => s.setExcitation(excitation === c.id ? null : c.id)}
                   aria-label={`Use ${c.name} as the excitation`} aria-pressed={excitation === c.id}>
@@ -183,7 +184,7 @@ export default function SystemAnalysisPage() {
                 </button>
               </div>
             ))}
-            <p className="text-[10px] text-muted">Input = the force (or reference). Output = what responds; pick several to compare.</p>
+            <p className="text-[11px] text-muted">Input = the force (or reference). Output = what responds; pick several to compare.</p>
           </Group>
         )}
 
@@ -216,7 +217,7 @@ export default function SystemAnalysisPage() {
                     { v: 'impact', label: 'Impact (hammer)', title: 'Finds each hit and averages them' },
                   ]} />
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-muted">Block length{blockInfo ? ` · ${blockInfo}` : ''}</span>
+                    <span className="text-[11px] text-muted">Block length{blockInfo ? ` · ${blockInfo}` : ''}</span>
                     <select className={sel} value={params.nperseg} onChange={(e) => s.setParams({ nperseg: Number(e.target.value) })}>
                       {BLOCKS.map((b) => <option key={b} value={b}>{b.toLocaleString("en-US")} samples</option>)}
                     </select>
@@ -224,13 +225,13 @@ export default function SystemAnalysisPage() {
                   {!impact ? (
                     <div className="grid grid-cols-2 gap-2">
                       <label className="flex flex-col gap-0.5">
-                        <span className="text-[10px] text-muted">Overlap</span>
+                        <span className="text-[11px] text-muted">Overlap</span>
                         <select className={sel} value={params.overlap} onChange={(e) => s.setParams({ overlap: Number(e.target.value) })}>
                           {[0, 25, 50, 66, 75].map((o) => <option key={o} value={o}>{o} %</option>)}
                         </select>
                       </label>
                       <label className="flex flex-col gap-0.5">
-                        <span className="text-[10px] text-muted">Window</span>
+                        <span className="text-[11px] text-muted">Window</span>
                         <select className={sel} value={params.window} onChange={(e) => s.setParams({ window: e.target.value })}>
                           {['hann', 'hamming', 'blackman', 'flattop', 'rectangular'].map((w) => <option key={w} value={w}>{w[0].toUpperCase() + w.slice(1)}</option>)}
                         </select>
@@ -250,7 +251,7 @@ export default function SystemAnalysisPage() {
 
             <Group title="Response quantity">
               <label className="flex flex-col gap-0.5">
-                <span className="text-[10px] text-muted">The response channel measures</span>
+                <span className="text-[11px] text-muted">The response channel measures</span>
                 <select className={sel} value={params.response_type}
                   onChange={(e) => { const v = e.target.value as RespType; s.setParams({ response_type: v, show_as: v }) }}>
                   {(Object.keys(RESP_LABEL) as RespType[]).map((k) => <option key={k} value={k}>{RESP_LABEL[k]}</option>)}
@@ -258,7 +259,7 @@ export default function SystemAnalysisPage() {
               </label>
               {params.response_type !== 'none' && (
                 <label className="flex flex-col gap-0.5">
-                  <span className="text-[10px] text-muted">Show the FRF as</span>
+                  <span className="text-[11px] text-muted">Show the FRF as</span>
                   <select className={sel} value={params.show_as} onChange={(e) => s.setParams({ show_as: e.target.value as RespType })}>
                     <option value="acceleration">Accelerance (acceleration / force)</option>
                     <option value="velocity">Mobility (velocity / force)</option>
@@ -272,7 +273,7 @@ export default function SystemAnalysisPage() {
               <div className="grid grid-cols-2 gap-2">
                 <NumField label="From" suffix="Hz" value={params.fmin} min={0} onChange={(v) => s.setParams({ fmin: v })} />
                 <label className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-[10px] text-muted">To (Hz)</span>
+                  <span className="text-[11px] text-muted">To (Hz)</span>
                   <input type="number" className={num} placeholder="Nyquist" value={params.fmax ?? ''} min={1}
                     onChange={(e) => { const v = parseFloat(e.target.value); s.setParams({ fmax: isNaN(v) ? null : v }) }} />
                 </label>
@@ -293,13 +294,13 @@ export default function SystemAnalysisPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <NumField label="Peak prominence" suffix="dB" value={params.modes.prominence_db} min={1} step={1} onChange={(v) => s.setModes({ prominence_db: v })} />
                     <label className="flex flex-col gap-0.5 min-w-0">
-                      <span className="text-[10px] text-muted">Min. spacing (Hz)</span>
+                      <span className="text-[11px] text-muted">Min. spacing (Hz)</span>
                       <input type="number" className={num} placeholder="auto" value={params.modes.min_sep_hz ?? ''} min={0}
                         onChange={(e) => { const v = parseFloat(e.target.value); s.setModes({ min_sep_hz: isNaN(v) ? null : v }) }} />
                     </label>
                   </div>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-muted">Damping method</span>
+                    <span className="text-[11px] text-muted">Damping method</span>
                     <select className={sel} value={params.modes.method} onChange={(e) => s.setModes({ method: e.target.value as any })}>
                       <option value="both">Half-power and mode fit</option>
                       <option value="half_power">Half-power (−3 dB) only</option>
@@ -314,7 +315,7 @@ export default function SystemAnalysisPage() {
       </aside>
 
       {/* ── Results column ── */}
-      <main className="flex flex-col flex-1 min-w-0 min-h-[420px] lg:min-h-0 lg:overflow-hidden">
+      <section aria-label="Results" className="flex flex-col flex-1 min-w-0 min-h-[420px] lg:min-h-0 lg:overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0 flex-wrap">
           <div className="flex gap-1 flex-wrap">
             {VIEWS.filter((v) => v.key !== 'modes' || params.modes.enabled).map(({ key, label, Icon }) => (
@@ -399,7 +400,7 @@ export default function SystemAnalysisPage() {
             </>
           )}
         </div>
-      </main>
+      </section>
     </div>
   )
 }
@@ -445,7 +446,7 @@ function ModesTable({ result }: { result: FrfResult }) {
           {modes.flatMap((m, i) => m.warnings.map((w, k) => <li key={`${i}-${k}`}>Mode {i + 1} ({m.fn_hz.toFixed(1)} Hz): {w}</li>))}
         </ul>
       )}
-      <p className="mt-2 px-2 text-[10px] text-muted">
+      <p className="mt-2 px-2 text-[11px] text-muted">
         Damping uses the receptance form of the FRF. The half-power method is reliable for well separated modes; the fit also
         works when modes are close, and its error is shown in the exported table.
       </p>

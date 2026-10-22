@@ -71,7 +71,7 @@ export default function MetricProgress({ label, metricKey, job, duration, onCanc
         </div>
       )}
 
-      <span className="text-[10px] text-muted/70 tabular-nums text-center">
+      <span className="text-[11px] text-muted/70 tabular-nums text-center">
         {waiting
           ? 'It starts as soon as they finish. You can cancel it.'
           : eta

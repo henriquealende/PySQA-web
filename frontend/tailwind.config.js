@@ -8,6 +8,7 @@ export default {
         surface: '#151f2b',
         panel:   '#1c2a38',
         border:  '#2b3c50',
+        field:   '#55728d',
         teal:    '#50b89e',
         orange:  '#ed693b',
         amber:   '#ffa94d',

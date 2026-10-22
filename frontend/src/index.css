@@ -18,6 +18,17 @@ html, body, #root {
 ::-webkit-scrollbar-thumb { background: #2b3c50; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #50b89e; }
 
+/* Touch screens: controls need a 44 px target */
+@media (pointer: coarse) {
+  main button, aside button, main select, aside select,
+  main input:not([type=range]):not([type=checkbox]):not([type=file]), aside input:not([type=range]):not([type=checkbox]):not([type=file]) {
+    min-height: 44px;
+  }
+  main input[type=checkbox], aside input[type=checkbox] { width: 20px; height: 20px; }
+  main label:has(> input[type=checkbox]), aside label:has(> input[type=checkbox]) { min-height: 44px; }
+  .js-plotly-plot button, .js-plotly-plot a { min-height: 0; }
+}
+
 /* Plotly override — transparent bg */
 .js-plotly-plot .plotly, .js-plotly-plot .plotly .svg-container {
   background: transparent !important;

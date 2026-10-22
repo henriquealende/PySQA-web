@@ -52,17 +52,17 @@ function BatchProgress({ step, total, label, elapsed, eta, onCancel }: {
       <div className="flex items-center gap-2 text-xs text-muted">
         <Loader2 size={13} className="animate-spin text-teal shrink-0" />
         <span className="truncate flex-1">{label}</span>
-        <span className="tabular-nums text-[10px] shrink-0 text-teal font-semibold">{step}/{total}</span>
+        <span className="tabular-nums text-[11px] shrink-0 text-teal font-semibold">{step}/{total}</span>
       </div>
       <div className="w-full h-2 bg-dark rounded-full overflow-hidden border border-border/50">
         <div className="h-full rounded-full transition-all duration-200 ease-out"
           style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#50b89e,#3dd6b0)' }} />
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-[10px] text-muted/70 tabular-nums flex-1">
+        <span className="text-[11px] text-muted/70 tabular-nums flex-1">
           {Math.round(elapsed)} s{eta ? ` of about ${Math.round(eta)} s (from earlier calculations on this server)` : ''}
         </span>
-        <span className="text-[10px] text-muted/70 tabular-nums">{pct}%</span>
+        <span className="text-[11px] text-muted/70 tabular-nums">{pct}%</span>
         <button onClick={onCancel}
           className="px-3 py-0.5 text-xs text-muted hover:text-white border border-border rounded transition-colors">
           Cancel
@@ -240,14 +240,14 @@ export default function BatchPanel() {
       {/* ── Left column: file list ───────────────────────────────── */}
       <div className="w-52 shrink-0 border-r border-border flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-          <span className="text-[10px] text-muted uppercase tracking-wider font-semibold">Files</span>
-          <button onClick={toggleAll} className="text-[10px] text-muted hover:text-teal transition-colors">
+          <span className="text-[11px] text-muted uppercase tracking-wider font-semibold">Files</span>
+          <button onClick={toggleAll} className="text-[11px] text-muted hover:text-teal transition-colors">
             {allChecked ? 'None' : 'All'}
           </button>
         </div>
         <div className="flex-1 overflow-y-auto py-1">
           {files.length === 0 && (
-            <p className="text-[10px] text-muted text-center py-6">No files uploaded</p>
+            <p className="text-[11px] text-muted text-center py-6">No files uploaded</p>
           )}
           {files.map(f => (
             <button
@@ -267,7 +267,7 @@ export default function BatchPanel() {
                   {f.name.replace(/\.wav$/i,'')}
                 </span>
                 {sections[f.audio_id] && (
-                  <span className="text-[10px] text-teal/80 truncate">
+                  <span className="text-[11px] text-teal/80 truncate">
                     section {sections[f.audio_id]![0]}–{sections[f.audio_id]![1]} s
                   </span>
                 )}
@@ -276,7 +276,7 @@ export default function BatchPanel() {
           ))}
         </div>
         <div className="px-3 py-2 border-t border-border shrink-0">
-          <span className="text-[10px] text-muted">{selectedFiles.length} of {files.length} selected</span>
+          <span className="text-[11px] text-muted">{selectedFiles.length} of {files.length} selected</span>
         </div>
       </div>
 
@@ -288,7 +288,7 @@ export default function BatchPanel() {
 
           {/* Row 1: metrics */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] text-muted uppercase tracking-wider shrink-0 whitespace-nowrap">Metrics</span>
+            <span className="text-[11px] text-muted uppercase tracking-wider shrink-0 whitespace-nowrap">Metrics</span>
             {BATCH_METRICS.map(({ key, label }) => (
               <button key={key} onClick={() => toggle(key)} disabled={busy}
                 className={clsx('px-2.5 py-1 text-xs rounded border transition-colors disabled:opacity-40',
@@ -303,7 +303,7 @@ export default function BatchPanel() {
 
           {/* Row 2: annoyance + field type + compute */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] text-muted uppercase tracking-wider shrink-0 whitespace-nowrap">Annoyance</span>
+            <span className="text-[11px] text-muted uppercase tracking-wider shrink-0 whitespace-nowrap">Annoyance</span>
             {ANNOYANCE_MODELS.map(({ key, full, tip }) => (
               <button key={key} onClick={() => toggleAnn(key)} disabled={busy} title={tip}
                 className={clsx('px-2.5 py-1 text-xs rounded border transition-colors disabled:opacity-40',
@@ -319,7 +319,7 @@ export default function BatchPanel() {
 
             {/* Field type */}
             <div className="flex items-center gap-1">
-              <span className="text-[10px] text-muted">Field:</span>
+              <span className="text-[11px] text-muted">Field:</span>
               {(['free','diffuse'] as FieldType[]).map(ft => (
                 <button key={ft} onClick={() => setFieldType(ft)} disabled={busy}
                   className={clsx('px-2 py-0.5 text-[11px] rounded transition-colors disabled:opacity-40',
@@ -346,7 +346,7 @@ export default function BatchPanel() {
           </div>
 
           {withSection.length > 0 && (
-            <p className="text-[10px] text-muted">
+            <p className="text-[11px] text-muted">
               Using only the selected section of <span className="text-teal">{withSection.length} file{withSection.length > 1 ? 's' : ''}</span>
               {' '}(change it in the Normal view, Section bar).
             </p>
@@ -354,7 +354,7 @@ export default function BatchPanel() {
 
           {/* Auto-added notice */}
           {autoAdded.length > 0 && (
-            <p className="text-[10px] text-muted">
+            <p className="text-[11px] text-muted">
               Auto-adding for annoyance: <span className="text-amber-400">{autoAdded.map(keyLabel).join(', ')}</span>
             </p>
           )}
@@ -424,7 +424,7 @@ export default function BatchPanel() {
                         title={row.name}
                         style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
                         {row.name.replace(/\.wav$/i,'')}
-                        {row.section && <span className="block text-[10px] text-teal/80">section {row.section[0]}–{row.section[1]} s</span>}
+                        {row.section && <span className="block text-[11px] text-teal/80">section {row.section[0]}–{row.section[1]} s</span>}
                       </td>
                       {displayKeys.map(k => (
                         <td key={k} className={clsx(

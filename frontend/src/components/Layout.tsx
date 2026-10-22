@@ -30,7 +30,12 @@ export default function Layout() {
 
   // Data Acquisition stays mounted once opened (it is only hidden on other pages), so a recording,
   // a take under review and the open microphone survive a visit to Post-Processing.
-  const isDaq = useLocation().pathname.startsWith('/data-acquisition')
+  const pathname = useLocation().pathname
+  const isDaq = pathname.startsWith('/data-acquisition')
+  useEffect(() => {
+    const page = NAV.find((n) => pathname.startsWith(n.to))
+    document.title = page ? `${page.label} · PySQA` : 'PySQA'
+  }, [pathname])
   const [daqVisited, setDaqVisited] = useState(isDaq)
   useEffect(() => { if (isDaq) setDaqVisited(true) }, [isDaq])
 

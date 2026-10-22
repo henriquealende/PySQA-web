@@ -96,13 +96,13 @@ function HarmonicInput({ f0, onChange }: { f0: number|null; onChange: (v: number
   const clear = () => { setRaw(''); onChange(null) }
   return (
     <div className="flex items-center gap-1 shrink-0">
-      <span className="text-[10px] text-muted">f₀</span>
+      <span className="text-[11px] text-muted">f₀</span>
       <input type="number" min={1} placeholder="Hz" value={raw}
         onChange={e => setRaw(e.target.value)}
         onKeyDown={e => e.key==='Enter' && apply()}
-        className="w-16 bg-panel border border-border rounded px-1.5 py-0.5 text-xs text-white placeholder:text-muted/70 focus:outline-none focus:border-teal" />
-      <button onClick={apply} className="px-1.5 py-0.5 text-[10px] bg-teal/20 border border-teal/40 text-teal rounded hover:bg-teal/30 transition-colors">Set</button>
-      {f0 && <button onClick={clear} className="px-1.5 py-0.5 text-[10px] text-muted hover:text-white transition-colors">✕</button>}
+        className="w-16 bg-panel border border-field rounded px-1.5 py-0.5 text-xs text-white placeholder:text-muted/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal" />
+      <button onClick={apply} className="px-1.5 py-0.5 text-[11px] bg-teal/20 border border-teal/40 text-teal rounded hover:bg-teal/30 transition-colors">Set</button>
+      {f0 && <button onClick={clear} className="px-1.5 py-0.5 text-[11px] text-muted hover:text-white transition-colors">✕</button>}
     </div>
   )
 }
@@ -160,7 +160,7 @@ function CancelledPanel({ wasRunning, onRetry, onBack }: { wasRunning: boolean; 
 // Compare badge shown when a comparison file is active
 function CompareBadge({ name, color }: { name: string; color: string }) {
   return (
-    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px]"
+    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px]"
       style={{ borderColor: color + '60', background: color + '15', color }}>
       <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
       {name.replace(/\.wav$/i, '')}
@@ -190,8 +190,8 @@ function LabeledRow({ label, children }: { label: string; children: React.ReactN
     </div>
   )
 }
-const inputCls  = 'w-full bg-panel border border-border rounded px-2 py-0.5 text-white text-xs focus:outline-none focus:border-teal'
-const selectCls = 'w-full bg-panel border border-border rounded px-2 py-0.5 text-white text-xs focus:outline-none focus:border-teal'
+const inputCls  = 'w-full bg-panel border border-field rounded px-2 py-0.5 text-white text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal'
+const selectCls = 'w-full bg-panel border border-field rounded px-2 py-0.5 text-white text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal'
 
 function SpectrogramSettings({ params, onChange }: { params: SpectrogramParams; onChange: (p: Partial<SpectrogramParams>) => void }) {
   return (
@@ -492,10 +492,10 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
 
       {/* Toolbar row */}
       <div className="flex items-center gap-2 px-2 shrink-0 flex-wrap">
-        <span ref={cursorClock} className="text-[10px] font-mono tabular-nums text-orange shrink-0" style={{ display: 'none' }} />
-        <span className="text-[10px] text-muted">f₀</span>
+        <span ref={cursorClock} className="text-[11px] font-mono tabular-nums text-orange shrink-0" style={{ display: 'none' }} />
+        <span className="text-[11px] text-muted">f₀</span>
         <HarmonicInput f0={f0} onChange={setF0} />
-        <div className="flex items-center gap-1 ml-2 text-[10px]" role="group" aria-label="What dragging on the waveform does">
+        <div className="flex items-center gap-1 ml-2 text-[11px]" role="group" aria-label="What dragging on the waveform does">
           <span className="text-muted">Drag to</span>
           {(['select', 'zoom'] as const).map(m => (
             <button key={m} onClick={() => setWfDrag(m)} aria-pressed={wfDrag === m}
@@ -506,14 +506,14 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
         </div>
         {wf.peak !== undefined && (
           <span
-            className={`ml-2 text-[10px] tabular-nums ${wf.peak >= 0.999 ? 'text-orange font-semibold' : 'text-muted'}`}
+            className={`ml-2 text-[11px] tabular-nums ${wf.peak >= 0.999 ? 'text-orange font-semibold' : 'text-muted'}`}
             title="Highest absolute sample of the whole file (0 dBFS = full scale)">
             Peak {wf.peak > 0 ? (20 * Math.log10(wf.peak)).toFixed(1) : '−∞'} dBFS{wf.peak >= 0.999 ? ' · clipping' : ''}
           </span>
         )}
         {totalPins > 0 && (
           <button onClick={() => { setSpPins([]); setWfPins([]) }}
-            className="ml-auto px-2 py-0.5 text-[10px] text-muted hover:text-white border border-border rounded transition-colors">
+            className="ml-auto px-2 py-0.5 text-[11px] text-muted hover:text-white border border-border rounded transition-colors">
             Clear {totalPins} pin{totalPins > 1 ? 's' : ''} (ESC)
           </button>
         )}
@@ -525,11 +525,11 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
 // ─── Bark scale badge ───────────────────────────────────────────────────────
 function BarkBadge({ isHMS }: { isHMS: boolean }) {
   return isHMS
-    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-900/40 text-purple-300 border border-purple-700/50">
+    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-purple-900/40 text-purple-300 border border-purple-700/50">
         <span className="w-1.5 h-1.5 rounded-full bg-purple-400 inline-block" />
         Bark HMS (ECMA-418-2)
       </span>
-    : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-sky-900/40 text-sky-300 border border-sky-700/50">
+    : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-sky-900/40 text-sky-300 border border-sky-700/50">
         <span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block" />
         Bark (ISO 532-1)
       </span>
@@ -710,7 +710,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
       {freqPins.length > 0 && (
         <div className="flex items-center px-2 shrink-0">
           <button onClick={() => setFreqPins([])}
-            className="text-[10px] text-muted hover:text-white border border-border rounded px-2 py-0.5 transition-colors">
+            className="text-[11px] text-muted hover:text-white border border-border rounded px-2 py-0.5 transition-colors">
             Clear {freqPins.length} pin{freqPins.length > 1 ? 's' : ''} (ESC)
           </button>
         </div>

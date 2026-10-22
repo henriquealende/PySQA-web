@@ -14,7 +14,7 @@ interface Props {
 }
 
 const optionCls =
-  'flex items-center gap-3 w-full px-4 py-3 rounded-lg bg-panel border border-border hover:border-teal/40 hover:bg-teal/5 disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-panel transition-colors text-left'
+  'flex items-center gap-3 w-full px-4 py-3 rounded-lg bg-panel border border-field hover:border-teal/40 hover:bg-teal/5 disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-panel transition-colors text-left'
 
 export default function ExportModal({ sessionId, audioId, audioName, onClose }: Props) {
   const dialogRef = useDialog(onClose)
@@ -100,12 +100,12 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
             <FileAudio size={18} className="text-teal shrink-0" />
             <div>
               <p className="text-xs font-semibold text-white">Audio (.wav)</p>
-              <p className="text-[10px] text-muted">Lossless: the file as you sent it, or 32-bit float if processed</p>
+              <p className="text-[11px] text-muted">Lossless: the file as you sent it, or 32-bit float if processed</p>
             </div>
           </button>
 
           <div className="pt-2">
-            <p className="text-[10px] uppercase tracking-wider text-muted mb-1.5">
+            <p className="text-[11px] uppercase tracking-wider text-muted mb-1.5">
               Data on screen{data ? ` — ${data.label}` : ''}
             </p>
             {loading && (
@@ -125,7 +125,7 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
             {busy === 'xlsx' ? <Loader2 size={18} className="animate-spin text-teal shrink-0" /> : <SheetIcon size={18} className="text-teal shrink-0" />}
             <div>
               <p className="text-xs font-semibold text-white">Excel (.xlsx)</p>
-              <p className="text-[10px] text-muted">{data && data.sheets.length > 1 ? `All ${data.sheets.length} tables, one sheet each` : 'The table on screen'}</p>
+              <p className="text-[11px] text-muted">{data && data.sheets.length > 1 ? `All ${data.sheets.length} tables, one sheet each` : 'The table on screen'}</p>
             </div>
           </button>
 
@@ -134,7 +134,7 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
               <FileText size={18} className="text-teal shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-white">CSV (.csv)</p>
-                <p className="text-[10px] text-muted">One table, made in your browser</p>
+                <p className="text-[11px] text-muted">One table, made in your browser</p>
               </div>
             </button>
             {data && data.sheets.length > 1 && (
@@ -142,7 +142,7 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
                 value={csvSheet}
                 onChange={(e) => setCsvSheet(e.target.value)}
                 aria-label="Table to export as CSV"
-                className="w-28 shrink-0 bg-panel border border-border rounded-lg px-2 text-xs text-white focus:outline-none focus:border-teal"
+                className="w-28 shrink-0 bg-panel border border-field rounded-lg px-2 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal"
               >
                 {data.sheets.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}
               </select>

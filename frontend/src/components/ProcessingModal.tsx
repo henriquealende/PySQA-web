@@ -248,7 +248,7 @@ function WaveformSelector({
 
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-[10px] text-muted">Drag on the chart to select a region</p>
+      <p className="text-[11px] text-muted">Drag on the chart to select a region</p>
       <Plot
         data={[
           {
@@ -291,13 +291,13 @@ function WaveformSelector({
         }}
       />
       {sel ? (
-        <p className="text-[10px] text-teal">
+        <p className="text-[11px] text-teal">
           {sel[0].toFixed(4)} s → {sel[1].toFixed(4)} s &nbsp;|&nbsp;
           {(sel[1]-sel[0]).toFixed(4)} s &nbsp;|&nbsp;
           {Math.round((sel[1]-sel[0])*sampleRate)} samples
         </p>
       ) : (
-        <p className="text-[10px] text-muted">No selection</p>
+        <p className="text-[11px] text-muted">No selection</p>
       )}
     </div>
   )
@@ -383,8 +383,8 @@ export default function ProcessingModal({
     }
   }
 
-  const inputCls = 'bg-dark border border-border rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-teal w-full'
-  const labelCls = 'text-[10px] text-muted uppercase tracking-wider mb-0.5 block'
+  const inputCls = 'bg-dark border border-border rounded px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal w-full'
+  const labelCls = 'text-[11px] text-muted uppercase tracking-wider mb-0.5 block'
 
   const TABS: { key: Tab; label: string }[] = [
     { key: 'filter',    label: 'Filtering' },
@@ -478,17 +478,17 @@ export default function ProcessingModal({
                 )}
                 {isOctave && (
                   <div className="border border-border rounded-lg p-2 bg-dark/40">
-                    <p className="text-[10px] text-muted mb-2 uppercase tracking-wider">1/3-octave band gain (dB) · −24 to +24</p>
+                    <p className="text-[11px] text-muted mb-2 uppercase tracking-wider">1/3-octave band gain (dB) · −24 to +24</p>
                     <OctaveEq gains={octaveGains} onChange={setOctaveGains} />
                     <button onClick={() => setOctaveGains(Array(31).fill(0))}
-                      className="mt-2 text-[10px] text-muted hover:text-white transition-colors">
+                      className="mt-2 text-[11px] text-muted hover:text-white transition-colors">
                       Reset all
                     </button>
                   </div>
                 )}
               </div>
               <div className="flex flex-col items-center gap-1 shrink-0">
-                <span className="text-[9px] text-muted uppercase tracking-wider">Response</span>
+                <span className="text-[10px] text-muted uppercase tracking-wider">Response</span>
                 <div className="border border-border rounded-lg p-2 bg-dark/40">
                   <FilterPreview type={filterType} />
                 </div>
@@ -530,7 +530,7 @@ export default function ProcessingModal({
                 )}
               </div>
               <div className="flex flex-col items-center gap-1 shrink-0">
-                <span className="text-[9px] text-muted uppercase tracking-wider">Shape</span>
+                <span className="text-[10px] text-muted uppercase tracking-wider">Shape</span>
                 <div className="border border-border rounded-lg p-2 bg-dark/40">
                   <WindowPreview type={windowType} />
                 </div>
@@ -555,7 +555,7 @@ export default function ProcessingModal({
                 </p>
               </div>
               <div className="flex flex-col items-center gap-1 shrink-0">
-                <span className="text-[9px] text-muted uppercase tracking-wider">Response</span>
+                <span className="text-[10px] text-muted uppercase tracking-wider">Response</span>
                 <div className="border border-border rounded-lg p-2 bg-dark/40">
                   <WeightingPreview curve={weightCurve} />
                 </div>
@@ -575,7 +575,7 @@ export default function ProcessingModal({
                 <select value={refId} onChange={e => setRefId(e.target.value)} className={inputCls}>
                   {otherFiles.map(f => <option key={f.audio_id} value={f.audio_id}>{f.name}</option>)}
                 </select>
-                <p className="text-[10px] text-muted mt-1">
+                <p className="text-[11px] text-muted mt-1">
                   The current file will be scaled so its ISO 532-1 loudness matches the reference file.
                 </p>
               </div>

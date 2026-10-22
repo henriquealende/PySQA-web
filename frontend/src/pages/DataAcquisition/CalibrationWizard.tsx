@@ -176,7 +176,7 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
     : dbfs(live.rms) < -55 ? { text: 'Very quiet: is the calibrator fitted and switched on?', bad: true }
     : { text: 'Level is good. Press Measure.', bad: false }
 
-  const input = 'bg-panel border border-border rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-teal'
+  const input = 'bg-panel border border-field rounded px-2 py-1 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal'
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => { if (!busy) onClose() }}>

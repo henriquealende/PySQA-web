@@ -211,13 +211,14 @@ function LiveWaveform({ bufRef, posRef, sampleRate, windowSec = 3, idleMessage }
       H = Math.round(rect.height * dpr)
       canvas.width  = W
       canvas.height = H
+      if (idleMessage) draw()
     })
     ro.observe(canvas)
 
     const capacity = bufRef.current.length
 
     const draw = () => {
-      rafRef.current = requestAnimationFrame(draw)
+      if (!idleMessage) rafRef.current = requestAnimationFrame(draw)     // a closed microphone needs one still frame, not 60 per second
       if (W === 0 || H === 0) return
       const buf = bufRef.current
       const pos = posRef.current
@@ -1410,7 +1411,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
     <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden text-white">
 
       {/* ── Graphics column ── */}
-      <main className="order-1 lg:order-2 flex flex-col flex-1 min-w-0 lg:overflow-y-auto">
+      <section aria-label="Recording" className="order-1 lg:order-2 flex flex-col flex-1 min-w-0 lg:overflow-y-auto">
       <div className="flex items-center gap-2 px-4 pt-3 lg:hidden">
         <Mic size={18} className="text-teal" />
         <h1 className="text-base font-semibold">Data Acquisition</h1>
@@ -1432,7 +1433,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
                 <span className="w-2.5 h-2.5 rounded-full bg-white"/> Record
               </button>
               <button onClick={()=>{stopStream();setRecState('idle')}}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-panel border border-border text-muted text-sm hover:text-white transition-colors">
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-panel border border-field text-muted text-sm hover:text-white transition-colors">
                 Cancel
               </button>
             </>)}
@@ -1442,7 +1443,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
                 <Zap size={14}/> Watch
               </button>
               <button onClick={()=>{stopStream();setRecState('idle')}}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-panel border border-border text-muted text-sm hover:text-white transition-colors">
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-panel border border-field text-muted text-sm hover:text-white transition-colors">
                 Cancel
               </button>
             </>)}
@@ -1454,7 +1455,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             )}
             {isRecording && (
               <button onClick={stopRecording}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-panel border border-border text-white text-sm font-medium hover:bg-orange/20 hover:border-orange/50 transition-colors">
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-panel border border-field text-white text-sm font-medium hover:bg-orange/20 hover:border-orange/50 transition-colors">
                 <Square size={13} fill="currentColor"/> Stop
               </button>
             )}
@@ -1540,7 +1541,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         {(isArmed||isRecording) && (
           <input type="text" placeholder="Recording name (optional)"
             value={recName} onChange={e=>setRecName(e.target.value)}
-            className="bg-panel border border-border rounded px-2 py-1.5 text-sm text-white placeholder-muted focus:outline-none focus:border-teal"/>
+            className="bg-panel border border-field rounded px-2 py-1.5 text-sm text-white placeholder-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal"/>
         )}
       </div>
 
@@ -1709,13 +1710,13 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         the sensitivity from its data sheet, and the meter reads dB SPL or dB(A). Recordings made afterwards carry the calibration into Post-Processing.
       </div>
         </div>
-      </main>
+      </section>
 
       {/* ── Settings column ── */}
       <aside className="order-2 lg:order-1 shrink-0 lg:w-80 lg:border-r border-border p-3 lg:overflow-y-auto">
         <div className="hidden lg:flex items-center gap-2 px-1 pb-3">
           <Mic size={18} className="text-teal" />
-          <h2 className="text-base font-semibold">Data Acquisition</h2>
+          <h1 className="text-base font-semibold">Data Acquisition</h1>
         </div>
       {/* ── Device + Settings (fold away while the microphone is open) ── */}
       <div className="bg-surface border border-border rounded-lg lg:bg-transparent lg:border-0 lg:rounded-none">
@@ -1736,7 +1737,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         </div>
 
         <select value={selectedDev} onChange={e=>setSelectedDev(e.target.value)} disabled={isActive}
-          className="w-full bg-panel border border-border rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-teal disabled:opacity-50">
+          className="w-full bg-panel border border-field rounded px-2 py-1.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50">
           {devices.length===0 && <option value="default">Default microphone</option>}
           {devices.map(d=><option key={d.deviceId} value={d.deviceId} title={d.label}>{d.label}</option>)}
         </select>
@@ -1746,7 +1747,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
           <div className="flex flex-col gap-1 flex-1 min-w-24">
             <label htmlFor="da-sr" className="text-xs text-muted">Sample Rate</label>
             <select id="da-sr" value={sampleRate} onChange={e=>setSampleRate(Number(e.target.value))} disabled={isActive}
-              className="bg-panel border border-border rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-teal disabled:opacity-50">
+              className="bg-panel border border-field rounded px-2 py-1.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50">
               <option value={44100}>44 100 Hz</option>
               <option value={48000}>48 000 Hz</option>
               <option value={96000}>96 000 Hz</option>
@@ -1755,7 +1756,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
           <div className="flex flex-col gap-1 flex-1 min-w-24">
             <label htmlFor="da-ch" className="text-xs text-muted">Channels</label>
             <select id="da-ch" value={channels} onChange={e=>setChannels(Number(e.target.value) as 1|2)} disabled={isActive}
-              className="bg-panel border border-border rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-teal disabled:opacity-50">
+              className="bg-panel border border-field rounded px-2 py-1.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50">
               <option value={1}>Mono</option>
               <option value={2}>Stereo→Mono</option>
             </select>
@@ -1763,7 +1764,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
           <div className="flex flex-col gap-1 flex-1 min-w-24">
             <label htmlFor="da-bits" className="text-xs text-muted">Bit Depth</label>
             <select id="da-bits" value={bitDepth} onChange={e=>setBitDepth(Number(e.target.value) as 16|32)} disabled={isActive}
-              className="bg-panel border border-border rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-teal disabled:opacity-50">
+              className="bg-panel border border-field rounded px-2 py-1.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50">
               <option value={16}>16-bit PCM</option>
               <option value={32}>32-bit Float</option>
             </select>
@@ -1788,7 +1789,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
               <label htmlFor="da-dur" className="text-xs text-muted">Duration (s)</label>
               <input id="da-dur" type="number" min={1} max={3600} step={1} value={durSeconds}
                 onChange={e=>setDurSeconds(Math.max(1,Number(e.target.value)))} disabled={isRecording}
-                className="w-24 bg-panel border border-border rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-teal disabled:opacity-50" />
+                className="w-24 bg-panel border border-field rounded px-2 py-1.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50" />
             </div>
           )}
         </div>
@@ -1805,7 +1806,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
 
         {/* Trigger settings */}
         {captureMode==='triggered' && (
-          <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded border border-border/50">
+          <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded">
             <span className="text-xs font-semibold text-muted uppercase tracking-wider">Trigger</span>
             <div className="flex gap-3 flex-wrap">
               <div className="flex flex-col gap-1 flex-1 min-w-32">
@@ -1837,7 +1838,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         )}
 
         {/* Averaging */}
-        <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded border border-border/50">
+        <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded">
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
               <input type="checkbox" checked={avgEnabled} onChange={e=>setAvgEnabled(e.target.checked)} disabled={isActive}
@@ -1856,7 +1857,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
                 <label htmlFor="da-takes" className="text-xs text-muted">Number of takes</label>
                 <input id="da-takes" type="number" min={2} max={99} step={1} value={avgTotal}
                   onChange={e=>setAvgTotal(Math.max(2,Number(e.target.value)))} disabled={isActive||avgCount>0}
-                  className="w-20 bg-panel border border-border rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-teal disabled:opacity-50"/>
+                  className="w-20 bg-panel border border-field rounded px-2 py-1.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50"/>
               </div>
               <label className="flex items-center gap-2 text-xs cursor-pointer select-none mb-1.5">
                 <input type="checkbox" checked={avgAutoAccept} onChange={e=>setAvgAutoAccept(e.target.checked)} disabled={isActive}
@@ -1874,7 +1875,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         </div>
 
         {/* Microphone calibration */}
-        <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded border border-border/50">
+        <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded">
           <span className="text-xs font-semibold text-muted uppercase tracking-wider">Microphone calibration</span>
           {cal ? (
             <div className="flex items-center gap-2 flex-wrap text-xs">
@@ -1901,7 +1902,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         </div>
 
         {/* Signal protection */}
-        <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded border border-border/50">
+        <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded">
           <span className="text-xs font-semibold text-muted uppercase tracking-wider">Signal Protection</span>
           <div className="flex gap-4 flex-wrap">
             <label className="flex items-center gap-2 text-xs cursor-pointer select-none">

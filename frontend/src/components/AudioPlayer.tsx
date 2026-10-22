@@ -50,7 +50,7 @@ export default function AudioPlayer({ src, fileName, onError }: Props) {
 
       {/* Seek bar */}
       <div className="flex items-center gap-2 flex-1 min-w-0">
-        <span className="text-[10px] text-muted w-8 text-right shrink-0">{fmtTime(currentTime)}</span>
+        <span className="text-[11px] text-muted w-8 text-right shrink-0">{fmtTime(currentTime)}</span>
         <input
           type="range"
           min={0}
@@ -62,7 +62,7 @@ export default function AudioPlayer({ src, fileName, onError }: Props) {
           className="flex-1 h-1 accent-teal disabled:opacity-30 cursor-pointer"
           style={{ accentColor: '#50b89e' }}
         />
-        <span className="text-[10px] text-muted w-8 shrink-0">{fmtTime(duration)}</span>
+        <span className="text-[11px] text-muted w-8 shrink-0">{fmtTime(duration)}</span>
       </div>
 
       {/* Volume */}
@@ -84,7 +84,7 @@ export default function AudioPlayer({ src, fileName, onError }: Props) {
 
       {/* File name */}
       {fileName && (
-        <span className="text-[10px] text-muted truncate max-w-[120px] hidden lg:block" title={fileName}>
+        <span className="text-[11px] text-muted truncate max-w-[120px] hidden lg:block" title={fileName}>
           {fileName}
         </span>
       )}

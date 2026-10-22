@@ -93,7 +93,7 @@ export default function SplMeter({ calibrationPa, workletActive, recording }: {
   return (
     <div className="flex items-center gap-x-4 gap-y-1 flex-wrap text-[11px]" aria-label="Sound level">
       <span className="flex items-baseline gap-1.5" title="Level with Fast time weighting (125 ms)">
-        <span className="text-[10px] uppercase tracking-wider text-muted">{calibrationPa ? 'Sound level' : 'Level, not calibrated'}</span>
+        <span className="text-[11px] uppercase tracking-wider text-muted">{calibrationPa ? 'Sound level' : 'Level, not calibrated'}</span>
         <span className="text-base font-semibold tabular-nums text-white" data-testid="spl-now">{fmt(shown.lp)}</span>
         <span className="text-muted">{unit}</span>
       </span>

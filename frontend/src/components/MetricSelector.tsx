@@ -57,8 +57,8 @@ export default function MetricSelector({ value, onChange, disabled }: Props) {
       disabled={disabled}
       onChange={(e) => onChange(e.target.value as MetricKey)}
       className={clsx(
-        'bg-panel border border-border text-xs text-white rounded px-2 py-1.5',
-        'focus:outline-none focus:border-teal disabled:opacity-40 cursor-pointer',
+        'bg-panel border border-field text-xs text-white rounded px-2 py-1.5',
+        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-40 cursor-pointer',
         'w-full'
       )}
     >
