@@ -9,3 +9,6 @@ openpyxl>=3.1
 pyuff>=1.5
 aiofiles>=23.2
 soundfile>=0.12
+sottek-hearing-model==0.1.13   # ECMA-418-2 tonality, roughness and loudness (Sottek Hearing Model)
+tqdm>=4.60
+bottleneck>=1.3

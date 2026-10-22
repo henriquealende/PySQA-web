@@ -36,11 +36,11 @@ function computeZWK(row: any) {
   if ([N,S,R,F].some(v => v == null)) return null
   const n = Number(N), s = Number(S), r = Number(R), f = Number(F)
   if (n <= 0) return 0
-  // Zwicker-Fastl Psychoacoustic Annoyance (Psychoacoustics: Facts and Models, Ch. 12)
-  const ws = Math.max(0, 0.25 * (s - 1.75))
-  const wf = (2.18 / Math.pow(n, 0.4)) * (0.4 * f + 0.6 * Math.max(f - 0.4, 0))
-  const wr = 0.95 * r / n
-  return n * (1 + Math.sqrt(ws*ws + wf*wf + wr*wr))
+  // Zwicker-Fastl Psychoacoustic Annoyance (Fastl & Zwicker, 2007): PA = N5 (1 + sqrt(wS² + wFR²)).
+  // N (stationary loudness) stands in for N5, the loudness exceeded 5 % of the time.
+  const ws = s > 1.75 ? (s - 1.75) * 0.25 * Math.log10(n + 10) : 0
+  const wfr = (2.18 / Math.pow(n, 0.4)) * (0.4 * f + 0.6 * r)
+  return n * (1 + Math.sqrt(ws*ws + wfr*wfr))
 }
 
 function BatchProgress({ step, total, label, elapsed, eta, onCancel }: {

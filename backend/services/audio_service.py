@@ -518,7 +518,7 @@ def _dispatch_metric(mono: np.ndarray, sr: int, key: str, field_type: str = "fre
     if key == "roughness_dw":
         return _metric_roughness_dw(mono, sr)
     if key == "roughness_ecma":
-        return _metric_roughness_ecma(mono, sr)
+        return _metric_roughness_ecma(mono, sr, diffuse=is_diffuse)
     if key == "fluctuation_strength":
         return _metric_fluctuation(mono, sr)
     if key == "tonality_ecma":
@@ -593,10 +593,7 @@ def _metric_loudness_ecma(mono, sr, diffuse=False):
 
 def _metric_sharpness(mono, sr, diffuse=False):
     sharp = _SHARP or __import__('psychoacoustics.sharpness_din', fromlist=['Sharpnes_DIN']).Sharpnes_DIN()
-    try:
-        bark, global_val, specific = sharp.sharpnessCalculation(mono, sr, field_type="diffuse" if diffuse else "free")
-    except TypeError:
-        bark, global_val, specific = sharp.sharpnessCalculation(mono, sr)
+    bark, global_val, specific = sharp.sharpnessCalculation(mono, sr, field_type="diffuse" if diffuse else "free")
     return {
         "global": round(float(global_val), 3),
         "unit": "acum",
@@ -629,11 +626,12 @@ def _metric_roughness_dw(mono, sr):
     return out
 
 
-def _metric_roughness_ecma(mono, sr):
+def _metric_roughness_ecma(mono, sr, diffuse=False):
     rough = _ROUGH or __import__('psychoacoustics.roughness', fromlist=['Roughness']).Roughness()
     # Try Sottek HM first; fall back to MoSQITo (roughnessECMA_Mqt).
     try:
-        bark, global_val, specific, time_data = rough.roughnessECMA_Shm(mono, sr)
+        bark, global_val, specific, time_data = rough.roughnessECMA_Shm(
+            mono, sr, field_type="diffuse" if diffuse else "free")
         has_time = True
     except Exception:
         try:
@@ -682,7 +680,8 @@ def _metric_tonality(mono, sr, diffuse=False):
 
     # ── Path 1: Sottek Hearing Model (ECMA-418-2 production) ─────────────────
     try:
-        bark, global_val, specific, time_data = ton.tonalityECMA_Shm(mono, sr)
+        bark, global_val, specific, time_data = ton.tonalityECMA_Shm(
+            mono, sr, field_type="diffuse" if diffuse else "free")
         out = {
             "global": round(float(global_val), 4),
             "unit": "tu",
@@ -698,27 +697,11 @@ def _metric_tonality(mono, sr, diffuse=False):
                 "values": time_data["values"].tolist(),
             }
         return out
-    except Exception:
-        pass  # fall through to native implementation
-
-    # ── Path 2: Native Python ECMA-418-2 implementation ──────────────────────
-    try:
-        T, Ts, Ttd, Tsv, fts, ftd, F, t, z = ton.calculate_tonality(mono, sr)
-        return {
-            "global": round(float(Tsv), 4),
-            "unit": "tu",
-            "x_axis": z.tolist(),
-            "x_label": "Bark HMS",
-            "y_axis": Ts.tolist(),
-            "y_label": "Specific Tonality ECMA (tu/Bark)",
-            "plot_type": "bar_or_line",
-            "time_data": {
-                "t": t.tolist(),
-                "values": Ttd.tolist(),
-            },
-        }
-    except Exception as e:
-        return {"error": str(e)}
+    except Exception as exc:
+        # The older hand-made port of the standard used to answer here. It returned values off by orders of
+        # magnitude (billions of tu for a 60 dB tone), so it is no longer used: an honest message is better.
+        return {"error": "Tonality (ECMA-418-2) needs the 'sottek-hearing-model' package"
+                         + (f" ({exc})" if str(exc) else "") + "."}
 
 
 def _metric_ipm(mono, sr):
@@ -831,18 +814,30 @@ def apply_loudness_adj_to_entry(entry: AudioEntry, ref: AudioEntry, audio_id: Op
     ref_mono = _mono(ref.data)
     # Two full ISO 532-1 runs: the same memory cost as the metric itself, so it takes the
     # same compute slot and passes the same budget check.
+    def stationary_loudness(x, sr_):
+        return float(loud.loudnessZWK(x, sr_, field_type="free", compute_time_varying=False)[1])
+
     with limits.heavy_slot():
         for e in (entry, ref):
             limits.check_budget("loudness_zwk", e.duration_s, e.sample_rate, audio_ram_mb(), can_select=False)
-        try:
-            _, ref_global, _, _ = loud.loudnessZWK(ref_mono, ref.sample_rate)
-            _, src_global, _, _ = loud.loudnessZWK(mono, entry.sample_rate)
-        except Exception:
-            _, ref_global, _ = loud.loudnessZWK(ref_mono, ref.sample_rate)
-            _, src_global, _ = loud.loudnessZWK(mono, entry.sample_rate)
-    if src_global < 1e-6:
-        return _derive(entry, mono, "[loudness_adj]", audio_id)
-    scale = ref_global / src_global
-    adjusted = mono * scale
-    tag = "[loudness_adj]"
-    return _derive(entry, adjusted, tag, audio_id)
+        ref_global = stationary_loudness(ref_mono, ref.sample_rate)
+        src_global = stationary_loudness(mono, entry.sample_rate)
+        if src_global < 1e-6 or ref_global < 1e-6:
+            return _derive(entry, mono, "[loudness_adj]", audio_id)
+        # Loudness grows with amplitude to the power of about 0.6, not linearly, so multiplying by the ratio of the two
+        # loudnesses would land well short. Start from that power law, then correct on the measured loudness
+        # (a few passes of a secant search on log N against log gain).
+        exponent = 0.6
+        scale = (ref_global / src_global) ** (1.0 / exponent)
+        last = None
+        for _ in range(8):
+            got = stationary_loudness(mono * scale, entry.sample_rate)
+            if got < 1e-9 or abs(got / ref_global - 1.0) < 0.005:
+                break
+            if last is not None and abs(np.log(scale / last[0])) > 1e-9:
+                slope = (np.log(got) - np.log(last[1])) / (np.log(scale) - np.log(last[0]))
+                if 0.2 < slope < 1.5:
+                    exponent = slope
+            last = (scale, got)
+            scale *= (ref_global / got) ** (1.0 / exponent)
+    return _derive(entry, mono * scale, "[loudness_adj]", audio_id)

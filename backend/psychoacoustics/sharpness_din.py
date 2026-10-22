@@ -8,14 +8,15 @@ class Sharpnes_DIN():
     def __init__(self):
         super(Sharpnes_DIN, self).__init__()        
             
-    def sharpnessCalculation(self, timeData, samplingRate):
+    def sharpnessCalculation(self, timeData, samplingRate, field_type="free"):
         # Bark scale
         Bark = np.arange(0.1, 24.1, 0.1)
         globalSharpness = 0
         specificSharpness = 0
         if len(timeData) > 0:
-            globalSharpness = sharpness_din_st(timeData, samplingRate, weighting="din")
-            Bark, _, sL, *_ = loud_zwk.loudnessZWK(timeData, samplingRate)
+            globalSharpness = sharpness_din_st(timeData, samplingRate, weighting="din", field_type=field_type)
+            # Specific loudness for the plot, in the same sound field as the global value
+            Bark, _, sL, *_ = loud_zwk.loudnessZWK(timeData, samplingRate, field_type=field_type, compute_time_varying=False)
             z = np.arange(1, 241) / 10
 
             # Small value to avoid divide-by-zero

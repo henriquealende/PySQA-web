@@ -320,8 +320,26 @@ def _apply_harmonic_notch(
 
 
 # ---------------------------------------------------------------------------
-# Frequency-weighting filters (IEC 61672)
+# Frequency weighting (IEC 61672-1)
 # ---------------------------------------------------------------------------
+
+def weighting_gain_db(f: np.ndarray, curve: str) -> np.ndarray:
+    """Magnitude response in dB of the A or C weighting at frequencies *f* (Hz), 0 dB at 1 kHz.
+
+    Exact analytic form of IEC 61672-1:2013 (annex E): no bilinear transform, so no warping near Nyquist.
+    """
+    f = np.asarray(f, dtype=float)
+    f1, f2, f3, f4 = 20.598997, 107.65265, 737.86223, 12194.217
+
+    def raw(x):
+        x2 = x * x
+        if curve == 'A':
+            return (f4 ** 2 * x2 ** 2) / ((x2 + f1 ** 2) * np.sqrt((x2 + f2 ** 2) * (x2 + f3 ** 2)) * (x2 + f4 ** 2))
+        return (f4 ** 2 * x2) / ((x2 + f1 ** 2) * (x2 + f4 ** 2))
+
+    with np.errstate(divide="ignore"):
+        return 20.0 * np.log10(np.maximum(raw(f) / raw(np.array(1000.0)), 1e-12))
+
 
 def apply_weighting(
     data: np.ndarray,
@@ -329,11 +347,11 @@ def apply_weighting(
     curve: str,
 ) -> np.ndarray:
     """
-    Apply a standard frequency-weighting curve to *data*.
+    Apply the standard A or C frequency weighting to *data* (once, zero phase).
 
-    The analog prototype is derived from the IEC 61672-1:2013 pole/zero
-    definition and converted to a digital IIR via the bilinear transform.
-    The gain is normalised to 0 dB at 1 kHz.
+    The weighting is applied in the frequency domain with the exact IEC 61672-1 magnitude response, so the
+    result has the standard's gain at every frequency, 0 dB at 1 kHz. (An earlier version ran a forward-backward
+    IIR filter, which applied the curve twice: -38 dB at 100 Hz instead of -19 dB.)
 
     Parameters
     ----------
@@ -343,42 +361,20 @@ def apply_weighting(
         Sample rate in Hz.
     curve : {'A', 'C'}
         Weighting curve.
-
-    Returns
-    -------
-    weighted : ndarray
-        Weighted signal, same shape as *data*.
     """
-    from scipy.signal import bilinear_zpk, zpk2sos, sosfiltfilt
-
-    # IEC 61672 defining frequencies
-    f1 = 20.598997
-    f2 = 107.65265
-    f3 = 737.86223
-    f4 = 12194.217
-
-    w1 = 2.0 * np.pi * f1
-    w4 = 2.0 * np.pi * f4
+    from scipy.fft import next_fast_len, rfft, irfft, rfftfreq
 
     curve = curve.upper()
-    if curve == 'A':
-        w2 = 2.0 * np.pi * f2
-        w3 = 2.0 * np.pi * f3
-        z_s = [0.0, 0.0, 0.0, 0.0]
-        p_s = [-w1, -w1, -w2, -w3, -w4, -w4]
-    elif curve == 'C':
-        z_s = [0.0, 0.0]
-        p_s = [-w1, -w1, -w4, -w4]
-    else:
+    if curve not in ('A', 'C'):
         raise ValueError(f"Unknown weighting curve: {curve!r}. Use 'A' or 'C'.")
 
-    # Normalise: 0 dB gain at 1 kHz (IEC 61672 requirement)
-    s1k = 1j * 2.0 * np.pi * 1000.0
-    H1k = np.prod([s1k - z for z in z_s]) / np.prod([s1k - p for p in p_s])
-    k_s = 1.0 / abs(H1k)
-
-    z_d, p_d, k_d = bilinear_zpk(z_s, p_s, k_s, fs)
-    sos = zpk2sos(z_d, p_d, k_d)
-
-    data = np.asarray(data, dtype=float)
-    return sosfiltfilt(sos, data, axis=0)
+    x = np.asarray(data, dtype=float)
+    n = x.shape[0]
+    nfft = next_fast_len(n + int(fs))            # one second of padding keeps the end of the signal from wrapping onto the start
+    gain = 10.0 ** (weighting_gain_db(rfftfreq(nfft, 1.0 / fs), curve) / 20.0)
+    if x.ndim == 1:
+        return irfft(rfft(x, nfft) * gain, nfft)[:n]
+    out = np.empty_like(x)
+    for ch in range(x.shape[1]):
+        out[:, ch] = irfft(rfft(x[:, ch], nfft) * gain, nfft)[:n]
+    return out
