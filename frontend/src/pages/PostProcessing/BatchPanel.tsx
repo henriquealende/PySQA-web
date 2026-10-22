@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Loader2, Download, CheckSquare, Square } from 'lucide-react'
 import clsx from 'clsx'
 import { useStore } from '../../store/useStore'
-import { fetchBatch } from '../../api/audioApi'
+import { fetchMetric, fetchServerLoad, isAbort, SessionExpiredError } from '../../api/audioApi'
+import { newClientId } from '../../api/http'
 import { MetricKey, FieldType } from '../../types'
 import { exportXlsx } from '../../api/exportApi'
 import { toast } from '../../store/useToast'
@@ -42,7 +43,9 @@ function computeZWK(row: any) {
   return n * (1 + Math.sqrt(ws*ws + wf*wf + wr*wr))
 }
 
-function BatchProgress({ step, total, label }: { step: number; total: number; label: string }) {
+function BatchProgress({ step, total, label, elapsed, eta, onCancel }: {
+  step: number; total: number; label: string; elapsed: number; eta: number | null; onCancel: () => void
+}) {
   const pct = total > 0 ? Math.round((step/total)*100) : 0
   return (
     <div className="flex flex-col gap-2 py-3 px-4 bg-panel rounded-lg border border-border">
@@ -55,7 +58,16 @@ function BatchProgress({ step, total, label }: { step: number; total: number; la
         <div className="h-full rounded-full transition-all duration-200 ease-out"
           style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#50b89e,#3dd6b0)' }} />
       </div>
-      <span className="text-[10px] text-muted/50 tabular-nums text-right">{pct}%</span>
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] text-muted/70 tabular-nums flex-1">
+          {Math.round(elapsed)} s{eta ? ` of about ${Math.round(eta)} s (from earlier calculations on this server)` : ''}
+        </span>
+        <span className="text-[10px] text-muted/50 tabular-nums">{pct}%</span>
+        <button onClick={onCancel}
+          className="px-3 py-0.5 text-xs text-muted hover:text-white border border-border rounded transition-colors">
+          Cancel
+        </button>
+      </div>
     </div>
   )
 }
@@ -111,30 +123,74 @@ export default function BatchPanel() {
     return BATCH_METRICS.find(m => m.key === k)?.label ?? k
   }
 
+  const ctrlRef = useRef<AbortController | null>(null)
+  const [etaTotal, setEtaTotal] = useState<number | null>(null)
+  const [startedAt, setStartedAt] = useState(0)
+  const [, tick] = useState(0)
+  useEffect(() => {
+    if (!busy) return
+    const id = window.setInterval(() => tick(n => n + 1), 500)
+    return () => window.clearInterval(id)
+  }, [busy])
+
+  const cancel = () => ctrlRef.current?.abort()
+
+  // One calculation per file and metric, so the bar moves for real and Cancel stops at the next boundary.
+  // Results are shared with the single-file views through the same cache.
   const compute = async () => {
     const metrics = metricsToCompute()
     if (!metrics.length || !selectedFiles.length) return
+    const ctrl = new AbortController()
+    ctrlRef.current = ctrl
     setBusy(true); setError(''); setRows(null); setSkipped([])
-    setPStep(0); setPTotal(1); setPLabel('Computing all metrics on server…')
+    const total = selectedFiles.length * metrics.length
+    setPStep(0); setPTotal(total); setPLabel('Starting…'); setStartedAt(Date.now()); setEtaTotal(null)
+    const load = await fetchServerLoad()
+    if (load?.timing_s_per_audio_s) {
+      let eta = 0, known = true
+      for (const f of selectedFiles) for (const m of metrics) {
+        const rate = load.timing_s_per_audio_s[m]
+        if (rate == null) { known = false; continue }
+        const sec = sectionMap[f.audio_id]
+        eta += rate * (sec ? sec[1] - sec[0] : f.duration_s)
+      }
+      if (known && eta > 0) setEtaTotal(eta)
+    }
+    const out: any[] = []
+    const skip: { audio_id: string; name: string; metric: string; reason: string }[] = []
+    let step = 0
     try {
-      const result = await fetchBatch(
-        sessionId,
-        selectedFiles.map(f => f.audio_id),
-        metrics,
-        fieldType,
-        sectionMap,
-      )
-      // Merge names into rows (server rows only have audio_id)
-      const named = result.rows.map(row => ({
-        ...row,
-        name: files.find(f => f.audio_id === row.audio_id)?.name ?? row.audio_id,
-      }))
-      setRows(named); setKeys(result.metric_keys as MetricKey[])
-      setSkipped(result.skipped ?? [])
-      setPStep(1)
+      for (const f of selectedFiles) {
+        const sec = sectionMap[f.audio_id] ?? null
+        const row: any = { audio_id: f.audio_id, name: f.name, section: sec }
+        for (const m of metrics) {
+          if (ctrl.signal.aborted) throw new DOMException('cancelled', 'AbortError')
+          setPLabel(`${f.name.replace(/\.wav$/i, '')} · ${keyLabel(m)}`)
+          try {
+            const res = await fetchMetric(sessionId, f.audio_id, m, fieldType, sec, { signal: ctrl.signal, job: newClientId() })
+            row[m] = res.global ?? null
+            if (res.section !== undefined) row.section = res.section
+          } catch (e: any) {
+            if (isAbort(e) || e instanceof SessionExpiredError) throw e
+            row[m] = null
+            skip.push({ audio_id: f.audio_id, name: f.name, metric: m, reason: e?.message ?? 'failed' })
+          }
+          setPStep(++step)
+        }
+        out.push(row)
+      }
+      setRows(out); setKeys(metrics); setSkipped(skip)
       toast.success('Batch analysis complete')
-    } catch(e:any) {
-      setError(e.message); toast.error('Batch failed')
+    } catch (e: any) {
+      if (isAbort(e)) {
+        // Keep what was finished: the rows already done are shown, the rest is left out
+        if (out.length) { setRows(out); setKeys(metrics); setSkipped(skip) }
+        toast.info(`Cancelled after ${step} of ${total} calculations`)
+      } else if (e instanceof SessionExpiredError) {
+        setError('The server restarted and lost your files. Upload them again and repeat the batch.')
+      } else {
+        setError(e.message); toast.error('Batch failed')
+      }
     } finally {
       setBusy(false); setPLabel('')
     }
@@ -307,7 +363,7 @@ export default function BatchPanel() {
         {/* Progress / results */}
         <div className="flex-1 overflow-auto p-4 flex flex-col gap-3">
 
-          {busy && <BatchProgress step={pStep} total={pTotal} label={pLabel} />}
+          {busy && <BatchProgress step={pStep} total={pTotal} label={pLabel} elapsed={(Date.now() - startedAt) / 1000} eta={etaTotal} onCancel={cancel} />}
 
           {error && <p className="text-xs text-red-400">{error}</p>}
 
