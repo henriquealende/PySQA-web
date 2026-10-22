@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 import services.audio_service as svc
 from services.session_store import add_entry, get_entry
+from utils.lang import msg
 
 router = APIRouter()
 
@@ -52,7 +53,7 @@ class LoudnessAdjRequest(BaseModel):
 def _entry(session_id, audio_id):
     e = get_entry(session_id, audio_id)
     if not e:
-        raise HTTPException(404, "Audio not found")
+        raise HTTPException(404, msg("Áudio não encontrado", "Audio not found"))
     return e
 
 

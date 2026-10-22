@@ -26,6 +26,7 @@ from scipy import signal as sps
 from scipy.optimize import least_squares
 
 from utils import limits
+from utils.lang import msg
 
 
 class FrfError(ValueError):
@@ -130,7 +131,7 @@ def read_wav(file_id: str, filename: str, raw: bytes) -> List[Channel]:
     try:
         data, fs = sf.read(io.BytesIO(raw), dtype="float64", always_2d=True)
     except Exception as exc:
-        raise FrfError(f"{filename}: not a readable WAV file ({exc}).")
+        raise FrfError(msg(f"{filename}: não é um arquivo WAV legível ({exc}).", f"{filename}: not a readable WAV file ({exc})."))
     base = os.path.splitext(_clean_name(filename))[0]
     out = []
     for k in range(data.shape[1]):
@@ -143,7 +144,7 @@ def read_csv(file_id: str, filename: str, raw: bytes, fs_hint: Optional[float]) 
     text = raw.decode("utf-8-sig", errors="replace")
     lines = [ln for ln in text.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
     if len(lines) < 4:
-        raise FrfError(f"{filename}: the table is too short.")
+        raise FrfError(msg(f"{filename}: a tabela é curta demais.", f"{filename}: the table is too short."))
     sep = ";" if lines[0].count(";") >= lines[0].count(",") and ";" in lines[0] else ("\t" if "\t" in lines[0] else ",")
     rows = [[c.strip() for c in ln.split(sep)] for ln in lines]
 
@@ -160,9 +161,9 @@ def read_csv(file_id: str, filename: str, raw: bytes, fs_hint: Optional[float]) 
     try:
         arr = np.array([[float(c.replace(",", ".") if sep != "," else c) if c != "" else np.nan for c in r] for r in rows], dtype=float)
     except ValueError:
-        raise FrfError(f"{filename}: the table has text where numbers are expected.")
+        raise FrfError(msg(f"{filename}: a tabela tem texto onde deveria haver números.", f"{filename}: the table has text where numbers are expected."))
     if arr.ndim != 2 or arr.shape[1] < 1:
-        raise FrfError(f"{filename}: no numeric columns found.")
+        raise FrfError(msg(f"{filename}: nenhuma coluna numérica encontrada.", f"{filename}: no numeric columns found."))
     names = header if header and len(header) == arr.shape[1] else [f"col{k + 1}" for k in range(arr.shape[1])]
     col0 = arr[:, 0]
     dt = np.diff(col0)
@@ -176,7 +177,8 @@ def read_csv(file_id: str, filename: str, raw: bytes, fs_hint: Optional[float]) 
         cols = range(1, arr.shape[1])
     else:
         if not fs_hint:
-            raise FrfError(f"{filename}: no time column found, so the sample rate is needed. Type it in 'CSV sample rate'.")
+            raise FrfError(msg(f"{filename}: não há coluna de tempo, então a taxa de amostragem é necessária. Digite-a em 'Taxa de amostragem do CSV'.",
+                               f"{filename}: no time column found, so the sample rate is needed. Type it in 'CSV sample rate'."))
         fs = float(fs_hint)
         cols = range(arr.shape[1])
     out = []
@@ -196,7 +198,8 @@ def read_uff(file_id: str, filename: str, raw: bytes) -> List[Channel]:
     try:
         import pyuff
     except ImportError:
-        raise FrfError("Reading UFF files needs the 'pyuff' package, which is not installed on this server.")
+        raise FrfError(msg("Para ler arquivos UFF é preciso o pacote 'pyuff', que não está instalado neste servidor.",
+                           "Reading UFF files needs the 'pyuff' package, which is not installed on this server."))
     fd, path = tempfile.mkstemp(suffix=".uff")
     try:
         with os.fdopen(fd, "wb") as fh:
@@ -204,7 +207,7 @@ def read_uff(file_id: str, filename: str, raw: bytes) -> List[Channel]:
         try:
             sets = pyuff.UFF(path).read_sets()
         except Exception as exc:
-            raise FrfError(f"{filename}: not a readable UFF file ({exc}).")
+            raise FrfError(msg(f"{filename}: não é um arquivo UFF legível ({exc}).", f"{filename}: not a readable UFF file ({exc})."))
     finally:
         try:
             os.remove(path)
@@ -244,7 +247,8 @@ def read_uff(file_id: str, filename: str, raw: bytes) -> List[Channel]:
             out.append(Channel(f"{file_id}_{len(out)}", name, _clean_name(filename), "time",
                                np.ascontiguousarray(np.asarray(y, dtype=float)), fs=1.0 / step, unit=unit))
     if not out:
-        raise FrfError(f"{filename}: no time records (dataset 58, type 1) or FRFs (type 4) were found in this UFF file.")
+        raise FrfError(msg(f"{filename}: este arquivo UFF não tem registros no tempo (dataset 58, tipo 1) nem FRFs (tipo 4).",
+                           f"{filename}: no time records (dataset 58, type 1) or FRFs (type 4) were found in this UFF file."))
     return out
 
 
@@ -256,7 +260,7 @@ def read_any(file_id: str, filename: str, raw: bytes, fs_hint: Optional[float] =
         return read_uff(file_id, filename, raw)
     if low.endswith((".csv", ".txt", ".dat", ".tsv")):
         return read_csv(file_id, filename, raw, fs_hint)
-    raise FrfError(f"{filename}: unsupported file type. Use .uff/.unv, .wav or .csv.")
+    raise FrfError(msg(f"{filename}: tipo de arquivo não suportado. Use .uff/.unv, .wav ou .csv.", f"{filename}: unsupported file type. Use .uff/.unv, .wav or .csv."))
 
 
 # ── Spectra and estimators ────────────────────────────────────────────────────
@@ -301,8 +305,10 @@ def _impact_spectra(x: np.ndarray, y: np.ndarray, fs: float, nperseg: int, thres
     pre = max(1, int(round(nperseg * pre_pct / 100.0)))
     hits = [h for h in find_hits(x, nperseg, thresh_pct) if h - pre >= 0 and h - pre + nperseg <= len(x)]
     if not hits:
-        raise FrfError("No impact was found. Lower 'Trigger level', check the excitation channel, or use "
-                       "'Random / continuous' averaging.")
+        raise FrfError(msg("Nenhum impacto foi encontrado. Diminua o 'Nível de disparo', confira o canal de excitação ou use "
+                           "a média 'Aleatório / contínuo'.",
+                           "No impact was found. Lower 'Trigger level', check the excitation channel, or use "
+                           "'Random / continuous' averaging."))
     t = np.arange(nperseg) / fs
     t_hit = pre / fs
     wf = (t <= t_hit + force_ms * 1e-3).astype(float)                          # force window: the pulse only
@@ -343,7 +349,7 @@ def estimate(Sxx: np.ndarray, Syy: np.ndarray, Sxy: np.ndarray, estimator: str) 
         syy, sxy = Syy / kappa, Sxy / s
         lam = 0.5 * (Sxx + syy) + np.sqrt((0.5 * (Sxx - syy)) ** 2 + np.abs(sxy) ** 2)
         return s * (lam - Sxx) / np.where(np.abs(sxy) < tiny, tiny, np.conj(sxy))
-    raise FrfError(f"Unknown estimator '{estimator}'.")
+    raise FrfError(msg(f"Estimador desconhecido '{estimator}'.", f"Unknown estimator '{estimator}'."))
 
 
 def coherence(Sxx: np.ndarray, Syy: np.ndarray, Sxy: np.ndarray) -> np.ndarray:
@@ -465,9 +471,11 @@ def find_modes(f: np.ndarray, H_disp: np.ndarray, H_show: np.ndarray, coh: Optio
                 bw = hi - lo
                 zeta_hp = bw / (2 * fn)
                 if bw < 3 * df:
-                    warn.append("Peak is only a few frequency lines wide: damping is not reliable (use a longer record).")
+                    warn.append(msg("O pico tem só algumas linhas de frequência de largura: o amortecimento não é confiável (use um registro mais longo).",
+                                    "Peak is only a few frequency lines wide: damping is not reliable (use a longer record)."))
             else:
-                warn.append("Neighbouring modes overlap this peak, so the -3 dB width could not be measured.")
+                warn.append(msg("Modos vizinhos se sobrepõem a este pico, então a largura de -3 dB não pôde ser medida.",
+                                "Neighbouring modes overlap this peak, so the -3 dB width could not be measured."))
             zeta_fit = fn_fit = fit_err = None
             residues = None
             if method in ("fit", "both") or zeta_hp is None:
@@ -477,13 +485,14 @@ def find_modes(f: np.ndarray, H_disp: np.ndarray, H_show: np.ndarray, coh: Optio
                 if fit and fit["error"] < 0.35:
                     zeta_fit, fn_fit, fit_err, residues = fit["zeta"], fit["fn"], fit["error"], fit["residues"]
                 elif method == "fit":
-                    warn.append("The single-mode fit did not converge on this peak.")
+                    warn.append(msg("O ajuste de um único modo não convergiu neste pico.", "The single-mode fit did not converge on this peak."))
             c_peak = None
             if coh is not None:
                 band = (f >= (lo if lo else fn - 2 * df)) & (f <= (hi if hi else fn + 2 * df))
                 c_peak = float(np.mean(coh[:, band])) if band.any() else None
                 if c_peak is not None and c_peak < 0.8:
-                    warn.append(f"Coherence near this peak is {c_peak:.2f}: the estimate is noisy.")
+                    warn.append(msg(f"A coerência perto deste pico é {c_peak:.2f}: a estimativa está ruidosa.",
+                                    f"Coherence near this peak is {c_peak:.2f}: the estimate is noisy."))
             corr = (exp_decay / (2 * np.pi * fn)) if (exp_decay and fn > 0) else 0.0
             use_fit = method in ("fit", "both") and zeta_fit is not None
             z_main = zeta_fit if use_fit else zeta_hp
@@ -506,7 +515,8 @@ def find_modes(f: np.ndarray, H_disp: np.ndarray, H_show: np.ndarray, coh: Optio
 # ── The whole analysis ────────────────────────────────────────────────────────
 
 def _res_label(response_type: str) -> str:
-    return {"acceleration": "Accelerance", "velocity": "Mobility", "displacement": "Receptance"}.get(response_type, "FRF")
+    return {"acceleration": msg("Acelerância", "Accelerance"), "velocity": msg("Mobilidade", "Mobility"),
+            "displacement": msg("Receptância", "Receptance")}.get(response_type, "FRF")
 
 
 def analyse(session_id: str, p: Dict[str, Any]) -> Dict[str, Any]:
@@ -518,7 +528,7 @@ def analyse(session_id: str, p: Dict[str, Any]) -> Dict[str, Any]:
     except KeyError:
         raise
     if not resp_chs:
-        raise FrfError("Choose at least one response channel.")
+        raise FrfError(msg("Escolha ao menos um canal de resposta.", "Choose at least one response channel."))
 
     estimator = str(p.get("estimator", "H1")).upper()
     mode = str(p.get("averaging", "welch"))
@@ -544,19 +554,23 @@ def analyse(session_id: str, p: Dict[str, Any]) -> Dict[str, Any]:
 
     if time_resp:
         if exc is None or exc.kind != "time":
-            raise FrfError("Choose an excitation channel (a time record) for the response channels.")
+            raise FrfError(msg("Escolha um canal de excitação (um registro no tempo) para os canais de resposta.",
+                               "Choose an excitation channel (a time record) for the response channels."))
         fs = exc.fs
         for c in time_resp:
             if abs(c.fs - fs) > 1e-6 * fs:
-                raise FrfError(f"'{c.name}' has sample rate {c.fs:g} Hz but the excitation has {fs:g} Hz. "
-                               "Use records with the same sample rate.")
+                raise FrfError(msg(f"'{c.name}' tem taxa de amostragem de {c.fs:g} Hz, mas a excitação tem {fs:g} Hz. "
+                                   "Use registros com a mesma taxa de amostragem.",
+                                   f"'{c.name}' has sample rate {c.fs:g} Hz but the excitation has {fs:g} Hz. "
+                                   "Use records with the same sample rate."))
         n = min([exc.n] + [c.n for c in time_resp])
         if n < 64:
-            raise FrfError("The records are too short.")
+            raise FrfError(msg("Os registros são curtos demais.", "The records are too short."))
         nperseg = int(p.get("nperseg", 4096))
         nperseg = min(max(nperseg, 64), 1 << 17)
         if nperseg > n:
-            warnings.append(f"The block length was reduced from {nperseg} to {n} samples (the record length).")
+            warnings.append(msg(f"O tamanho do bloco foi reduzido de {nperseg} para {n} amostras (o tamanho do registro).",
+                                f"The block length was reduced from {nperseg} to {n} samples (the record length)."))
             nperseg = n
         x = exc.data[:n]
         Sxx0 = None
@@ -582,11 +596,16 @@ def analyse(session_id: str, p: Dict[str, Any]) -> Dict[str, Any]:
             names.append((c.id, c.name))
         df = float(grid_f[1] - grid_f[0])
         if not coh_valid:
-            warnings.append("Only one average: coherence cannot be estimated. Use a longer record, a shorter block "
-                            "length, or more impacts.")
+            warnings.append(msg("Só uma média: a coerência não pode ser estimada. Use um registro mais longo, um bloco mais curto "
+                                "ou mais impactos.",
+                                "Only one average: coherence cannot be estimated. Use a longer record, a shorter block "
+                                "length, or more impacts."))
         if mode == "impact":
-            warnings.append(f"Impact averaging: {hits} impact{'s' if hits != 1 else ''} used. The exponential window adds "
-                            f"{exp_decay:.1f} 1/s of artificial damping; it is subtracted from the damping estimates.")
+            warnings.append(msg(
+                f"Média de impactos: {hits} impacto{'s' if hits != 1 else ''} usado{'s' if hits != 1 else ''}. A janela exponencial soma "
+                f"{exp_decay:.1f} 1/s de amortecimento artificial; ele é descontado das estimativas de amortecimento.",
+                f"Impact averaging: {hits} impact{'s' if hits != 1 else ''} used. The exponential window adds "
+                f"{exp_decay:.1f} 1/s of artificial damping; it is subtracted from the damping estimates."))
 
     f_all = grid_f
     # Measured FRFs from files: bring them onto the computed grid, or use their own if there is no time data
@@ -598,7 +617,7 @@ def analyse(session_id: str, p: Dict[str, Any]) -> Dict[str, Any]:
         C_list.append(None)
         names.append((c.id, c.name))
     if f_all is None:
-        raise FrfError("Nothing to analyse.")
+        raise FrfError(msg("Não há nada para analisar.", "Nothing to analyse."))
     if df is None:
         df = float(f_all[1] - f_all[0]) if len(f_all) > 1 else 1.0
 
@@ -608,7 +627,8 @@ def analyse(session_id: str, p: Dict[str, Any]) -> Dict[str, Any]:
     fmax = min(fmax, fmax_nyq)
     keep = (f_all > 0) & (f_all >= fmin) & (f_all <= fmax)
     if keep.sum() < 8:
-        raise FrfError("The frequency range is too narrow for this frequency resolution.")
+        raise FrfError(msg("A faixa de frequência é estreita demais para esta resolução em frequência.",
+                           "The frequency range is too narrow for this frequency resolution."))
     f = f_all[keep]
 
     unwrap = bool(p.get("unwrap", False))
@@ -656,6 +676,9 @@ def analyse(session_id: str, p: Dict[str, Any]) -> Dict[str, Any]:
         out["modes"] = md["modes"]
         out["mif_db"] = md["mif_db"]
         if resp_type == "none":
-            out["warnings"].append("Response type is 'Not specified', so damping uses the FRF as it is. "
-                                   "Pick acceleration, velocity or displacement for best damping estimates.")
+            out["warnings"].append(msg(
+                "O tipo de resposta é 'Não especificado', então o amortecimento usa a FRF como ela está. "
+                "Escolha aceleração, velocidade ou deslocamento para estimar melhor o amortecimento.",
+                "Response type is 'Not specified', so damping uses the FRF as it is. "
+                "Pick acceleration, velocity or displacement for best damping estimates."))
     return out

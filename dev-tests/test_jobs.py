@@ -58,7 +58,7 @@ class Server:
 
     def req(self, method, path, body=None, headers=None):
         c = self.conn()
-        c.request(method, path, body=body, headers=headers or {})
+        c.request(method, path, body=body, headers={"X-Lang": "en", **(headers or {})})
         r = c.getresponse()
         data = r.read()
         c.close()
@@ -100,7 +100,7 @@ class Pending:
 
     def _run(self, base, payload):
         try:
-            self.c.request("POST", f"{base}/metrics", payload, {"Content-Type": "application/json"})
+            self.c.request("POST", f"{base}/metrics", payload, {"Content-Type": "application/json", "X-Lang": "en"})
             r = self.c.getresponse()
             self.result = (r.status, r.read()[:80])
         except Exception as e:

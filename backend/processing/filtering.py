@@ -27,6 +27,8 @@ from typing import Sequence
 import numpy as np
 from scipy import signal as sp
 
+from utils.lang import msg
+
 
 # ---------------------------------------------------------------------------
 # Filter type enumeration
@@ -45,7 +47,7 @@ class FilterType(str, Enum):
         for member in cls:
             if member.value.lower() == label.strip().lower():
                 return member
-        raise ValueError(f"Unknown filter type: {label!r}")
+        raise ValueError(msg(f"Tipo de filtro desconhecido: {label!r}", f"Unknown filter type: {label!r}"))
 
 
 # ---------------------------------------------------------------------------
@@ -125,12 +127,12 @@ def apply_filter(
 
     if filter_type == FilterType.HARMONIC_NOTCH:
         if fundamental is None:
-            raise ValueError("fundamental must be specified for Harmonic Notch.")
+            raise ValueError(msg("Informe a frequência fundamental para o Notch harmônico.", "fundamental must be specified for Harmonic Notch."))
         return _apply_harmonic_notch(data, fs, fundamental, q_factor)
 
     # --- scalar / band-pass filters ---
     if cutoff is None:
-        raise ValueError("cutoff must be specified for this filter type.")
+        raise ValueError(msg("Informe a frequência de corte para este tipo de filtro.", "cutoff must be specified for this filter type."))
 
     linkwitz = design.lower().startswith("link")
 
@@ -143,12 +145,12 @@ def apply_filter(
             btype = "high"
         case FilterType.BANDPASS:
             if not hasattr(cutoff, "__len__") or len(cutoff) != 2:
-                raise ValueError("Band-pass cutoff must be a (low, high) tuple.")
+                raise ValueError(msg("O corte do passa-faixa deve ser um par (baixa, alta).", "Band-pass cutoff must be a (low, high) tuple."))
             wn = (cutoff[0] / nyq, cutoff[1] / nyq)
             btype = "band"
         case FilterType.BANDSTOP:
             if not hasattr(cutoff, "__len__") or len(cutoff) != 2:
-                raise ValueError("Band-reject cutoff must be a (low, high) tuple.")
+                raise ValueError(msg("O corte do rejeita-faixa deve ser um par (baixa, alta).", "Band-reject cutoff must be a (low, high) tuple."))
             wn = (cutoff[0] / nyq, cutoff[1] / nyq)
             btype = "bandstop"
         case _:
@@ -207,10 +209,12 @@ def _apply_octave_eq(
         gains_db = [0.0] * len(THIRD_OCTAVE_CENTRES_HZ)
 
     if len(gains_db) != len(THIRD_OCTAVE_CENTRES_HZ):
-        raise ValueError(
+        raise ValueError(msg(
+            f"Eram esperados {len(THIRD_OCTAVE_CENTRES_HZ)} valores de ganho, "
+            f"mas vieram {len(gains_db)}.",
             f"Expected {len(THIRD_OCTAVE_CENTRES_HZ)} gain values, "
             f"got {len(gains_db)}."
-        )
+        ))
 
     data = np.asarray(data, dtype=float)
     N    = data.shape[0]
@@ -366,7 +370,7 @@ def apply_weighting(
 
     curve = curve.upper()
     if curve not in ('A', 'C'):
-        raise ValueError(f"Unknown weighting curve: {curve!r}. Use 'A' or 'C'.")
+        raise ValueError(msg(f"Curva de ponderação desconhecida: {curve!r}. Use 'A' ou 'C'.", f"Unknown weighting curve: {curve!r}. Use 'A' or 'C'."))
 
     x = np.asarray(data, dtype=float)
     n = x.shape[0]

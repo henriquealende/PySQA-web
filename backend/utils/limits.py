@@ -32,6 +32,8 @@ import time
 import uuid
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
+from utils.lang import msg
+
 
 class ResourceLimitError(Exception):
     """The request is valid but does not fit this server's limits (HTTP 413)."""
@@ -164,13 +166,24 @@ COST: Dict[str, Tuple[float, float]] = {
     "tonality_ecma":        (111.0, 537.0),
 }
 
-LABELS: Dict[str, str] = {
-    "spectrum": "The spectrum", "spectrogram": "The spectrogram", "octave": "The 1/3-octave analysis",
-    "envelope": "The envelope", "ipm": "IPM", "sharpness_din": "Sharpness DIN 45692",
-    "roughness_dw": "Roughness (Daniel and Weber)", "fluctuation_strength": "Fluctuation strength",
-    "loudness_zwk": "Loudness ISO 532-1", "loudness_ecma": "Loudness ECMA-418-2",
-    "roughness_ecma": "Roughness ECMA-418-2", "tonality_ecma": "Tonality ECMA-418-2",
+# (Portuguese, English) names shown inside the refusal messages; use label(kind) to pick one.
+LABELS: Dict[str, Tuple[str, str]] = {
+    "spectrum": ("O espectro", "The spectrum"), "spectrogram": ("O espectrograma", "The spectrogram"),
+    "octave": ("A análise em 1/3 de oitava", "The 1/3-octave analysis"),
+    "envelope": ("O envelope", "The envelope"), "ipm": ("IPM", "IPM"),
+    "sharpness_din": ("Sharpness DIN 45692", "Sharpness DIN 45692"),
+    "roughness_dw": ("Roughness (Daniel e Weber)", "Roughness (Daniel and Weber)"),
+    "fluctuation_strength": ("Fluctuation Strength", "Fluctuation strength"),
+    "loudness_zwk": ("Loudness ISO 532-1", "Loudness ISO 532-1"),
+    "loudness_ecma": ("Loudness ECMA-418-2", "Loudness ECMA-418-2"),
+    "roughness_ecma": ("Roughness ECMA-418-2", "Roughness ECMA-418-2"),
+    "tonality_ecma": ("Tonality ECMA-418-2", "Tonality ECMA-418-2"),
 }
+
+
+def label(kind: str) -> str:
+    pair = LABELS.get(kind)
+    return msg(*pair) if pair else kind
 
 
 def estimate_mb(kind: str, duration_s: float, sample_rate: int) -> Optional[float]:
@@ -202,18 +215,28 @@ def check_budget(kind: str, duration_s: float, sample_rate: int, audio_ram_mb: f
     fits_s = max(0.0, (free / SAFETY - base) / per_s) / rate_factor if per_s > 0 else 0.0
     need_one_s = estimate_mb(kind, 1.0, sample_rate)
     if fits_s >= 1.0 and can_select:
-        hint = f"Select a section of up to about {fits_s:.1f} s (the Section bar above the chart) or run PySQA locally."
+        hint = msg(
+            f"Escolha um trecho de até cerca de {fits_s:.1f} s (a barra Trecho acima do gráfico) ou rode o PySQA no seu computador.",
+            f"Select a section of up to about {fits_s:.1f} s (the Section bar above the chart) or run PySQA locally.")
     elif fits_s >= 1.0:
-        hint = f"Trim the file to about {fits_s:.1f} s (Processing, Windowing) or run PySQA locally."
+        hint = msg(
+            f"Corte o arquivo para cerca de {fits_s:.1f} s (Processamento, Janela) ou rode o PySQA no seu computador.",
+            f"Trim the file to about {fits_s:.1f} s (Processing, Windowing) or run PySQA locally.")
     elif need_one_s is not None and need_one_s > MEMORY_LIMIT_MB - RESERVE_MB - BASELINE_MB:
-        hint = (f"Even 1 s of audio needs about {need_one_s:.0f} MB, more than this server can spare. "
-                "Run PySQA locally or on a server with more memory.")
+        hint = msg(
+            f"Até 1 s de áudio precisa de cerca de {need_one_s:.0f} MB, mais do que este servidor consegue dar. "
+            "Rode o PySQA no seu computador ou em um servidor com mais memória.",
+            f"Even 1 s of audio needs about {need_one_s:.0f} MB, more than this server can spare. "
+            "Run PySQA locally or on a server with more memory.")
     else:
-        hint = "There is not enough free memory for it right now. Try again in a moment, or run PySQA locally."
-    raise ResourceLimitError(
-        f"{LABELS.get(kind, kind)} needs about {need:.0f} MB for {duration_s:.1f} s of audio, "
+        hint = msg("Não há memória livre suficiente agora. Tente de novo daqui a pouco ou rode o PySQA no seu computador.",
+                   "There is not enough free memory for it right now. Try again in a moment, or run PySQA locally.")
+    raise ResourceLimitError(msg(
+        f"{label(kind)} precisa de cerca de {need:.0f} MB para {duration_s:.1f} s de áudio, "
+        f"mas este servidor tem cerca de {max(free, 0):.0f} MB livres. {hint}",
+        f"{label(kind)} needs about {need:.0f} MB for {duration_s:.1f} s of audio, "
         f"but this server has about {max(free, 0):.0f} MB free. {hint}"
-    )
+    ))
 
 
 # ── One heavy job at a time ───────────────────────────────────────────────────
@@ -246,7 +269,8 @@ def heavy_slot(cancelled: Optional[Callable[[], bool]] = None, job: str = "", ki
             if cancelled is not None and cancelled():
                 raise RequestCancelled()
             if time.monotonic() > deadline:
-                raise ServerBusyError("The server is busy with another calculation. Try again in a moment.")
+                raise ServerBusyError(msg("O servidor está ocupado com outro cálculo. Tente de novo daqui a pouco.",
+                                          "The server is busy with another calculation. Try again in a moment."))
     finally:
         with _STATE:
             if tag in _QUEUE:
@@ -295,26 +319,31 @@ def record_timing(kind: str, audio_s: float, secs: float) -> None:
 
 def check_upload_size(filename: str, size_bytes: int) -> None:
     if MAX_UPLOAD_MB and size_bytes > MAX_UPLOAD_MB * 1048576:
-        raise ResourceLimitError(
+        raise ResourceLimitError(msg(
+            f"{filename} é maior que {MAX_UPLOAD_MB:.0f} MB, o máximo que este servidor aceita por arquivo.",
             f"{filename} is larger than {MAX_UPLOAD_MB:.0f} MB, the most this server accepts per file."
-        )
+        ))
 
 
 def check_upload_audio(filename: str, duration_s: float) -> None:
     if MAX_AUDIO_SECONDS and duration_s > MAX_AUDIO_SECONDS:
-        raise ResourceLimitError(
+        raise ResourceLimitError(msg(
+            f"{filename} dura {duration_s:.0f} s; este servidor aceita até {MAX_AUDIO_SECONDS:.0f} s por arquivo. "
+            "Corte-o antes (por exemplo no Audacity) ou rode o PySQA no seu computador.",
             f"{filename} lasts {duration_s:.0f} s; this server accepts up to {MAX_AUDIO_SECONDS:.0f} s per file. "
             "Trim it first (for example in Audacity) or run PySQA locally."
-        )
+        ))
 
 
 def check_export_size(cells: int) -> None:
     """An .xlsx is built in memory cell by cell (about 0.65 MB per 1000 cells): refuse the huge ones."""
     if MAX_EXPORT_CELLS and cells > MAX_EXPORT_CELLS:
-        raise ResourceLimitError(
+        raise ResourceLimitError(msg(
+            f"Esta tabela tem {cells:,} células; o servidor monta arquivos Excel de até {MAX_EXPORT_CELLS:,.0f}. "
+            "Use CSV: ele é feito no seu navegador e não tem limite.",
             f"This table has {cells:,} cells; the server builds Excel files of up to {MAX_EXPORT_CELLS:,.0f}. "
             "Use CSV instead: it is made in your browser and has no limit."
-        )
+        ))
 
 
 def describe(audio_ram_mb: float = 0.0) -> Dict[str, object]:

@@ -10,6 +10,7 @@ from pydantic import BaseModel
 import services.frf_service as frf
 from services.session_store import check_session_id, usable_audio_id
 from utils import limits
+from utils.lang import msg
 
 router = APIRouter()
 
@@ -85,6 +86,6 @@ def compute(session_id: str, body: ComputeRequest):
         return frf.analyse(session_id, body.model_dump())
     except KeyError:
         # The server forgot these records (restart, or idle for too long): the browser re-sends them
-        raise HTTPException(status_code=404, detail="The server no longer has these records.")
+        raise HTTPException(status_code=404, detail=msg("O servidor não tem mais estes registros.", "The server no longer has these records."))
     except frf.FrfError as exc:
         raise HTTPException(status_code=400, detail=str(exc))

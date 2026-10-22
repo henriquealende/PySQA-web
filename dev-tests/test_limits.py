@@ -61,7 +61,7 @@ class Server:
 
     def req(self, method, path, body=None, headers=None, timeout=300):
         c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=timeout)
-        c.request(method, path, body=body, headers=headers or {})
+        c.request(method, path, body=body, headers={"X-Lang": "en", **(headers or {})})
         r = c.getresponse()
         raw = r.read()
         try:
@@ -189,6 +189,8 @@ from pathlib import Path
 from services import session_store as ss
 from services.session_store import AudioEntry
 from utils import limits
+from utils.lang import set_lang
+set_lang("en")
 
 
 def fake(aid, mb):

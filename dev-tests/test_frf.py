@@ -13,6 +13,8 @@ import numpy as np
 sys.stdout.reconfigure(encoding="utf-8")
 sys.path.insert(0, os.getcwd())
 import services.frf_service as frf   # noqa: E402
+from utils.lang import set_lang   # noqa: E402
+set_lang("en")
 
 FAILS = []
 
@@ -207,6 +209,21 @@ try:
     check("modes from a measured FRF file", len(rf["modes"]) == 3, [m["fn_hz"] for m in rf["modes"]])
 except Exception as exc:
     check("UFF reader", False, repr(exc)[:300])
+
+
+# ── the same refusal in Portuguese and in English ──
+def _refusal():
+    try:
+        frf.analyse("lang-s", dict(excitation=None, responses=[], response_type="none", show_as="none"))
+    except frf.FrfError as exc:
+        return str(exc)
+    return ""
+
+
+set_lang("pt")
+check("refusal in Portuguese", _refusal() == "Escolha ao menos um canal de resposta.", _refusal())
+set_lang("en")
+check("refusal in English", _refusal() == "Choose at least one response channel.", _refusal())
 
 print("FAILS:", len(FAILS), FAILS)
 sys.exit(1 if FAILS else 0)

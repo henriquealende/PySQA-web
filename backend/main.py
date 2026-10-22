@@ -14,6 +14,7 @@ from routers import audio, processing, export, frf
 from services.audio_service import SectionError
 from services.session_store import InvalidIdError, audio_ram_mb, load_all_sessions, start_janitor
 from utils import limits
+from utils.lang import msg, set_lang
 
 # ── App ───────────────────────────────────────────────────────────────────────
 @asynccontextmanager
@@ -31,6 +32,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Language of the messages (the browser sends X-Lang: pt | en) ──────────────
+class LanguageMiddleware:
+    """Plain ASGI middleware (not @app.middleware("http"): that kind wraps the request and breaks
+    request.is_disconnected(), which the queue of heavy calculations relies on to drop abandoned requests)."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            h = dict(scope.get("headers") or [])
+            set_lang((h.get(b"x-lang") or h.get(b"accept-language") or b"").decode("latin-1"))
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(LanguageMiddleware)
+
 
 # ── Global error handler ──────────────────────────────────────────────────────
 @app.exception_handler(Exception)
@@ -62,7 +81,7 @@ async def resource_limit_handler(request: Request, exc: limits.ResourceLimitErro
 
 @app.exception_handler(limits.RequestCancelled)
 async def request_cancelled_handler(request: Request, exc: limits.RequestCancelled):
-    return JSONResponse(status_code=499, content={"detail": "The request was cancelled."})     # nobody is listening
+    return JSONResponse(status_code=499, content={"detail": msg("A requisição foi cancelada.", "The request was cancelled.")})     # nobody is listening
 
 
 @app.exception_handler(limits.ServerBusyError)

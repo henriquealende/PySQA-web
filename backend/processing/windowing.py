@@ -20,6 +20,8 @@ from enum import Enum
 
 import numpy as np
 
+from utils.lang import msg
+
 
 # ---------------------------------------------------------------------------
 # Window type enumeration
@@ -39,7 +41,7 @@ class WindowType(str, Enum):
         for member in cls:
             if member.value.lower() == label.strip().lower():
                 return member
-        raise ValueError(f"Unknown window type: {label!r}")
+        raise ValueError(msg(f"Tipo de janela desconhecido: {label!r}", f"Unknown window type: {label!r}"))
 
 
 # ---------------------------------------------------------------------------
@@ -130,9 +132,10 @@ def apply_window(
     end   = n_total if end_sample is None else int(end_sample)
 
     if start < 0 or end > n_total or start >= end:
-        raise ValueError(
+        raise ValueError(msg(
+            f"Trecho inválido [{start}, {end}) para um sinal de comprimento {n_total}.",
             f"Invalid segment [{start}, {end}) for signal of length {n_total}."
-        )
+        ))
 
     segment = data[start:end].copy()
     n = end - start
@@ -188,9 +191,10 @@ def frame_signal(
     n = len(data)
     n_frames = 1 + (n - frame_length) // hop_length
     if n_frames <= 0:
-        raise ValueError(
+        raise ValueError(msg(
+            f"O sinal ({n} amostras) é mais curto que o bloco ({frame_length} amostras).",
             f"Signal length {n} is shorter than frame_length {frame_length}."
-        )
+        ))
 
     w = get_window(window_type, frame_length, kaiser_beta)
 

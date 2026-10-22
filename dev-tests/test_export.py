@@ -55,7 +55,7 @@ class Server:
 
     def req(self, method, path, body=None, headers=None, raw=False):
         c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=300)
-        c.request(method, path, body=body, headers=headers or {})
+        c.request(method, path, body=body, headers={"X-Lang": "en", **(headers or {})})
         r = c.getresponse()
         data = r.read()
         c.close()

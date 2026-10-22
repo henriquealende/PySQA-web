@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from services.session_store import get_entry
 from utils import limits
+from utils.lang import msg
 
 router = APIRouter()
 
@@ -20,7 +21,7 @@ router = APIRouter()
 def export_wav(session_id: str, audio_id: str):
     entry = get_entry(session_id, audio_id)
     if not entry:
-        raise HTTPException(404, "Audio not found")
+        raise HTTPException(404, msg("Áudio não encontrado", "Audio not found"))
     return FileResponse(
         path=str(entry.raw_path),
         media_type="audio/wav",
@@ -44,7 +45,7 @@ def _build_xlsx(plot_data: List[dict]) -> io.BytesIO:
         )
         from openpyxl.utils import get_column_letter
     except ImportError:
-        raise HTTPException(500, "openpyxl not installed")
+        raise HTTPException(500, msg("O pacote openpyxl não está instalado", "openpyxl not installed"))
 
     # ── Colour palette (matches app theme) ────────────────────────────────
     TEAL_HEX   = "FF50B89E"

@@ -15,6 +15,8 @@ sys.path.insert(0, os.getcwd())
 
 from processing.filtering import apply_weighting   # noqa: E402
 import services.audio_service as svc               # noqa: E402
+from utils.lang import set_lang                    # noqa: E402
+set_lang("en")
 
 FAILS = []
 

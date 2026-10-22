@@ -23,6 +23,7 @@ from typing import Dict, Optional
 import numpy as np
 
 from utils import limits
+from utils.lang import msg
 from utils.samples import normalise_samples
 
 # PYSQA_TMP_DIR moves the session files (tests use it to stay out of the project folder)
@@ -39,7 +40,7 @@ class InvalidIdError(ValueError):
 
 def check_session_id(session_id: str) -> None:
     if not isinstance(session_id, str) or not _SAFE_ID.match(session_id):
-        raise InvalidIdError("Invalid session id.")
+        raise InvalidIdError(msg("Identificador de sessão inválido.", "Invalid session id."))
 
 
 def usable_audio_id(hint) -> Optional[str]:
@@ -201,10 +202,12 @@ def add_entry(session_id: str, entry: AudioEntry) -> None:
             session = get_or_create_session(session_id)
             previous = session.get(entry.audio_id)          # a restored file re-uses its old id
             if limits.MAX_FILES_PER_SESSION and previous is None and len(session) >= limits.MAX_FILES_PER_SESSION:
-                raise limits.ResourceLimitError(
+                raise limits.ResourceLimitError(msg(
+                    f"Uma sessão guarda no máximo {int(limits.MAX_FILES_PER_SESSION)} arquivos. "
+                    "Remova alguns antes de adicionar mais.",
                     f"A session holds at most {int(limits.MAX_FILES_PER_SESSION)} files. "
                     "Remove some before adding more."
-                )
+                ))
             ensure_room(session_id, max(0.0, _entry_mb(entry) - (_entry_mb(previous) if previous else 0.0)))
             session[entry.audio_id] = entry
             if previous is not None and previous.raw_path != entry.raw_path:
@@ -271,9 +274,10 @@ def ensure_room(session_id: str, new_mb: float) -> None:
     if not budget:
         return
     if new_mb > budget:
-        raise limits.ResourceLimitError(
+        raise limits.ResourceLimitError(msg(
+            f"Este arquivo precisa de {new_mb:.0f} MB de memória depois de carregado; o servidor guarda no máximo {budget:.0f} MB de áudio.",
             f"This file needs {new_mb:.0f} MB of memory once loaded; the server keeps at most {budget:.0f} MB of audio."
-        )
+        ))
     while audio_ram_mb() + new_mb > budget:
         now = time.time()
         victims = sorted(
@@ -281,9 +285,10 @@ def ensure_room(session_id: str, new_mb: float) -> None:
             if sid != session_id and _sessions.get(sid) and now - seen > _MIN_IDLE_TO_EVICT_S
         )
         if not victims:
-            raise limits.ResourceLimitError(
+            raise limits.ResourceLimitError(msg(
+                "A memória de áudio do servidor está cheia. Remova um arquivo da sua lista ou tente de novo em alguns minutos.",
                 "The server's audio memory is full. Remove a file from your list, or try again in a few minutes."
-            )
+            ))
         drop_session(victims[0][1])
 
 

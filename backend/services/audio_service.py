@@ -17,6 +17,7 @@ from scipy.signal import spectrogram as scipy_spectrogram, hilbert, oaconvolve
 
 from services.session_store import AudioEntry, audio_ram_mb, new_audio_id, persist_session, usable_audio_id
 from utils import limits
+from utils.lang import msg
 from utils.samples import BROWSER_SAFE, normalise_samples
 
 # ── Pre-warmed metric singletons ──────────────────────────────────────────────
@@ -142,13 +143,15 @@ def _section(entry: AudioEntry, t0: Optional[float] = None, t1: Optional[float] 
     lo = 0.0 if t0 is None else float(t0)
     hi = n / sr if t1 is None else float(t1)
     if not (math.isfinite(lo) and math.isfinite(hi)):
-        raise SectionError("The section limits must be numbers.")
+        raise SectionError(msg("Os limites do trecho precisam ser números.", "The section limits must be numbers."))
     start = int(round(max(lo, 0.0) * sr))
     end = min(int(round(hi * sr)), n)
     if start >= n:
-        raise SectionError(f"The section starts at {lo:.2f} s but this file lasts only {n / sr:.2f} s.")
+        raise SectionError(msg(f"O trecho começa em {lo:.2f} s, mas este arquivo dura só {n / sr:.2f} s.",
+                               f"The section starts at {lo:.2f} s but this file lasts only {n / sr:.2f} s."))
     if end - start < max(1, int(MIN_SECTION_S * sr)):
-        raise SectionError(f"The section must last at least {MIN_SECTION_S:g} s.")
+        raise SectionError(msg(f"O trecho precisa durar pelo menos {MIN_SECTION_S:g} s.",
+                               f"The section must last at least {MIN_SECTION_S:g} s."))
     if start == 0 and end == n:
         return _Slice(entry, 0.0, 0, n, True)
     view = copy.copy(entry)
@@ -525,7 +528,7 @@ def _dispatch_metric(mono: np.ndarray, sr: int, key: str, field_type: str = "fre
         return _metric_tonality(mono, sr, diffuse=is_diffuse)
     if key == "ipm":
         return _metric_ipm(mono, sr)
-    raise ValueError(f"Unknown metric: {key}")
+    raise ValueError(msg(f"Métrica desconhecida: {key}", f"Unknown metric: {key}"))
 
 
 def _metric_loudness_zwk(mono, sr, diffuse=False, compute_time_varying=True):
@@ -700,7 +703,8 @@ def _metric_tonality(mono, sr, diffuse=False):
     except Exception as exc:
         # The older hand-made port of the standard used to answer here. It returned values off by orders of
         # magnitude (billions of tu for a 60 dB tone), so it is no longer used: an honest message is better.
-        return {"error": "Tonality (ECMA-418-2) needs the 'sottek-hearing-model' package"
+        return {"error": msg("A Tonality (ECMA-418-2) precisa do pacote 'sottek-hearing-model'",
+                             "Tonality (ECMA-418-2) needs the 'sottek-hearing-model' package")
                          + (f" ({exc})" if str(exc) else "") + "."}
 
 

@@ -17,6 +17,7 @@ from services.session_store import (
     add_entry, check_session_id, ensure_room, get_entry, list_entries, new_audio_id, remove_entry, persist_session
 )
 from utils import limits
+from utils.lang import msg
 
 router = APIRouter()
 
@@ -78,7 +79,7 @@ async def upload_audio(
     results = []
     for index, f in enumerate(files):
         if not f.filename.lower().endswith(".wav"):
-            raise HTTPException(400, f"{f.filename} is not a WAV file")
+            raise HTTPException(400, msg(f"{f.filename} não é um arquivo WAV", f"{f.filename} is not a WAV file"))
         data = await _read_upload(f)
         try:                                   # header only: no decoding before the limits are checked
             info = sf.info(io.BytesIO(data))
@@ -121,7 +122,7 @@ def list_audio(session_id: str):
 def stream_audio(session_id: str, audio_id: str):
     entry = get_entry(session_id, audio_id)
     if not entry:
-        raise HTTPException(404, "Audio not found")
+        raise HTTPException(404, msg("Áudio não encontrado", "Audio not found"))
     return FileResponse(
         path=str(entry.raw_path),
         media_type="audio/wav",
@@ -134,7 +135,7 @@ def stream_audio(session_id: str, audio_id: str):
 def _get(session_id, audio_id):
     entry = get_entry(session_id, audio_id)
     if not entry:
-        raise HTTPException(404, "Audio not found")
+        raise HTTPException(404, msg("Áudio não encontrado", "Audio not found"))
     return entry
 
 
@@ -224,7 +225,7 @@ def calibrate(session_id: str, audio_id: str, body: CalibrateRequest, background
     """Store microphone calibration. calibration_pa = (fs_voltage * 1000) / sensitivity_mv_pa."""
     entry = _get(session_id, audio_id)
     if body.sensitivity_mv_pa <= 0:
-        raise HTTPException(400, "sensitivity_mv_pa must be > 0")
+        raise HTTPException(400, msg("A sensibilidade (mV/Pa) precisa ser maior que 0", "sensitivity_mv_pa must be > 0"))
     entry.calibration_pa = (body.fs_voltage * 1000.0) / body.sensitivity_mv_pa
     entry.invalidate_cache()
     background_tasks.add_task(persist_session, session_id)
