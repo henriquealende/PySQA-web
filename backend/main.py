@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from routers import audio, processing, export
+from routers import audio, processing, export, frf
 from services.audio_service import SectionError
 from services.session_store import InvalidIdError, audio_ram_mb, load_all_sessions, start_janitor
 from utils import limits
@@ -73,6 +73,7 @@ async def server_busy_handler(request: Request, exc: limits.ServerBusyError):
 app.include_router(audio.router,      prefix="/api/audio",      tags=["audio"])
 app.include_router(processing.router, prefix="/api/processing", tags=["processing"])
 app.include_router(export.router,     prefix="/api/export",     tags=["export"])
+app.include_router(frf.router,        prefix="/api/frf",        tags=["frf"])
 
 
 @app.get("/api/health")

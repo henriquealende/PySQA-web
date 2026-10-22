@@ -13,6 +13,9 @@ cd backend
 `test_jobs`, `test_fidelity`, `test_section`, `test_limits`, `test_ids`, `test_export`: 149 checks in total,
 all of them must end with `FAILS: 0 []`.
 
+`test_frf` (System Analysis) needs no server: it builds a system with known modes and checks the FRF estimators,
+coherence, impact averaging, mode detection and damping, and the UFF/WAV/CSV readers.
+
 Other files:
 - `test_aweight.js` (Node): the A-weighting filter of the recorder against IEC 61672.
 - `docker-test/`, `drive.py`, `stress.py`: reproduce the Render plan (512 MB, 0.5 CPU) in Docker and measure memory.
