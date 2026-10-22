@@ -1,5 +1,6 @@
 import Plot from '../../components/Plot'
 import type { FrfMode, FrfResult } from '../../api/frfApi'
+import { useT } from '../../i18n'
 
 export type FrfView = 'bode' | 'complex' | 'nyquist' | 'modes'
 
@@ -44,6 +45,7 @@ function modeShapes(modes: FrfMode[] | undefined, show: boolean, xLog: boolean) 
 export default function FrfPlots({ result, view, xLog, showModes }: {
   result: FrfResult; view: FrfView; xLog: boolean; showModes: boolean
 }) {
+  const t = useT()
   const f = result.freqs
   const curves = result.responses
   const xType = xLog ? 'log' : 'linear'
@@ -65,11 +67,11 @@ export default function FrfPlots({ result, view, xLog, showModes }: {
       ...BASE, shapes, annotations, showlegend: multi,
       xaxis: { ...AXIS, type: xType, anchor: 'y', showticklabels: false },
       yaxis: { ...AXIS, domain: d.mag, title: { text: `${result.quantity} (dB)` } },
-      xaxis2: { ...AXIS, type: xType, anchor: 'y2', matches: 'x', showticklabels: !hasCoh, title: hasCoh ? undefined : { text: 'Frequency (Hz)' } },
-      yaxis2: { ...AXIS, domain: d.ph, title: { text: 'Phase (°)' }, ...(unwrapped ? {} : { range: [-190, 190], dtick: 90 }) },
+      xaxis2: { ...AXIS, type: xType, anchor: 'y2', matches: 'x', showticklabels: !hasCoh, title: hasCoh ? undefined : { text: t('sa.plots.frequency') } },
+      yaxis2: { ...AXIS, domain: d.ph, title: { text: t('sa.plots.phase') }, ...(unwrapped ? {} : { range: [-190, 190], dtick: 90 }) },
       ...(hasCoh ? {
-        xaxis3: { ...AXIS, type: xType, anchor: 'y3', matches: 'x', title: { text: 'Frequency (Hz)' } },
-        yaxis3: { ...AXIS, domain: d.co, title: { text: 'Coherence' }, range: [0, 1.02], dtick: 0.5 },
+        xaxis3: { ...AXIS, type: xType, anchor: 'y3', matches: 'x', title: { text: t('sa.plots.frequency') } },
+        yaxis3: { ...AXIS, domain: d.co, title: { text: t('sa.plots.coherence') }, range: [0, 1.02], dtick: 0.5 },
       } : {}),
     }
     return <Plot data={[...mag, ...ph, ...co] as any} layout={layout} config={CONFIG} useResizeHandler
@@ -84,9 +86,9 @@ export default function FrfPlots({ result, view, xLog, showModes }: {
     const layout = {
       ...BASE, shapes, annotations, showlegend: multi,
       xaxis: { ...AXIS, type: xType, anchor: 'y', showticklabels: false },
-      yaxis: { ...AXIS, domain: [0.54, 1], title: { text: 'Real' }, exponentformat: 'power' },
-      xaxis2: { ...AXIS, type: xType, anchor: 'y2', matches: 'x', title: { text: 'Frequency (Hz)' } },
-      yaxis2: { ...AXIS, domain: [0, 0.46], title: { text: 'Imaginary' }, exponentformat: 'power' },
+      yaxis: { ...AXIS, domain: [0.54, 1], title: { text: t('sa.plots.real') }, exponentformat: 'power' },
+      xaxis2: { ...AXIS, type: xType, anchor: 'y2', matches: 'x', title: { text: t('sa.plots.frequency') } },
+      yaxis2: { ...AXIS, domain: [0, 0.46], title: { text: t('sa.plots.imaginary') }, exponentformat: 'power' },
     }
     return <Plot data={[...re, ...im] as any} layout={layout} config={CONFIG} useResizeHandler
       className="w-full h-full" style={{ width: '100%', height: '100%' }} />
@@ -94,11 +96,11 @@ export default function FrfPlots({ result, view, xLog, showModes }: {
 
   if (view === 'nyquist') {
     const data = curves.map((c, i) => ({ x: c.real, y: c.imag, name: c.name, type: 'scatter', mode: 'lines',
-      line: { color: col(i), width: 1.3 }, text: f.map((v) => `${v.toFixed(1)} Hz`), hovertemplate: '%{text}<br>Re %{x:.3g}<br>Im %{y:.3g}<extra>%{fullData.name}</extra>' }))
+      line: { color: col(i), width: 1.3 }, text: f.map((v) => `${v.toFixed(1)} Hz`), hovertemplate: `%{text}<br>${t('sa.plots.re')} %{x:.3g}<br>${t('sa.plots.im')} %{y:.3g}<extra>%{fullData.name}</extra>` }))
     const layout = {
       ...BASE, showlegend: multi, hovermode: 'closest',
-      xaxis: { ...AXIS, title: { text: 'Real' }, exponentformat: 'power' },
-      yaxis: { ...AXIS, title: { text: 'Imaginary' }, scaleanchor: 'x', exponentformat: 'power' },
+      xaxis: { ...AXIS, title: { text: t('sa.plots.real') }, exponentformat: 'power' },
+      yaxis: { ...AXIS, title: { text: t('sa.plots.imaginary') }, scaleanchor: 'x', exponentformat: 'power' },
     }
     return <Plot data={data as any} layout={layout} config={CONFIG} useResizeHandler
       className="w-full h-full" style={{ width: '100%', height: '100%' }} />
@@ -108,16 +110,16 @@ export default function FrfPlots({ result, view, xLog, showModes }: {
   const mif = result.mif_db ?? []
   const modes = result.modes ?? []
   const data: any[] = [
-    { x: f, y: mif, name: curves.length > 1 ? 'Mode indicator (all responses)' : curves[0]?.name ?? 'FRF', type: 'scatter', mode: 'lines',
+    { x: f, y: mif, name: curves.length > 1 ? t('sa.plots.mif') : curves[0]?.name ?? 'FRF', type: 'scatter', mode: 'lines',
       line: { color: '#50b89e', width: 1.5 } },
-    { x: modes.map((m) => m.fn_hz), y: modes.map((m) => m.level_db), type: 'scatter', mode: 'markers+text', name: 'Modes',
+    { x: modes.map((m) => m.fn_hz), y: modes.map((m) => m.level_db), type: 'scatter', mode: 'markers+text', name: t('sa.plots.modes'),
       marker: { color: '#ffa94d', size: 9, symbol: 'diamond' }, text: modes.map((_, i) => `${i + 1}`), textposition: 'top center',
       textfont: { color: '#ffa94d', size: 10 },
-      hovertemplate: modes.map((m) => `${m.fn_hz.toFixed(2)} Hz` + (m.zeta != null ? `<br>ζ = ${(m.zeta * 100).toFixed(2)} %` : '')).map((t) => t + '<extra></extra>') },
+      hovertemplate: modes.map((m) => `${m.fn_hz.toFixed(2)} Hz` + (m.zeta != null ? `<br>ζ = ${(m.zeta * 100).toFixed(2)} %` : '')).map((h) => h + '<extra></extra>') },
   ]
   const layout = {
     ...BASE, showlegend: true,
-    xaxis: { ...AXIS, type: xType, title: { text: 'Frequency (Hz)' } },
+    xaxis: { ...AXIS, type: xType, title: { text: t('sa.plots.frequency') } },
     yaxis: { ...AXIS, title: { text: `${result.quantity} (dB)` } },
   }
   return <Plot data={data} layout={layout} config={CONFIG} useResizeHandler

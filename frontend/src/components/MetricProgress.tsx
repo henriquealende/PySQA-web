@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { fetchServerLoad } from '../api/audioApi'
 import type { ServerLoad } from '../types'
+import { useT } from '../i18n'
 
 const fmt = (s: number) => (s < 10 ? s.toFixed(1) : String(Math.round(s)))
 
@@ -19,6 +20,7 @@ export default function MetricProgress({ label, metricKey, job, duration, onCanc
   duration: number                  // seconds of audio being calculated
   onCancel: (wasRunning: boolean) => void
 }) {
+  const t = useT()
   const [elapsed, setElapsed] = useState(0)
   const [load, setLoad] = useState<ServerLoad | null>(null)
 
@@ -55,14 +57,14 @@ export default function MetricProgress({ label, metricKey, job, duration, onCanc
         <Loader2 size={14} className="animate-spin text-teal shrink-0" />
         <span>
           {waiting
-            ? `Waiting for ${ahead} other calculation${ahead > 1 ? 's' : ''} on the server…`
-            : `Calculating ${label}…`}
+            ? t(ahead > 1 ? 'plot.progress.waitMany' : 'plot.progress.waitOne', { n: ahead })
+            : t('plot.progress.calculating', { label })}
         </span>
       </div>
 
       {!waiting && (
         <div className="w-full max-w-xs h-1.5 bg-panel rounded-full overflow-hidden border border-border"
-          role="progressbar" aria-label={`Calculating ${label}`} aria-valuemin={0} aria-valuemax={100}
+          role="progressbar" aria-label={t('plot.progress.calculating', { label })} aria-valuemin={0} aria-valuemax={100}
           aria-valuenow={eta ? Math.round(pct) : undefined}>
           {eta
             ? <div className="h-full rounded-full transition-all duration-300 ease-out"
@@ -73,17 +75,17 @@ export default function MetricProgress({ label, metricKey, job, duration, onCanc
 
       <span className="text-[11px] text-muted/70 tabular-nums text-center">
         {waiting
-          ? 'It starts as soon as they finish. You can cancel it.'
+          ? t('plot.progress.startsSoon')
           : eta
-            ? (slow ? `${fmt(worked)} s — taking longer than the usual ${fmt(eta)} s`
-                    : `${fmt(worked)} s of about ${fmt(eta)} s (from earlier calculations on this server)`)
-            : `${fmt(worked)} s — no estimate yet (first time on this server)`}
+            ? (slow ? t('plot.progress.slow', { worked: fmt(worked), eta: fmt(eta) })
+                    : t('plot.progress.normal', { worked: fmt(worked), eta: fmt(eta) }))
+            : t('plot.progress.noEstimate', { worked: fmt(worked) })}
       </span>
 
       <button
         onClick={() => onCancel(running)}
         className="px-3 py-1 text-xs text-muted hover:text-white border border-border rounded transition-colors">
-        Cancel
+        {t('plot.progress.cancel')}
       </button>
     </div>
   )

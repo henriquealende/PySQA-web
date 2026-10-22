@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { useStore } from './useStore'
 import { toast } from './useToast'
+import { t } from '../i18n'
 import { newClientId } from '../api/http'
 import {
   computeFrf, FrfChannel, FrfExpiredError, FrfParams, FrfResult, loadFrfFiles, removeFrfFile,
@@ -77,9 +78,9 @@ export const useFrfStore = create<FrfState>((set, get) => ({
           responses: [...new Set([...responses, ...frfs])],
         }
       })
-      if (channels.length) toast.success(`${channels.length} channel${channels.length > 1 ? 's' : ''} loaded`)
+      if (channels.length) toast.success(t(channels.length > 1 ? 'sa.store.channelsMany' : 'sa.store.channelsOne', { n: channels.length }))
     } catch (e: any) {
-      toast.error(e.message ?? 'Could not load the files')
+      toast.error(e.message ?? t('sa.store.loadFail'))
     } finally {
       set({ loading: false })
     }
@@ -132,7 +133,7 @@ export const useFrfStore = create<FrfState>((set, get) => ({
       set({ result, busy: false })
     } catch (e: any) {
       if (e?.name === 'AbortError') return
-      set({ busy: false, error: e.message ?? 'Calculation failed', result: null })
+      set({ busy: false, error: e.message ?? t('sa.store.calcFail'), result: null })
     } finally {
       if (ctrl === mine) ctrl = null
     }

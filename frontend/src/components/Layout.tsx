@@ -5,28 +5,32 @@ import RecordingPage from '../pages/DataAcquisition/RecordingPage'
 import { useStore } from '../store/useStore'
 import { useFrfStore } from '../store/useFrfStore'
 import Logo from './Logo'
+import LanguageSwitch from './LanguageSwitch'
+import { useT } from '../i18n'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Activity, Mic, BarChart2, BookOpen, Menu, X } from 'lucide-react'
 import clsx from 'clsx'
 
 const NAV = [
-  { to: '/data-acquisition', label: 'Data Acquisition', Icon: Mic },
-  { to: '/post-processing',  label: 'Post-Processing',  Icon: Activity },
-  { to: '/system-analysis',  label: 'System Analysis',  Icon: BarChart2 },
+  { to: '/data-acquisition', label: 'nav.dataAcq',      Icon: Mic },
+  { to: '/post-processing',  label: 'nav.postProc',     Icon: Activity },
+  { to: '/system-analysis',  label: 'nav.sysAnalysis',  Icon: BarChart2 },
 ]
 
 /** Pulsing dot on the Data Acquisition tab while the microphone is open (also when you are on another page). */
 function DaqDot({ state }: { state: 'idle' | 'monitoring' | 'recording' }) {
+  const t = useT()
   if (state === 'idle') return null
   return (
     <span
       className={clsx('w-1.5 h-1.5 rounded-full animate-pulse', state === 'recording' ? 'bg-orange' : 'bg-amber')}
-      title={state === 'recording' ? 'Recording' : 'Microphone is open'}
+      title={state === 'recording' ? t('nav.recording') : t('nav.micOpen')}
     />
   )
 }
 
 export default function Layout() {
+  const t = useT()
   const [menuOpen, setMenuOpen] = useState(false)
   const daqState = useStore((s) => s.daqState)
   const serverWaking = useStore((s) => s.serverWaking)
@@ -38,9 +42,9 @@ export default function Layout() {
   const pathname = useLocation().pathname
   const isDaq = pathname.startsWith('/data-acquisition')
   useEffect(() => {
-    const page = pathname.startsWith('/docs') ? { label: 'Documentação' } : NAV.find((n) => pathname.startsWith(n.to))
-    document.title = page ? `${page.label} · PySQA` : 'PySQA'
-  }, [pathname])
+    const key = pathname.startsWith('/docs') ? 'nav.docs' : NAV.find((n) => pathname.startsWith(n.to))?.label
+    document.title = key ? `${t(key)} · PySQA` : 'PySQA'
+  }, [pathname, t])
   const [daqVisited, setDaqVisited] = useState(isDaq)
   useEffect(() => { if (isDaq) setDaqVisited(true) }, [isDaq])
 
@@ -49,13 +53,13 @@ export default function Layout() {
       {/* ── Top bar ──────────────────────────────────────────────────── */}
       <header className="flex items-center h-14 bg-surface border-b border-border shrink-0">
         {/* Logo: this block is as wide as the settings column below it, so the tabs start where the results start */}
-        <Link to="/" className="flex items-center gap-3 px-4 h-full lg:w-80 lg:shrink-0 lg:border-r lg:border-border" aria-label="PySQA, home">
+        <Link to="/" className="flex items-center gap-3 px-4 h-full lg:w-80 lg:shrink-0 lg:border-r lg:border-border" aria-label={t('nav.home')}>
           <Logo state={logoState} className="h-12 w-12 shrink-0" />
           <span className="font-bold text-teal tracking-wide text-xl hidden sm:block" aria-hidden="true">PySQA</span>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden sm:flex gap-2 px-3" aria-label="Pages">
+        <nav className="hidden sm:flex gap-2 px-3" aria-label={t('nav.pages')}>
           {NAV.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
@@ -70,13 +74,15 @@ export default function Layout() {
               }
             >
               <Icon size={17} />
-              {label}
+              {t(label)}
               {to === '/data-acquisition' && <DaqDot state={daqState} />}
             </NavLink>
           ))}
         </nav>
 
         <div className="flex-1" />
+
+        <LanguageSwitch className="hidden sm:flex mr-3" />
 
         {/* Documentation */}
         <NavLink
@@ -89,14 +95,14 @@ export default function Layout() {
           }
         >
           <BookOpen size={17} />
-          Documentação
+          {t('nav.docs')}
         </NavLink>
 
         {/* Mobile hamburger */}
         <button
           className="sm:hidden p-1.5 mr-3 rounded text-muted hover:text-white hover:bg-panel transition-colors"
           onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle menu"
+          aria-label={t('nav.menu')}
         >
           {menuOpen ? <X size={18} /> : <Menu size={18} />}
         </button>
@@ -105,6 +111,7 @@ export default function Layout() {
       {/* Mobile dropdown nav */}
       {menuOpen && (
         <div className="sm:hidden bg-surface border-b border-border px-3 py-2 flex flex-col gap-1 shrink-0 z-40">
+          <LanguageSwitch className="self-start mb-1" />
           {NAV.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
@@ -120,7 +127,7 @@ export default function Layout() {
               }
             >
               <Icon size={15} />
-              {label}
+              {t(label)}
               {to === '/data-acquisition' && <DaqDot state={daqState} />}
             </NavLink>
           ))}
@@ -135,7 +142,7 @@ export default function Layout() {
             }
           >
             <BookOpen size={15} />
-            Documentação
+            {t('nav.docs')}
           </NavLink>
         </div>
       )}

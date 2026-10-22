@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Upload } from 'lucide-react'
 import clsx from 'clsx'
+import { useT } from '../i18n'
 
 interface Props {
   onFiles: (files: File[]) => void
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function FileDropzone({ onFiles, disabled, highlight }: Props) {
+  const t = useT()
   const [dragging, setDragging] = useState(false)
 
   const handleFiles = useCallback(
@@ -34,9 +36,9 @@ export default function FileDropzone({ onFiles, disabled, highlight }: Props) {
       onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }}
     >
       <Upload size={22} className={clsx('text-teal', highlight && 'animate-bob-up motion-reduce:animate-none')} />
-      {highlight && <span className="text-teal text-xs font-semibold">Start here</span>}
+      {highlight && <span className="text-teal text-xs font-semibold">{t('pp.drop.startHere')}</span>}
       <span className="text-muted text-xs text-center">
-        Drop WAV files here<br />or <span className="text-teal">click to browse</span>
+        {t('pp.drop.dropHere')}<br />{t('pp.drop.or')} <span className="text-teal">{t('pp.drop.browse')}</span>
       </span>
       <input
         type="file"

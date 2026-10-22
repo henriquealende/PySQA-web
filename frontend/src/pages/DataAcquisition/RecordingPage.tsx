@@ -25,6 +25,7 @@ import { RECORDER_WORKLET_URL } from './worklet'
 import { toast } from '../../store/useToast'
 import { saveTake, deleteTake, loadTakes } from '../../api/recordingsStore'
 import { useNavigate } from 'react-router-dom'
+import { t as tr, useT } from '../../i18n'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -296,6 +297,7 @@ function LiveSpectrum({ analyser, sampleRate, thresholdDb, showThreshold, avgMod
   analyser: AnalyserNode|null; sampleRate: number; idleMessage?: string
   thresholdDb?: number; showThreshold?: boolean; avgMode?: boolean
 }) {
+  const t = useT()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef    = useRef<number>(0)
 
@@ -416,7 +418,7 @@ function LiveSpectrum({ analyser, sampleRate, thresholdDb, showThreshold, avgMod
         ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(cw, ty); ctx.stroke()
         ctx.setLineDash([])
         ctx.fillStyle = '#fbbf24'; ctx.font = '9px Inter,ui-sans-serif,sans-serif'; ctx.textAlign = 'right'
-        ctx.fillText(`trig ${thresholdDb} dB`, cw - 4, ty - 3)
+        ctx.fillText(t('rec.canvas.trig', { db: thresholdDb }), cw - 4, ty - 3)
       }
 
       // Spectrum fill
@@ -447,14 +449,14 @@ function LiveSpectrum({ analyser, sampleRate, thresholdDb, showThreshold, avgMod
       // Avg counter label
       if (avgMode && fftCount > 0) {
         ctx.fillStyle = '#50b89e99'; ctx.font = '9px Inter,ui-sans-serif,sans-serif'; ctx.textAlign = 'left'
-        ctx.fillText(`avg ${fftCount}`, 4, 12)
+        ctx.fillText(t('rec.canvas.avg', { n: fftCount }), 4, 12)
       }
 
       ctx.restore()
     }
     draw()
     return () => { ro.disconnect(); cancelAnimationFrame(rafRef.current) }
-  }, [analyser, sampleRate, thresholdDb, showThreshold, avgMode, idleMessage])
+  }, [analyser, sampleRate, thresholdDb, showThreshold, avgMode, idleMessage, t])
 
   return (
     <canvas ref={canvasRef}
@@ -646,7 +648,8 @@ function ClipIndicator({ clipping }: { clipping: boolean }) {
   return <div className={`px-2 py-0.5 rounded text-xs font-bold tracking-widest transition-colors ${clipping?'bg-orange text-dark':'bg-panel text-border'}`}>CLIP</div>
 }
 function WorkletBadge({ active }: { active: boolean }) {
-  return <div title={active?'AudioWorklet PCM':'MediaRecorder fallback'} className={`px-2 py-0.5 rounded text-xs font-semibold ${active?'bg-teal/20 text-teal':'bg-panel text-muted'}`}>{active?'Worklet':'MediaRec'}</div>
+  const t = useT()
+  return <div title={active?'AudioWorklet PCM':t('rec.badge.fallback')} className={`px-2 py-0.5 rounded text-xs font-semibold ${active?'bg-teal/20 text-teal':'bg-panel text-muted'}`}>{active?'Worklet':'MediaRec'}</div>
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -656,6 +659,7 @@ const MAX_SR = 96000
 export default function RecordingPage({ active = true }: { active?: boolean }) {
   const { sessionId, addFiles, setCalibration: setFileCalibration } = useStore()
   const navigate = useNavigate()
+  const t = useT()
 
   // Device / basic settings
   const [devices,      setDevices]      = useState<DeviceInfo[]>([])
@@ -856,8 +860,8 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       await listDevices()
     } catch (e: any) {
       toast.error(e?.name === 'NotAllowedError'
-        ? 'Microphone blocked. Allow it in the browser site settings, then press Refresh.'
-        : 'Could not read the microphone list: ' + (e?.message ?? e))
+        ? tr('rec.toast.micBlocked')
+        : tr('rec.toast.micListFail', { msg: e?.message ?? e }))
     }
   }, [listDevices])
 
@@ -964,7 +968,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             if (overloadOnRef.current && recStateRef.current === 'recording') {
               const thresh = dbToLinear(overloadDbRef.current)
               if (msg.peak >= thresh) {
-                toast.error(`Overload! Peak ${(20*Math.log10(msg.peak)).toFixed(1)} dBFS — take discarded`)
+                toast.error(tr('rec.toast.overload', { db: (20*Math.log10(msg.peak)).toFixed(1) }))
                 discardCurrentRecording()
               }
             }
@@ -978,7 +982,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       } catch { /* AudioWorklet unavailable */ }
       setWorkletActive(useWorklet)
     } catch (e: any) {
-      toast.error('Cannot open device: ' + e.message)
+      toast.error(tr('rec.toast.openFail', { msg: e.message }))
       setRecState('idle')
     }
   }
@@ -1018,7 +1022,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
     // Fixed duration timer
     if (durMode === 'fixed' && durSeconds > 0) {
       maxDurRef.current = setTimeout(() => {
-        toast.info(`Duration ${fmtTime(durSeconds)} reached`)
+        toast.info(tr('rec.toast.durReached', { time: fmtTime(durSeconds) }))
         stopRecording()
       }, durSeconds*1000)
     }
@@ -1065,7 +1069,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       if (!an) return
       const b = new Float32Array(an.fftSize); an.getFloatTimeDomainData(b)
       let pk=0; for(let i=0;i<b.length;i++){const v=Math.abs(b[i]);if(v>pk)pk=v}
-      if (pk < threshLin) { silSince += 100; if (silSince >= silenceDur*1000) { toast.info(`Silence for ${silenceDur}s — stopping`); stopRecording() } }
+      if (pk < threshLin) { silSince += 100; if (silSince >= silenceDur*1000) { toast.info(tr('rec.toast.silenceStop', { sec: silenceDur })); stopRecording() } }
       else silSince = 0
     }, 100)
   }
@@ -1097,7 +1101,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       if (nCh===1) { pcm = decoded.getChannelData(0) }
       else { const L=decoded.getChannelData(0),R=decoded.getChannelData(1); pcm=new Float32Array(len); for(let i=0;i<len;i++) pcm[i]=(L[i]+R[i])/2 }
       buildRecording(pcm, sr)
-    } catch(e:any) { toast.error('Encode failed: '+e.message); stopStream(); setRecState('idle') }
+    } catch(e:any) { toast.error(tr('rec.toast.encodeFail', { msg: e.message })); stopStream(); setRecState('idle') }
   }
 
   // ── Build recording object → reviewing state ──────────────────────────────────
@@ -1154,7 +1158,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       id: rec.id, name: rec.name, blob: rec.blob, durationSec: rec.durationSec, bitDepth: rec.bitDepth,
       sr: rec.sr, device: rec.device, capturedAt: rec.capturedAt, mode: rec.mode, calibrationPa: rec.calibrationPa ?? null,
     }).then(ok => {
-      if (!ok) toast.info("Couldn't keep a copy of this recording in the browser: send it to Post-Processing or download it before leaving.")
+      if (!ok) toast.info(tr('rec.toast.keepFail'))
     })
   }
 
@@ -1165,7 +1169,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
     if (pendingRec.mode.includes('average') && avgTakesRef.current.length === 0) {
       keepTake(pendingRec)
       setPendingRec(null); pendingPcmRef.current = null; setRecName(''); setRecState('idle')
-      toast.success(`"${pendingRec.name}" saved`)
+      toast.success(tr('rec.toast.saved', { name: pendingRec.name }))
       return
     }
 
@@ -1182,7 +1186,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
 
       if (newCount >= avgTotal) {
         // All takes collected — compute average
-        toast.info(`${avgTotal} takes collected — computing average`)
+        toast.info(tr('rec.toast.collected', { n: avgTotal }))
         const takes = avgTakesRef.current.slice()
         const sr    = avgSrRef.current
         const rawName = recNameRef.current.trim()
@@ -1195,7 +1199,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       }
 
       // More takes needed
-      toast.success(`Take ${newCount}/${avgTotal} accepted`)
+      toast.success(tr('rec.toast.takeAccepted', { n: newCount, total: avgTotal }))
       setRecState('idle')
       if (avgAutoAccept) {
         // Automatically start next take
@@ -1204,19 +1208,19 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
     } else {
       keepTake(pendingRec)
       setPendingRec(null); pendingPcmRef.current = null; setRecName(''); setRecState('idle')
-      toast.success(`"${pendingRec.name}" saved`)
+      toast.success(tr('rec.toast.saved', { name: pendingRec.name }))
     }
   }
 
   const declineRecording = () => {
     if (pendingRec) URL.revokeObjectURL(pendingRec.url)
     setPendingRec(null); pendingPcmRef.current = null; setRecName(''); setRecState('idle')
-    toast.info('Take discarded')
+    toast.info(tr('rec.toast.takeDiscarded'))
   }
 
   const cancelAveraging = () => {
     avgTakesRef.current = []; setAvgCount(0)
-    toast.info('Averaging session cancelled')
+    toast.info(tr('rec.toast.avgCancelled'))
   }
 
   // ── Select recording for waveform/spectrum view ──────────────────────────────
@@ -1229,7 +1233,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       const ctx = new AudioContext(); const decoded = await ctx.decodeAudioData(ab); await ctx.close()
       const raw = decoded.getChannelData(0)
       setSelectedPcm({ pcm: new Float32Array(raw), sr: decoded.sampleRate })
-    } catch { toast.error('Could not decode recording for preview') }
+    } catch { toast.error(tr('rec.toast.decodeFail')) }
     finally { setSelectedPcmLoading(false) }
   }
 
@@ -1267,13 +1271,13 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         wasAbove = pk >= threshLin
         if (fired) {
           clearInterval(trigPollRef.current!); trigPollRef.current=null
-          toast.info('Trigger fired — recording')
+          toast.info(tr('rec.toast.triggerFired'))
           startRecording()
           // Hold detector
           trigPollRef.current = setInterval(() => {
             const b2=new Float32Array(analyser.fftSize); analyser.getFloatTimeDomainData(b2)
             let pk2=0; for(let i=0;i<b2.length;i++){const v=Math.abs(b2[i]);if(v>pk2)pk2=v}
-            if (pk2<threshLin){holdSince+=100;if(holdSince>=trigHold*1000){clearInterval(trigPollRef.current!);trigPollRef.current=null;toast.info(`${trigHold}s silence — stopping`);stopRecording()}}
+            if (pk2<threshLin){holdSince+=100;if(holdSince>=trigHold*1000){clearInterval(trigPollRef.current!);trigPollRef.current=null;toast.info(tr('rec.toast.holdStop', { sec: trigHold }));stopRecording()}}
             else holdSince=0
           }, 100)
         }
@@ -1297,27 +1301,27 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       const MAX_PTS = 500_000
       const step = Math.max(1, Math.floor(pcm.length/MAX_PTS))
       const lines: string[] = [
-        '# PySQA Data Acquisition Export',
-        `# Name: ${rec.name}`,
-        `# Device: ${rec.device}`,
-        `# Captured: ${rec.capturedAt}`,
-        `# Mode: ${rec.mode}`,
-        `# Sample Rate: ${sr} Hz`,
-        `# Bit Depth: ${rec.bitDepth}`,
-        `# Duration: ${rec.durationSec} s`,
-        `# Samples: ${pcm.length}`,
+        `# ${tr('rec.csv.header')}`,
+        `# ${tr('rec.csv.name')}: ${rec.name}`,
+        `# ${tr('rec.csv.device')}: ${rec.device}`,
+        `# ${tr('rec.csv.captured')}: ${rec.capturedAt}`,
+        `# ${tr('rec.csv.mode')}: ${rec.mode}`,
+        `# ${tr('rec.csv.sampleRate')}: ${sr} Hz`,
+        `# ${tr('rec.csv.bitDepth')}: ${rec.bitDepth}`,
+        `# ${tr('rec.csv.duration')}: ${rec.durationSec} s`,
+        `# ${tr('rec.csv.samples')}: ${pcm.length}`,
         rec.calibrationPa
-          ? `# Calibration: ${rec.calibrationPa.toPrecision(6)} Pa at full scale (${sensitivityFromPa(rec.calibrationPa).toFixed(3)} mV/Pa for 1 V); the amplitudes below are in full scale`
-          : '# Calibration: none (amplitude in full scale)',
-        step>1 ? `# (decimated ${step}x for export, ${Math.ceil(pcm.length/step)} rows)` : '',
-        'Time (s),Amplitude',
+          ? `# ${tr('rec.csv.calibration')}: ${tr('rec.csv.calYes', { pa: rec.calibrationPa.toPrecision(6), sens: sensitivityFromPa(rec.calibrationPa).toFixed(3) })}`
+          : `# ${tr('rec.csv.calibration')}: ${tr('rec.csv.calNo')}`,
+        step>1 ? `# ${tr('rec.csv.decimated', { step, rows: Math.ceil(pcm.length/step) })}` : '',
+        tr('rec.csv.columns'),
       ].filter(Boolean)
       for (let i=0; i<pcm.length; i+=step) lines.push(`${(i/sr).toFixed(6)},${pcm[i].toFixed(8)}`)
       const blob = new Blob([lines.join('\n')], { type:'text/csv' })
       const url  = URL.createObjectURL(blob)
       const a    = document.createElement('a'); a.href=url; a.download=rec.name.replace('.wav','.csv'); a.click()
       URL.revokeObjectURL(url)
-    } catch(e:any) { toast.error('CSV export failed: '+e.message) }
+    } catch(e:any) { toast.error(tr('rec.toast.csvFail', { msg: e.message })) }
   }
 
   // ── Playback ─────────────────────────────────────────────────────────────────
@@ -1351,11 +1355,11 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         try {
           await apiSetCalibration(sessionId, uploaded[0].audio_id, sens)
           setFileCalibration(uploaded[0].audio_id, sens)
-          note = ` (calibrated, ${sens.toFixed(1)} mV/Pa)`
-        } catch (e: any) { toast.error('Sent, but the calibration could not be applied: ' + e.message) }
+          note = tr('rec.toast.calibNote', { sens: sens.toFixed(1) })
+        } catch (e: any) { toast.error(tr('rec.toast.calibFail', { msg: e.message })) }
       }
-      toast.success(`"${rec.name}" → Post-Processing${note}`); navigate('/post-processing')
-    } catch(e:any) { toast.error('Send failed: '+e.message) }
+      toast.success(tr('rec.toast.sent', { name: rec.name, note })); navigate('/post-processing')
+    } catch(e:any) { toast.error(tr('rec.toast.sendFail', { msg: e.message })) }
     finally { setSendingId(null) }
   }
 
@@ -1375,15 +1379,15 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
     stopped: (m) => {
       if (finalizedRef.current) return                                        // this take is already being kept
       if (!['recording', 'busy'].includes(recStateRef.current)) return       // discarded or cancelled meanwhile
-      if (m.reason === 'duration') toast.info(`Duration ${fmtTime(durSeconds)} reached`)
-      else if (m.reason === 'silence') toast.info(`Silence for ${silenceDur}s — stopping`)
-      else if (m.reason === 'hold') toast.info(`${trigHold}s of quiet — stopping`)
+      if (m.reason === 'duration') toast.info(tr('rec.toast.durReached', { time: fmtTime(durSeconds) }))
+      else if (m.reason === 'silence') toast.info(tr('rec.toast.silenceStop', { sec: silenceDur }))
+      else if (m.reason === 'hold') toast.info(tr('rec.toast.holdStop', { sec: trigHold }))
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
       setRecState('busy')
       void finalizeWorklet()
     },
     triggered: () => {
-      toast.info('Trigger fired — recording')
+      toast.info(tr('rec.toast.triggerFired'))
       finalizedRef.current = false
       startTimeRef.current = Date.now()
       setElapsed(0); setRecState('recording')
@@ -1411,10 +1415,10 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
     <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden text-white">
 
       {/* ── Graphics column ── */}
-      <section aria-label="Recording" className="order-1 lg:order-2 flex flex-col flex-1 min-w-0 lg:overflow-y-auto">
+      <section aria-label={t('rec.section')} className="order-1 lg:order-2 flex flex-col flex-1 min-w-0 lg:overflow-y-auto">
       <div className="flex items-center gap-2 px-4 pt-3 lg:hidden">
         <Mic size={18} className="text-teal" />
-        <h1 className="text-base font-semibold">Data Acquisition</h1>
+        <h1 className="text-base font-semibold">{t('rec.title')}</h1>
       </div>
 
       {/* ── Transport bar: Record, Stop, time and level stay in reach while the column scrolls ── */}
@@ -1424,54 +1428,54 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             {recState==='idle' && (
               <button onClick={armStream}
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-teal/20 text-teal text-sm font-medium hover:bg-teal/30 transition-colors">
-                <Mic size={14}/> Monitor
+                <Mic size={14}/> {t('rec.transport.monitor')}
               </button>
             )}
             {isArmed && captureMode==='immediate' && (<>
               <button onClick={startRecording}
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-orange text-dark text-sm font-medium hover:bg-orange/80 transition-colors">
-                <span className="w-2.5 h-2.5 rounded-full bg-white"/> Record
+                <span className="w-2.5 h-2.5 rounded-full bg-white"/> {t('rec.transport.record')}
               </button>
               <button onClick={()=>{stopStream();setRecState('idle')}}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-panel border border-field text-muted text-sm hover:text-white transition-colors">
-                Cancel
+                {t('rec.transport.cancel')}
               </button>
             </>)}
             {isArmed && captureMode==='triggered' && (<>
               <button onClick={startWaiting}
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-amber/20 text-amber text-sm font-medium hover:bg-amber/30 transition-colors">
-                <Zap size={14}/> Watch
+                <Zap size={14}/> {t('rec.transport.watch')}
               </button>
               <button onClick={()=>{stopStream();setRecState('idle')}}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-panel border border-field text-muted text-sm hover:text-white transition-colors">
-                Cancel
+                {t('rec.transport.cancel')}
               </button>
             </>)}
             {isWaiting && (
               <button onClick={cancelWaiting}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-panel border border-amber/40 text-amber text-sm hover:bg-amber/10 transition-colors">
-                <Square size={13} fill="currentColor"/> Cancel
+                <Square size={13} fill="currentColor"/> {t('rec.transport.cancel')}
               </button>
             )}
             {isRecording && (
               <button onClick={stopRecording}
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-panel border border-field text-white text-sm font-medium hover:bg-orange/20 hover:border-orange/50 transition-colors">
-                <Square size={13} fill="currentColor"/> Stop
+                <Square size={13} fill="currentColor"/> {t('rec.transport.stop')}
               </button>
             )}
             {isBusy && (
               <div className="flex items-center gap-2 text-sm text-muted">
-                <RefreshCw size={13} className="animate-spin"/> Encoding WAV…
+                <RefreshCw size={13} className="animate-spin"/> {t('rec.transport.encoding')}
               </div>
             )}
             {isReviewing && pendingRec && (<>
               <button onClick={acceptRecording}
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-teal text-dark text-sm font-semibold hover:bg-teal/80 transition-colors">
-                <CheckCircle size={14}/> Accept
+                <CheckCircle size={14}/> {t('rec.transport.accept')}
               </button>
               <button onClick={declineRecording}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-panel border border-orange/40 text-orange text-sm font-medium hover:bg-orange/10 transition-colors">
-                <XCircle size={14}/> Discard
+                <XCircle size={14}/> {t('rec.transport.discard')}
               </button>
             </>)}
           </div>
@@ -1480,13 +1484,13 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             <div className="flex items-center gap-2 shrink-0">
               <span className="w-2 h-2 rounded-full bg-orange animate-pulse"/>
               <span className="text-sm font-mono text-orange">{fmtTime(displayTime)}</span>
-              {isCountdown && <span className="text-xs text-muted">remaining</span>}
+              {isCountdown && <span className="text-xs text-muted">{t('rec.transport.remaining')}</span>}
               {!isCountdown && durMode==='fixed' && <span className="text-xs text-muted">/ {fmtTime(durSeconds)}</span>}
             </div>
           )}
 
           <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider shrink-0">Level</span>
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider shrink-0">{t('rec.transport.level')}</span>
             <div className="flex-1"><VUMeter analyser={analyser} onClip={handleClip} height={48}/></div>
             <ClipIndicator clipping={clipping}/>
             <WorkletBadge active={workletActive}/>
@@ -1507,23 +1511,23 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       {/* ── Live plots: always on screen, idle until the microphone opens ── */}
       <div className="bg-surface border border-border rounded-lg p-4 flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-muted uppercase tracking-wider">Waveform — live</span>
+          <span className="text-xs font-semibold text-muted uppercase tracking-wider">{t('rec.live.waveform')}</span>
           <LiveWaveform bufRef={waveBufRef} posRef={wavePosRef} sampleRate={sampleRate}
-            idleMessage={isActive ? undefined : 'Press Monitor to open the microphone'}/>
+            idleMessage={isActive ? undefined : t('rec.live.idle')}/>
         </div>
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Spectrum — live</span>
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">{t('rec.live.spectrum')}</span>
             <label className="flex items-center gap-1 text-xs cursor-pointer select-none">
               <input type="checkbox" checked={fftAvg} onChange={e=>setFftAvg(e.target.checked)} className="accent-teal w-3 h-3"/>
-              <span className="text-muted">Average</span>
+              <span className="text-muted">{t('rec.live.average')}</span>
             </label>
           </div>
           <LiveSpectrum analyser={analyser} sampleRate={sampleRate}
             thresholdDb={captureMode==='triggered'?trigThresh:undefined}
             showThreshold={captureMode==='triggered'&&(isWaiting||isArmed)}
             avgMode={fftAvg}
-            idleMessage={isActive ? undefined : 'Press Monitor to open the microphone'}/>
+            idleMessage={isActive ? undefined : t('rec.live.idle')}/>
         </div>
 
         {/* Waiting indicator */}
@@ -1531,15 +1535,15 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
           <div className="flex items-center gap-2 p-2 rounded bg-amber/10 border border-amber/30">
             <span className="w-2 h-2 rounded-full bg-amber animate-pulse shrink-0"/>
             <span className="text-sm text-amber">
-              Waiting for {trigEdge==='rising'?'↑':'↓'} trigger ({trigThresh} dBFS)…
+              {t('rec.live.waiting', { edge: trigEdge==='rising'?'↑':'↓', db: trigThresh })}
             </span>
-            <span className="text-xs text-muted ml-auto">Pre-roll: {trigPreRoll}s</span>
+            <span className="text-xs text-muted ml-auto">{t('rec.live.preRoll', { sec: trigPreRoll })}</span>
           </div>
         )}
 
         {/* Recording name (while armed or recording) */}
         {(isArmed||isRecording) && (
-          <input type="text" placeholder="Recording name (optional)"
+          <input type="text" placeholder={t('rec.live.namePlaceholder')}
             value={recName} onChange={e=>setRecName(e.target.value)}
             className="bg-panel border border-field rounded px-2 py-1.5 text-sm text-white placeholder-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal"/>
         )}
@@ -1551,10 +1555,10 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-teal uppercase tracking-wider">
               {avgEnabled && !pendingRec.mode.includes('average')
-                ? `Review Take ${avgCount + 1} / ${avgTotal}`
+                ? t('rec.review.take', { n: avgCount + 1, total: avgTotal })
                 : pendingRec.mode.includes('average')
-                  ? `Review Averaged Result (${avgTotal} takes)`
-                  : 'Review Take'}
+                  ? t('rec.review.averaged', { total: avgTotal })
+                  : t('rec.review.single')}
             </span>
           </div>
           <div className="flex items-center gap-3 bg-panel rounded px-3 py-2 border border-border">
@@ -1565,14 +1569,14 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             <div className="flex flex-col flex-1 min-w-0">
               <span className="text-sm truncate">{pendingRec.name}</span>
               <span className="text-xs text-muted">
-                {fmtTime(pendingRec.durationSec)} · {pendingRec.bitDepth}-bit · {(pendingRec.sr/1000).toFixed(1)} kHz · {pendingRec.device}{pendingRec.calibrationPa ? ' · calibrated' : ''}
+                {fmtTime(pendingRec.durationSec)} · {t('rec.list.bits', { n: pendingRec.bitDepth })} · {(pendingRec.sr/1000).toFixed(1)} kHz · {pendingRec.device}{pendingRec.calibrationPa ? ' · ' + t('rec.list.calibrated') : ''}
               </span>
             </div>
           </div>
           {/* Full-signal waveform with playback cursor */}
           {pendingPcmRef.current && (
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted uppercase tracking-wider">Waveform</span>
+              <span className="text-xs text-muted uppercase tracking-wider">{t('rec.review.waveform')}</span>
               <StaticWaveform
                 pcm={pendingPcmRef.current.pcm}
                 sampleRate={pendingPcmRef.current.sr}
@@ -1583,18 +1587,18 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
           {/* Spectrum */}
           {pendingPcmRef.current && (
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted uppercase tracking-wider">Spectrum</span>
+              <span className="text-xs text-muted uppercase tracking-wider">{t('rec.review.spectrum')}</span>
               <StaticSpectrum pcm={pendingPcmRef.current.pcm} sampleRate={pendingPcmRef.current.sr} />
             </div>
           )}
           <div className="flex gap-2">
             <button onClick={acceptRecording}
               className="flex items-center gap-1.5 px-4 py-2 rounded bg-teal text-dark text-sm font-semibold hover:bg-teal/80 transition-colors">
-              <CheckCircle size={14}/> Accept
+              <CheckCircle size={14}/> {t('rec.transport.accept')}
             </button>
             <button onClick={declineRecording}
               className="flex items-center gap-1.5 px-4 py-2 rounded bg-panel border border-orange/40 text-orange text-sm font-medium hover:bg-orange/10 transition-colors">
-              <XCircle size={14}/> Discard
+              <XCircle size={14}/> {t('rec.transport.discard')}
             </button>
           </div>
         </div>
@@ -1604,7 +1608,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       {recordings.length > 0 && (
         <div className="bg-surface border border-border rounded-lg p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Recordings ({recordings.length})<span className="ml-2 normal-case font-normal tracking-normal text-muted/70">kept in this browser</span></span>
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">{t('rec.list.title', { n: recordings.length })}<span className="ml-2 normal-case font-normal tracking-normal text-muted/70">{t('rec.list.kept')}</span></span>
             <div className="flex items-center gap-1.5">
               <button onClick={()=>setPlayMuted(m=>!m)} className="text-muted hover:text-white transition-colors">
                 {playMuted?<VolumeX size={13}/>:<Volume2 size={13}/>}
@@ -1619,33 +1623,33 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
               <div className="flex items-center gap-2 px-3 py-2">
                 <button onClick={()=>togglePlay(rec)}
                   className="text-muted hover:text-white transition-colors shrink-0"
-                  title={playingId===rec.id?'Pause':'Play'}>
+                  title={playingId===rec.id?t('rec.list.pause'):t('rec.list.play')}>
                   {playingId===rec.id?<Pause size={14}/>:<Play size={14}/>}
                 </button>
                 {/* Clicking the name row toggles waveform/spectrum expand */}
                 <div className="flex flex-col min-w-0 flex-1 cursor-pointer select-none"
-                  onClick={()=>selectRecording(rec)} title="Click to view waveform & spectrum">
+                  onClick={()=>selectRecording(rec)} title={t('rec.list.view')}>
                   <span className="text-sm truncate">{rec.name}</span>
                   <span className="text-xs text-muted truncate">
-                    {fmtTime(rec.durationSec)} · {rec.bitDepth}-bit · {(rec.sr/1000).toFixed(1)} kHz · {rec.device}{rec.calibrationPa ? ' · calibrated' : ''}
+                    {fmtTime(rec.durationSec)} · {t('rec.list.bits', { n: rec.bitDepth })} · {(rec.sr/1000).toFixed(1)} kHz · {rec.device}{rec.calibrationPa ? ' · ' + t('rec.list.calibrated') : ''}
                   </span>
                 </div>
 
                 {/* Download WAV */}
-                <button onClick={()=>downloadRecording(rec)} title="Download WAV"
+                <button onClick={()=>downloadRecording(rec)} title={t('rec.list.downloadWav')}
                   className="text-muted hover:text-white transition-colors shrink-0 p-1 rounded hover:bg-panel">
                   <Download size={13}/>
                 </button>
 
                 {/* Export CSV */}
-                <button onClick={()=>exportCSV(rec)} title="Export CSV"
+                <button onClick={()=>exportCSV(rec)} title={t('rec.list.exportCsv')}
                   className="text-muted hover:text-teal transition-colors shrink-0 px-1.5 py-1 rounded hover:bg-teal/10 text-xs font-medium">
                   CSV
                 </button>
 
                 {/* Send */}
                 <button onClick={()=>sendToPostProcessing(rec)} disabled={sendingId===rec.id}
-                  title="Send to Post-Processing"
+                  title={t('rec.list.send')}
                   className="flex items-center gap-1 text-xs text-teal hover:text-white disabled:opacity-50 transition-colors shrink-0 px-2 py-1 rounded hover:bg-teal/20">
                   {sendingId===rec.id?<RefreshCw size={12} className="animate-spin"/>:<><Send size={12}/><ChevronRight size={10}/></>}
                 </button>
@@ -1654,12 +1658,12 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
                 {deleteConfId===rec.id ? (
                   <div className="flex items-center gap-1 shrink-0">
                     <AlertTriangle size={11} className="text-orange"/>
-                    <span className="text-xs text-orange">Delete?</span>
-                    <button onClick={()=>deleteRecording(rec.id)} className="text-xs text-orange hover:text-white px-1">Yes</button>
-                    <button onClick={()=>setDeleteConfId(null)} className="text-xs text-muted hover:text-white px-1">No</button>
+                    <span className="text-xs text-orange">{t('rec.list.confirmDelete')}</span>
+                    <button onClick={()=>deleteRecording(rec.id)} className="text-xs text-orange hover:text-white px-1">{t('rec.list.yes')}</button>
+                    <button onClick={()=>setDeleteConfId(null)} className="text-xs text-muted hover:text-white px-1">{t('rec.list.no')}</button>
                   </div>
                 ) : (
-                  <button onClick={()=>setDeleteConfId(rec.id)} title="Delete"
+                  <button onClick={()=>setDeleteConfId(rec.id)} title={t('rec.list.delete')}
                     className="text-muted hover:text-orange transition-colors shrink-0">
                     <Trash2 size={13}/>
                   </button>
@@ -1671,12 +1675,12 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
                 <div className="px-3 pb-3 flex flex-col gap-2 border-t border-border/50">
                   {selectedPcmLoading && (
                     <div className="flex items-center gap-2 py-2 text-xs text-muted">
-                      <RefreshCw size={11} className="animate-spin"/> Decoding…
+                      <RefreshCw size={11} className="animate-spin"/> {t('rec.list.decoding')}
                     </div>
                   )}
                   {selectedPcm && !selectedPcmLoading && (<>
                     <div className="flex flex-col gap-1 pt-2">
-                      <span className="text-xs text-muted uppercase tracking-wider">Waveform</span>
+                      <span className="text-xs text-muted uppercase tracking-wider">{t('rec.review.waveform')}</span>
                       <StaticWaveform
                         pcm={selectedPcm.pcm}
                         sampleRate={selectedPcm.sr}
@@ -1684,7 +1688,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
                       />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted uppercase tracking-wider">Spectrum</span>
+                      <span className="text-xs text-muted uppercase tracking-wider">{t('rec.review.spectrum')}</span>
                       <StaticSpectrum pcm={selectedPcm.pcm} sampleRate={selectedPcm.sr} />
                     </div>
                   </>)}
@@ -1697,17 +1701,14 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
 
       {/* Help */}
       <div className="text-xs text-muted bg-surface border border-border rounded-lg p-3 leading-relaxed">
-        <strong className="text-white">Workflow:</strong> Monitor → Record / Watch → Stop → <strong className="text-teal">Accept</strong> (keeps) or <strong className="text-orange">Discard</strong> (throws away).
-        {' '}The <span className="text-teal font-semibold">Worklet</span> badge means lossless Float32 PCM capture (requires HTTPS or localhost).
+        <strong className="text-white">{t('rec.help.workflow')}</strong> {t('rec.help.flow1')} <strong className="text-teal">{t('rec.transport.accept')}</strong> {t('rec.help.flow2')} <strong className="text-orange">{t('rec.transport.discard')}</strong> {t('rec.help.flow3')}
+        {' '}{t('rec.help.badge1')} <span className="text-teal font-semibold">Worklet</span> {t('rec.help.badge2')}
         <br/><br/>
-        <strong className="text-white">Signal protection:</strong> Overload abort automatically discards the take if the peak exceeds the threshold.
-        Silence stop ends the recording after N seconds of silence, in any capture mode.
+        <strong className="text-white">{t('rec.help.protection')}</strong> {t('rec.help.protectionText')}
         <br/><br/>
-        <strong className="text-white">Trigger:</strong> ↑ Rising fires when the signal rises above the threshold;
-        ↓ Falling fires when it drops below. Pre-roll captures audio before the trigger (via AudioWorklet).
+        <strong className="text-white">{t('rec.help.trigger')}</strong> {t('rec.help.triggerText')}
         <br/><br/>
-        <strong className="text-white">Calibration and level:</strong> calibrate the microphone in Settings, with an acoustic calibrator or
-        the sensitivity from its data sheet, and the meter reads dB SPL or dB(A). Recordings made afterwards carry the calibration into Post-Processing.
+        <strong className="text-white">{t('rec.help.calibration')}</strong> {t('rec.help.calibrationText')}
       </div>
         </div>
       </section>
@@ -1716,36 +1717,36 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       <aside className="order-2 lg:order-1 shrink-0 lg:w-80 lg:border-r border-border p-3 lg:overflow-y-auto">
         <div className="hidden lg:flex items-center gap-2 px-1 pb-3">
           <Mic size={18} className="text-teal" />
-          <h1 className="text-base font-semibold">Data Acquisition</h1>
+          <h1 className="text-base font-semibold">{t('rec.title')}</h1>
         </div>
       {/* ── Device + Settings (fold away while the microphone is open) ── */}
       <div className="bg-surface border border-border rounded-lg lg:bg-transparent lg:border-0 lg:rounded-none">
         <button type="button" onClick={() => setSettingsOpen(o => !o)} aria-expanded={settingsOpen}
           className="flex w-full items-center gap-2 px-4 py-2.5 text-left lg:px-1 lg:pt-0 lg:pointer-events-none">
           <ChevronRight size={14} className={`shrink-0 text-muted transition-transform lg:hidden ${settingsOpen ? 'rotate-90' : ''}`}/>
-          <span className="text-xs font-semibold text-muted uppercase tracking-wider shrink-0">Settings</span>
+          <span className="text-xs font-semibold text-muted uppercase tracking-wider shrink-0">{t('rec.settings.title')}</span>
           <span className="text-xs text-muted truncate lg:hidden">
-            {(sampleRate/1000).toFixed(1)} kHz · {channels===1?'Mono':'Stereo→Mono'} · {bitDepth}-bit · {captureMode==='immediate'?'Immediate':'Level trigger'}{durMode==='fixed'?` · ${durSeconds} s`:''}{avgEnabled?` · average of ${avgTotal}`:''}
+            {(sampleRate/1000).toFixed(1)} kHz · {channels===1?t('rec.settings.mono'):t('rec.settings.stereoMono')} · {t('rec.list.bits', { n: bitDepth })} · {captureMode==='immediate'?t('rec.settings.immediate'):t('rec.settings.levelTrigger')}{durMode==='fixed'?` · ${durSeconds} s`:''}{avgEnabled?` · ${t('rec.settings.avgSummary', { n: avgTotal })}`:''}
           </span>
         </button>
       <div className={`px-4 pb-4 lg:px-1 flex-col gap-3 ${settingsOpen ? 'flex' : 'hidden'} lg:flex`}>
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted uppercase tracking-wider">Input Device</span>
+          <span className="text-xs font-semibold text-muted uppercase tracking-wider">{t('rec.settings.inputDevice')}</span>
           <button onClick={refreshDevices} className="flex items-center gap-1 text-xs text-muted hover:text-white transition-colors">
-            <RefreshCw size={11}/> Refresh
+            <RefreshCw size={11}/> {t('rec.settings.refresh')}
           </button>
         </div>
 
         <select value={selectedDev} onChange={e=>setSelectedDev(e.target.value)} disabled={isActive}
           className="w-full bg-panel border border-field rounded px-2 py-1.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50">
-          {devices.length===0 && <option value="default">Default microphone</option>}
+          {devices.length===0 && <option value="default">{t('rec.settings.defaultMic')}</option>}
           {devices.map(d=><option key={d.deviceId} value={d.deviceId} title={d.label}>{d.label}</option>)}
         </select>
 
         {/* Row 1: SR / Channels / Bit depth */}
         <div className="flex gap-2 flex-wrap">
           <div className="flex flex-col gap-1 flex-1 min-w-24">
-            <label htmlFor="da-sr" className="text-xs text-muted">Sample Rate</label>
+            <label htmlFor="da-sr" className="text-xs text-muted">{t('rec.settings.sampleRate')}</label>
             <select id="da-sr" value={sampleRate} onChange={e=>setSampleRate(Number(e.target.value))} disabled={isActive}
               className="bg-panel border border-field rounded px-2 py-1.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50">
               <option value={44100}>44 100 Hz</option>
@@ -1754,19 +1755,19 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             </select>
           </div>
           <div className="flex flex-col gap-1 flex-1 min-w-24">
-            <label htmlFor="da-ch" className="text-xs text-muted">Channels</label>
+            <label htmlFor="da-ch" className="text-xs text-muted">{t('rec.settings.channels')}</label>
             <select id="da-ch" value={channels} onChange={e=>setChannels(Number(e.target.value) as 1|2)} disabled={isActive}
               className="bg-panel border border-field rounded px-2 py-1.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50">
-              <option value={1}>Mono</option>
-              <option value={2}>Stereo→Mono</option>
+              <option value={1}>{t('rec.settings.mono')}</option>
+              <option value={2}>{t('rec.settings.stereoMono')}</option>
             </select>
           </div>
           <div className="flex flex-col gap-1 flex-1 min-w-24">
-            <label htmlFor="da-bits" className="text-xs text-muted">Bit Depth</label>
+            <label htmlFor="da-bits" className="text-xs text-muted">{t('rec.settings.bitDepth')}</label>
             <select id="da-bits" value={bitDepth} onChange={e=>setBitDepth(Number(e.target.value) as 16|32)} disabled={isActive}
               className="bg-panel border border-field rounded px-2 py-1.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50">
-              <option value={16}>16-bit PCM</option>
-              <option value={32}>32-bit Float</option>
+              <option value={16}>{t('rec.settings.pcm16')}</option>
+              <option value={32}>{t('rec.settings.float32')}</option>
             </select>
           </div>
         </div>
@@ -1774,19 +1775,19 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         {/* Duration */}
         <div className="flex gap-2 items-end flex-wrap">
           <div className="flex flex-col gap-1">
-            <span id="da-durmode" className="text-xs text-muted flex items-center gap-1"><Timer size={10}/> Duration</span>
+            <span id="da-durmode" className="text-xs text-muted flex items-center gap-1"><Timer size={10}/> {t('rec.settings.duration')}</span>
             <div role="group" aria-labelledby="da-durmode" className="flex gap-1 p-0.5 bg-panel rounded border border-border">
               {(['free','fixed'] as DurMode[]).map(m=>(
                 <button key={m} onClick={()=>setDurMode(m)} disabled={isRecording}
                   className={`px-3 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${durMode===m?'bg-teal/20 text-teal':'text-muted hover:text-white'}`}>
-                  {m==='free'?'Free Run':'Fixed'}
+                  {m==='free'?t('rec.settings.free'):t('rec.settings.fixed')}
                 </button>
               ))}
             </div>
           </div>
           {durMode==='fixed' && (
             <div className="flex flex-col gap-1">
-              <label htmlFor="da-dur" className="text-xs text-muted">Duration (s)</label>
+              <label htmlFor="da-dur" className="text-xs text-muted">{t('rec.settings.durationS')}</label>
               <input id="da-dur" type="number" min={1} max={3600} step={1} value={durSeconds}
                 onChange={e=>setDurSeconds(Math.max(1,Number(e.target.value)))} disabled={isRecording}
                 className="w-24 bg-panel border border-field rounded px-2 py-1.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50" />
@@ -1799,7 +1800,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
           {(['immediate','triggered'] as CaptureMode[]).map(m=>(
             <button key={m} onClick={()=>setCaptureMode(m)} disabled={isActive}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-50 ${captureMode===m?'bg-teal/20 text-teal':'text-muted hover:text-white'}`}>
-              {m==='immediate'?<><Radio size={11}/> Immediate</>:<><Zap size={11}/> Level Trigger</>}
+              {m==='immediate'?<><Radio size={11}/> {t('rec.settings.immediate')}</>:<><Zap size={11}/> {t('rec.settings.levelTrigger')}</>}
             </button>
           ))}
         </div>
@@ -1807,30 +1808,30 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         {/* Trigger settings */}
         {captureMode==='triggered' && (
           <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Trigger</span>
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">{t('rec.settings.trigger')}</span>
             <div className="flex gap-3 flex-wrap">
               <div className="flex flex-col gap-1 flex-1 min-w-32">
-                <label htmlFor="da-thresh" className="text-xs text-muted">Threshold <span className="text-amber">{trigThresh} dBFS</span></label>
+                <label htmlFor="da-thresh" className="text-xs text-muted">{t('rec.settings.threshold')} <span className="text-amber">{trigThresh} dBFS</span></label>
                 <input id="da-thresh" type="range" min={-80} max={0} step={1} value={trigThresh}
                   onChange={e=>setTrigThresh(Number(e.target.value))} disabled={isWaiting||isRecording} className="accent-amber"/>
               </div>
               <div className="flex flex-col gap-1 flex-1 min-w-32">
-                <label htmlFor="da-preroll" className="text-xs text-muted">Pre-roll <span className="text-teal">{trigPreRoll} s</span></label>
+                <label htmlFor="da-preroll" className="text-xs text-muted">{t('rec.settings.preRoll')} <span className="text-teal">{trigPreRoll} s</span></label>
                 <input id="da-preroll" type="range" min={0} max={5} step={0.5} value={trigPreRoll}
                   onChange={e=>setTrigPreRoll(Number(e.target.value))} disabled={isWaiting||isRecording} className="accent-teal"/>
               </div>
               <div className="flex flex-col gap-1 flex-1 min-w-32">
-                <label htmlFor="da-hold" className="text-xs text-muted">Hold <span className="text-muted">{trigHold} s</span></label>
+                <label htmlFor="da-hold" className="text-xs text-muted">{t('rec.settings.hold')} <span className="text-muted">{trigHold} s</span></label>
                 <input id="da-hold" type="range" min={0.5} max={10} step={0.5} value={trigHold}
                   onChange={e=>setTrigHold(Number(e.target.value))} disabled={isWaiting||isRecording} className="accent-border"/>
               </div>
             </div>
             <div role="group" aria-labelledby="da-edge" className="flex gap-1">
-              <span id="da-edge" className="text-xs text-muted">Edge:</span>
+              <span id="da-edge" className="text-xs text-muted">{t('rec.settings.edge')}</span>
               {(['rising','falling'] as TrigEdge[]).map(e=>(
                 <button key={e} onClick={()=>setTrigEdge(e)} disabled={isWaiting||isRecording}
                   className={`px-2 py-0.5 rounded text-xs transition-colors disabled:opacity-50 ${trigEdge===e?'bg-amber/20 text-amber':'text-muted hover:text-white'}`}>
-                  {e==='rising'?'↑ Rising':'↓ Falling'}
+                  {e==='rising'?t('rec.settings.rising'):t('rec.settings.falling')}
                 </button>
               ))}
             </div>
@@ -1843,18 +1844,18 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
               <input type="checkbox" checked={avgEnabled} onChange={e=>setAvgEnabled(e.target.checked)} disabled={isActive}
                 className="accent-teal w-3 h-3"/>
-              <span className="text-muted font-semibold uppercase tracking-wider">Averaging</span>
+              <span className="text-muted font-semibold uppercase tracking-wider">{t('rec.settings.averaging')}</span>
             </label>
             {avgEnabled && avgCount > 0 && (
               <span className="ml-auto text-xs font-semibold text-teal">
-                {avgCount} / {avgTotal} takes
+                {t('rec.settings.takes', { a: avgCount, b: avgTotal })}
               </span>
             )}
           </div>
           {avgEnabled && (
             <div className="flex gap-3 flex-wrap items-end">
               <div className="flex flex-col gap-1">
-                <label htmlFor="da-takes" className="text-xs text-muted">Number of takes</label>
+                <label htmlFor="da-takes" className="text-xs text-muted">{t('rec.settings.numTakes')}</label>
                 <input id="da-takes" type="number" min={2} max={99} step={1} value={avgTotal}
                   onChange={e=>setAvgTotal(Math.max(2,Number(e.target.value)))} disabled={isActive||avgCount>0}
                   className="w-20 bg-panel border border-field rounded px-2 py-1.5 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50"/>
@@ -1862,12 +1863,12 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
               <label className="flex items-center gap-2 text-xs cursor-pointer select-none mb-1.5">
                 <input type="checkbox" checked={avgAutoAccept} onChange={e=>setAvgAutoAccept(e.target.checked)} disabled={isActive}
                   className="accent-teal w-3 h-3"/>
-                <span className="text-muted">Auto-start next take</span>
+                <span className="text-muted">{t('rec.settings.autoNext')}</span>
               </label>
               {avgCount > 0 && (
                 <button onClick={cancelAveraging}
                   className="px-2 py-1 text-xs text-orange border border-orange/30 rounded hover:bg-orange/10 transition-colors mb-1.5">
-                  Cancel session
+                  {t('rec.settings.cancelSession')}
                 </button>
               )}
             </div>
@@ -1876,39 +1877,39 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
 
         {/* Microphone calibration */}
         <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded">
-          <span className="text-xs font-semibold text-muted uppercase tracking-wider">Microphone calibration</span>
+          <span className="text-xs font-semibold text-muted uppercase tracking-wider">{t('rec.cal.title')}</span>
           {cal ? (
             <div className="flex items-center gap-2 flex-wrap text-xs">
               <CheckCircle size={13} className="text-teal shrink-0"/>
               <span className="text-white">
                 {cal.sensitivityMvPa.toFixed(2)} mV/Pa
                 <span className="text-muted">
-                  {cal.source === 'calibrator' ? ` · calibrator ${cal.levelDb} dB at ${cal.freqHz ? Math.round(cal.freqHz) : '?'} Hz` : ' · typed in'}
+                  {cal.source === 'calibrator' ? t('rec.cal.calibrator', { level: cal.levelDb ?? '?', freq: cal.freqHz ? Math.round(cal.freqHz) : '?' }) : t('rec.cal.typed')}
                   {' · '}{new Date(cal.at).toLocaleDateString()}
                 </span>
               </span>
               <button onClick={()=>setWizardOpen(true)} disabled={isActive}
-                className="px-2 py-0.5 rounded border border-border text-muted hover:text-white disabled:opacity-50 transition-colors">Recalibrate</button>
+                className="px-2 py-0.5 rounded border border-border text-muted hover:text-white disabled:opacity-50 transition-colors">{t('rec.cal.recalibrate')}</button>
               <button onClick={()=>{ removeCalibration(devKeys); setCal(null); calRef.current = null }} disabled={isActive}
-                className="px-2 py-0.5 rounded text-muted hover:text-orange disabled:opacity-50 transition-colors">Remove</button>
+                className="px-2 py-0.5 rounded text-muted hover:text-orange disabled:opacity-50 transition-colors">{t('rec.cal.remove')}</button>
             </div>
           ) : (
             <div className="flex items-center gap-2 flex-wrap text-xs">
-              <span className="text-muted">Not calibrated: levels are in dBFS. Calibrate to read dB SPL, and to send recordings to Post-Processing already calibrated.</span>
+              <span className="text-muted">{t('rec.cal.none')}</span>
               <button onClick={()=>setWizardOpen(true)} disabled={isActive}
-                className="px-3 py-1 rounded bg-teal/20 text-teal font-medium hover:bg-teal/30 disabled:opacity-50 transition-colors">Calibrate…</button>
+                className="px-3 py-1 rounded bg-teal/20 text-teal font-medium hover:bg-teal/30 disabled:opacity-50 transition-colors">{t('rec.cal.calibrate')}</button>
             </div>
           )}
         </div>
 
         {/* Signal protection */}
         <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded">
-          <span className="text-xs font-semibold text-muted uppercase tracking-wider">Signal Protection</span>
+          <span className="text-xs font-semibold text-muted uppercase tracking-wider">{t('rec.protect.title')}</span>
           <div className="flex gap-4 flex-wrap">
             <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
               <input type="checkbox" checked={overloadOn} onChange={e=>setOverloadOn(e.target.checked)} disabled={isRecording}
                 className="accent-orange w-3 h-3"/>
-              <span className="text-muted">Overload abort</span>
+              <span className="text-muted">{t('rec.protect.overload')}</span>
               {overloadOn && <span className="text-orange">{overloadDb} dBFS</span>}
             </label>
             {overloadOn && (
@@ -1921,7 +1922,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
               <input type="checkbox" checked={silenceStop} onChange={e=>setSilenceStop(e.target.checked)} disabled={isRecording}
                 className="accent-teal w-3 h-3"/>
-              <span className="text-muted">Auto-stop on silence</span>
+              <span className="text-muted">{t('rec.protect.silence')}</span>
               {silenceStop && <span className="text-teal">{silenceDur} s</span>}
             </label>
             {silenceStop && (
@@ -1945,7 +1946,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
           onSaved={(c)=>{
             setCal(c); calRef.current = c; setWizardOpen(false)
             listDevices().catch(()=>{})       // the microphone's real name can be read now
-            toast.success(`Microphone calibrated: ${c.sensitivityMvPa.toFixed(1)} mV/Pa`)
+            toast.success(tr('rec.toast.calibrated', { sens: c.sensitivityMvPa.toFixed(1) }))
           }}
         />
       )}

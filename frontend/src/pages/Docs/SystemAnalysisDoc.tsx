@@ -37,16 +37,16 @@ export default function SystemAnalysisDoc() {
           rows={[
             ['Arquivos', 'Lê registros no tempo e FRFs já prontas', 'UFF (dataset 58), WAV, CSV'],
             ['Canais', 'Define entrada (um) e saídas (vários)', 'Marcação na tabela de canais'],
-            ['Estimator', 'Como a FRF é calculada', 'H1, H2, Hv'],
-            ['Averaging', 'Como as médias são formadas', 'Random/continuous (Welch); Impact (martelo)'],
-            ['Block length', 'Tamanho de cada bloco da FFT', '512 a 65 536 amostras'],
-            ['Overlap / Window', 'Sobreposição e janela dos blocos', '0 a 75 %; Hann, Hamming, Blackman, flat-top, retangular'],
-            ['Impact', 'Detecção dos golpes e janelas', 'Trigger, Pre-trigger, Force window, Exp. window'],
-            ['Response quantity', 'Converte aceleração, velocidade e deslocamento', 'Acelerância, mobilidade, receptância'],
-            ['Frequency range', 'Faixa mostrada e analisada', 'De… até…; desenrolar fase'],
-            ['Vistas', 'Formas de ver a FRF', 'Bode, Real/Imag, Nyquist, Modes'],
-            ['Modes', 'Detecção de modos e amortecimento', 'Proeminência, espaçamento, método'],
-            ['Export', 'Salva os resultados', 'FRF CSV; Modes CSV'],
+            ['Estimador', 'Como a FRF é calculada', 'H1, H2, Hv'],
+            ['Média', 'Como as médias são formadas', 'Aleatório / contínuo (Welch); Impacto (martelo)'],
+            ['Comprimento do bloco', 'Tamanho de cada bloco da FFT', '512 a 65 536 amostras'],
+            ['Sobreposição / Janela', 'Sobreposição e janela dos blocos', '0 a 75 %; Hann, Hamming, Blackman, flat-top, retangular'],
+            ['Impacto', 'Detecção dos golpes e janelas', 'Nível de disparo, Pré-disparo, Janela de força, Janela exponencial'],
+            ['Grandeza da resposta', 'Converte aceleração, velocidade e deslocamento', 'Acelerância, mobilidade, receptância'],
+            ['Faixa de frequência', 'Faixa mostrada e analisada', 'De… até…; desenrolar a fase'],
+            ['Vistas', 'Formas de ver a FRF', 'Bode, Real / Imag, Nyquist, Modos'],
+            ['Modos', 'Detecção de modos e amortecimento', 'Proeminência, espaçamento, método'],
+            ['Exportar', 'Salva os resultados', 'FRF CSV; Modos CSV'],
           ]}
         />
       </Section>
@@ -76,7 +76,7 @@ export default function SystemAnalysisDoc() {
           ]}
         />
         <P>
-          O PySQA converte entre as três: você diz o que o seu sensor mede (<K>The response channel measures</K>) e como quer ver a FRF (<K>Show the FRF as</K>). O cálculo de
+          O PySQA converte entre as três: você diz o que o seu sensor mede (<K>O canal de resposta mede</K>) e como quer ver a FRF (<K>Mostrar a FRF como</K>). O cálculo de
           amortecimento é sempre feito na forma de receptância, e por isso a primeira escolha deve refletir o seu sensor.
         </P>
       </Section>
@@ -85,12 +85,12 @@ export default function SystemAnalysisDoc() {
         <UL>
           <li><strong>UFF</strong> (<em>Universal File Format</em>, dataset 58): o formato da maioria dos sistemas de aquisição de vibração. O PySQA lê registros no tempo (tipo 1) e FRFs (tipo 4), com a biblioteca pyuff <Cite ids={['pyuff']} />.</li>
           <li><strong>WAV:</strong> cada canal do arquivo vira um registro. Um WAV estéreo com a força em um canal e a resposta no outro serve.</li>
-          <li><strong>CSV:</strong> uma tabela com uma coluna de tempo seguida dos canais (a taxa vem do tempo). Sem coluna de tempo, digite a taxa em <K>CSV sample rate</K>.</li>
+          <li><strong>CSV:</strong> uma tabela com uma coluna de tempo seguida dos canais (a taxa vem do tempo). Sem coluna de tempo, digite a taxa em <K>Taxa de amostragem do CSV (Hz)</K>.</li>
         </UL>
         <P>
-          Depois de carregar, a tabela <K>Channels</K> lista cada registro. Marque o círculo laranja em <strong>Input</strong> para a entrada (um canal) e as caixas em <strong>Output</strong> para as
+          Depois de carregar, a tabela <K>Canais</K> lista cada registro. Marque o círculo laranja em <strong>Entrada</strong> para a entrada (um canal) e as caixas em <strong>Saída</strong> para as
           respostas (quantas quiser: todas serão calculadas contra a mesma entrada). Com exatamente dois registros, o PySQA já marca o primeiro como entrada e o segundo como saída.
-          FRFs que já vêm prontas num arquivo UFF aparecem em <K>Measured FRFs</K> e são desenhadas como estão, sem precisar de entrada.
+          FRFs que já vêm prontas num arquivo UFF aparecem em <K>FRFs medidas nos arquivos</K> e são desenhadas como estão, sem precisar de entrada.
         </P>
         <Callout kind="info" title="Os registros e o servidor">
           Os registros ficam guardados no servidor durante a sessão (até 30 minutos sem uso), e o navegador guarda os arquivos originais. Se o servidor reiniciar, o PySQA reenvia
@@ -106,9 +106,9 @@ export default function SystemAnalysisDoc() {
             e a sobreposição aproveita bem os dados.
           </P>
           <UL>
-            <li><strong>Block length:</strong> o tamanho do bloco define a resolução em frequência (Δf = fs / N). Blocos longos separam melhor modos próximos, mas dão menos médias, e o bloco deve ser mais longo que a resposta do sistema.</li>
-            <li><strong>Overlap:</strong> 50 % por padrão. Com janela de Hann, 50 a 75 % aproveita bem os dados.</li>
-            <li><strong>Window:</strong> Hann por padrão <Cite ids={['harris1978']} />. A flat-top mede melhor a altura dos picos, a retangular só serve para sinais que cabem exatamente no bloco.</li>
+            <li><strong>Comprimento do bloco:</strong> o tamanho do bloco define a resolução em frequência (Δf = fs / N). Blocos longos separam melhor modos próximos, mas dão menos médias, e o bloco deve ser mais longo que a resposta do sistema.</li>
+            <li><strong>Sobreposição:</strong> 50 % por padrão. Com janela de Hann, 50 a 75 % aproveita bem os dados.</li>
+            <li><strong>Janela:</strong> Hann por padrão <Cite ids={['harris1978']} />. A flat-top mede melhor a altura dos picos, a retangular só serve para sinais que cabem exatamente no bloco.</li>
           </UL>
           <Figure n={1} title="Resolução, duração do bloco e número de médias. Ajuste a taxa, o bloco e a duração da gravação." source="PySQA (simulação nesta página)."
             note="Comprimento de bloco e duração da gravação são um compromisso: para ter muitas médias com blocos longos, é preciso gravar por mais tempo.">
@@ -163,34 +163,34 @@ export default function SystemAnalysisDoc() {
           como na norma de mobilidade por impacto <Cite ids={['iso76265', 'ewins2000']} />.
         </P>
         <UL>
-          <li><strong>Trigger (padrão 20 % do pico):</strong> um golpe é o primeiro instante em que a força chega a essa fração do maior valor. Golpes a menos de um bloco de distância (duplos) são ignorados.</li>
-          <li><strong>Pre-trigger (padrão 5 % do bloco):</strong> parte do bloco que vem antes do golpe, para o início do sinal não ser cortado e para estimar o nível de repouso (que é subtraído).</li>
-          <li><strong>Force window (padrão 8 ms):</strong> a força vale zero depois desse tempo, o que elimina o ruído de fundo do martelo depois do golpe.</li>
-          <li><strong>Exp. window (padrão 1 %):</strong> uma janela exponencial na resposta que a faz chegar a essa porcentagem no fim do bloco, para que ela termine em zero e não seja cortada.</li>
+          <li><strong>Nível de disparo (padrão 20 % do pico):</strong> um golpe é o primeiro instante em que a força chega a essa fração do maior valor. Golpes a menos de um bloco de distância (duplos) são ignorados.</li>
+          <li><strong>Pré-disparo (padrão 5 % do bloco):</strong> parte do bloco que vem antes do golpe, para o início do sinal não ser cortado e para estimar o nível de repouso (que é subtraído).</li>
+          <li><strong>Janela de força (padrão 8 ms):</strong> a força vale zero depois desse tempo, o que elimina o ruído de fundo do martelo depois do golpe.</li>
+          <li><strong>Janela exponencial (padrão 1 %):</strong> uma janela exponencial na resposta que a faz chegar a essa porcentagem no fim do bloco, para que ela termine em zero e não seja cortada.</li>
         </UL>
         <Figure n={4} title="As duas janelas do ensaio de impacto. Mude a janela de força e o fim da exponencial e veja o amortecimento que ela acrescenta."
           source="PySQA (simulação nesta página; modo de 100 Hz com ζ = 2 %)." note="A exponencial é uma ferramenta útil, mas “engana” o amortecimento: o PySQA conhece a taxa que usou e a subtrai da estimativa.">
           <ImpactWindowsDemo />
         </Figure>
         <Callout kind="warn" title="Se nenhum golpe for encontrado">
-          O PySQA avisa e sugere baixar o <K>Trigger level</K>, conferir o canal de excitação ou trocar para <K>Random / continuous</K>. Um registro com um único golpe tem uma só média,
+          O PySQA avisa e sugere baixar o <K>Nível de disparo</K>, conferir o canal de excitação ou trocar para <K>Aleatório / contínuo</K>. Um registro com um único golpe tem uma só média,
           e a coerência não pode ser calculada: junte vários golpes.
         </Callout>
       </Section>
 
       <Section id="vistas" title="Vistas dos resultados">
         <UL>
-          <li><strong>Bode:</strong> o módulo da FRF em dB, a fase em graus e, abaixo, a coerência, com eixo de frequência logarítmico ou linear. Cada resposta tem sua cor. <K>Unwrap phase</K> desenrola a fase (sem saltos de 360°).</li>
+          <li><strong>Bode:</strong> o módulo da FRF em dB, a fase em graus e, abaixo, a coerência, com eixo de frequência logarítmico ou linear. Cada resposta tem sua cor. <K>Desenrolar a fase</K> desenrola a fase (sem saltos de 360°).</li>
           <li><strong>Real / Imag:</strong> as partes real e imaginária. Bons para ver a forma de cada ressonância: a parte imaginária tem seu máximo no pico.</li>
           <li><strong>Nyquist:</strong> a parte imaginária contra a real. Cada modo desenha um círculo (figura abaixo); modos bem separados são círculos separados.</li>
-          <li><strong>Modes:</strong> o indicador de modos com os picos marcados e a tabela de resultados.</li>
+          <li><strong>Modos:</strong> o indicador de modos com os picos marcados e a tabela de resultados.</li>
         </UL>
         <Figure n={5} title="Diagrama de Nyquist da receptância de um modo (100 Hz, ζ = 3 %). O círculo é percorrido no sentido horário, da direita para a esquerda, conforme a frequência sobe."
           source="PySQA (simulação nesta página)." note="Ao passar pela ressonância, o ponto atravessa o ponto mais baixo do círculo, onde a parte imaginária é máxima em módulo.">
           <NyquistModeChart />
         </Figure>
         <P>
-          <K>Frequency range</K> restringe a faixa mostrada e a analisada (a frequência zero nunca é mostrada). A faixa útil é limitada, no alto, pela frequência de Nyquist, e em baixo,
+          <K>Faixa de frequência</K> restringe a faixa mostrada e a analisada (a frequência zero nunca é mostrada). A faixa útil é limitada, no alto, pela frequência de Nyquist, e em baixo,
           pela resolução do bloco.
         </P>
       </Section>
@@ -208,8 +208,8 @@ export default function SystemAnalysisDoc() {
             O PySQA procura picos na curva em dB:
           </P>
           <UL>
-            <li><strong>Peak prominence (padrão 6 dB):</strong> o quanto o pico precisa se destacar do vale ao redor. Aumente para ignorar ruído; baixe para ver modos fracos.</li>
-            <li><strong>Min. spacing:</strong> distância mínima entre dois picos (padrão: duas linhas da FFT, no mínimo 1 Hz).</li>
+            <li><strong>Proeminência do pico (padrão 6 dB):</strong> o quanto o pico precisa se destacar do vale ao redor. Aumente para ignorar ruído; baixe para ver modos fracos.</li>
+            <li><strong>Espaçamento mín.:</strong> distância mínima entre dois picos (padrão: duas linhas da FFT, no mínimo 1 Hz).</li>
             <li>No máximo 12 modos, os mais proeminentes. A frequência de cada pico é refinada por interpolação parabólica entre as linhas vizinhas.</li>
           </UL>
           <Figure n={6} title="Indicador de modos do sistema simulado, com os três modos detectados." source="PySQA (cálculo próprio).">
@@ -234,7 +234,7 @@ export default function SystemAnalysisDoc() {
             <strong>2. Ajuste de um modo.</strong> Em volta do pico, o PySQA ajusta à FRF medida a curva teórica de um sistema de um grau de liberdade,
             com a frequência natural e o amortecimento como incógnitas (compartilhados por todas as respostas) e um termo constante que representa a influência dos modos vizinhos.
             Esse ajuste usa os pontos da curva inteira, e não só dois, e por isso é mais robusto ao ruído e funciona também quando os modos estão próximos.
-            O valor <K>ζ (%)</K> mostrado na tabela é o do ajuste quando ele converge, e o da meia-potência nos demais casos.
+            O valor <K>Amortecimento ζ (%)</K> mostrado na tabela é o do ajuste quando ele converge, e o da meia-potência nos demais casos.
           </P>
           <Callout kind="info" title="Correção da janela exponencial">
             No ensaio de impacto, a janela exponencial acrescenta amortecimento artificial. O PySQA subtrai esse acréscimo (k / ω<sub>n</sub>) dos valores mostrados.
@@ -265,7 +265,7 @@ export default function SystemAnalysisDoc() {
       <Section id="exportacao" title="Exportação">
         <UL>
           <li><strong>FRF CSV:</strong> uma linha por frequência, com, para cada resposta, módulo (dB), fase (°), parte real, parte imaginária e coerência.</li>
-          <li><strong>Modes CSV:</strong> uma linha por modo: frequência, amortecimento (%) total, pela meia-potência e pelo ajuste, Q, largura de −3 dB, coerência no pico e nível.</li>
+          <li><strong>Modos CSV:</strong> uma linha por modo: frequência, amortecimento (%) total, pela meia-potência e pelo ajuste, Q, largura de −3 dB, coerência no pico e nível.</li>
         </UL>
       </Section>
 

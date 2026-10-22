@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Upload, ArrowLeft } from 'lucide-react'
 import clsx from 'clsx'
+import { useT } from '../i18n'
 
 interface Props {
   onFiles: (files: File[]) => void
@@ -15,8 +16,11 @@ interface Props {
 
 /** Large, centred "start here" call to action shown while a page has nothing loaded yet. */
 export default function ImportCallout({
-  onFiles, disabled, title = 'Start here: import your audio', what = 'WAV files', extensions = ['.wav'],
+  onFiles, disabled, title, what, extensions = ['.wav'],
 }: Props) {
+  const t = useT()
+  const titleText = title ?? t('pp.import.title')
+  const whatText = what ?? t('pp.import.what')
   const [dragging, setDragging] = useState(false)
 
   const handleFiles = useCallback(
@@ -45,12 +49,12 @@ export default function ImportCallout({
         <span className="flex h-16 w-16 items-center justify-center rounded-full bg-teal/15">
           <Upload size={30} className="text-teal animate-bob-up motion-reduce:animate-none" />
         </span>
-        <span className="text-white text-base font-semibold">{title}</span>
+        <span className="text-white text-base font-semibold">{titleText}</span>
         <span className="text-muted text-xs">
-          Drop {what} here or <span className="text-teal">click to browse</span>
+          {t('pp.import.dropPre', { what: whatText })} <span className="text-teal">{t('pp.drop.browse')}</span>
         </span>
         <span className="hidden lg:flex items-center gap-1 text-[11px] text-muted/80">
-          <ArrowLeft size={12} className="text-teal" /> or use the box in the left panel
+          <ArrowLeft size={12} className="text-teal" /> {t('pp.import.leftPanel')}
         </span>
         <input
           type="file"

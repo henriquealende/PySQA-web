@@ -1,14 +1,16 @@
 import clsx from 'clsx'
 import { MetricKey } from '../types'
+import { t, useT } from '../i18n'
 
 interface Group {
   label: string
+  labelKey?: string
   items: { key: MetricKey; label: string; fullLabel: string }[]
 }
 
 const GROUPS: Group[] = [
   {
-    label: 'Visualisation',
+    label: 'Visualisation', labelKey: 'pp.metric.visualisation',
     items: [{ key: 'none', label: 'Time — Frequency', fullLabel: 'Time — Frequency' }],
   },
   {
@@ -26,7 +28,7 @@ const GROUPS: Group[] = [
     ],
   },
   {
-    label: 'Other metrics',
+    label: 'Other metrics', labelKey: 'pp.metric.otherMetrics',
     items: [
       { key: 'sharpness_din',        label: 'Sharpness DIN 45692',     fullLabel: 'Sharpness DIN 45692' },
       { key: 'fluctuation_strength', label: 'Fluctuation Strength', fullLabel: 'Fluctuation Strength' },
@@ -37,6 +39,7 @@ const GROUPS: Group[] = [
 ]
 
 export function metricLabel(key: MetricKey): string {
+  if (key === 'none') return t('pp.metric.timeFreq')
   for (const g of GROUPS) {
     const item = g.items.find((i) => i.key === key)
     if (item) return item.fullLabel
@@ -51,6 +54,7 @@ interface Props {
 }
 
 export default function MetricSelector({ value, onChange, disabled }: Props) {
+  const t = useT()
   return (
     <select
       value={value}
@@ -63,10 +67,10 @@ export default function MetricSelector({ value, onChange, disabled }: Props) {
       )}
     >
       {GROUPS.map((g) => (
-        <optgroup key={g.label} label={g.label}>
+        <optgroup key={g.label} label={g.labelKey ? t(g.labelKey) : g.label}>
           {g.items.map((item) => (
             <option key={item.key} value={item.key}>
-              {item.fullLabel}
+              {item.key === 'none' ? t('pp.metric.timeFreq') : item.fullLabel}
             </option>
           ))}
         </optgroup>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { RotateCcw } from 'lucide-react'
+import { useT } from '../../i18n'
 
 /** What the recorder worklet reports about the last ~50 ms of sound. */
 export interface LevelMsg {
@@ -43,6 +44,7 @@ export default function SplMeter({ calibrationPa, workletActive, recording }: {
   workletActive: boolean
   recording: boolean
 }) {
+  const t = useT()
   const [weighting, setWeighting] = useState<'A' | 'Z'>('A')
   const acc = useRef(fresh())
   const [shown, setShown] = useState<{ lp: number | null; leq: number | null; max: number | null; peak: number | null }>(
@@ -84,47 +86,47 @@ export default function SplMeter({ calibrationPa, workletActive, recording }: {
   }, [useA, calibrationPa])
 
   if (!workletActive) {
-    return <p className="text-[11px] text-muted">The level in dB needs the Worklet capture (HTTPS or localhost).</p>
+    return <p className="text-[11px] text-muted">{t('cal.meter.needsWorklet')}</p>
   }
 
   const unit = !calibrationPa ? 'dBFS' : useA ? 'dB(A)' : 'dB SPL'
   const num = 'font-semibold tabular-nums text-white'
 
   return (
-    <div className="flex items-center gap-x-4 gap-y-1 flex-wrap text-[11px]" aria-label="Sound level">
-      <span className="flex items-baseline gap-1.5" title="Level with Fast time weighting (125 ms)">
-        <span className="text-[11px] uppercase tracking-wider text-muted">{calibrationPa ? 'Sound level' : 'Level, not calibrated'}</span>
+    <div className="flex items-center gap-x-4 gap-y-1 flex-wrap text-[11px]" aria-label={t('cal.meter.aria')}>
+      <span className="flex items-baseline gap-1.5" title={t('cal.meter.fastTip')}>
+        <span className="text-[11px] uppercase tracking-wider text-muted">{calibrationPa ? t('cal.meter.soundLevel') : t('cal.meter.levelUncal')}</span>
         <span className="text-base font-semibold tabular-nums text-white" data-testid="spl-now">{fmt(shown.lp)}</span>
         <span className="text-muted">{unit}</span>
       </span>
-      <span title={recording ? 'Equivalent (average) level since the recording started' : 'Equivalent (average) level since the microphone was opened'}>
+      <span title={recording ? t('cal.meter.leqTipRec') : t('cal.meter.leqTipMic')}>
         <span className="text-muted">Leq </span><span className={num} data-testid="spl-leq">{fmt(shown.leq)}</span>
       </span>
-      <span title="Highest level (Fast) since then">
-        <span className="text-muted">Max </span><span className={num} data-testid="spl-max">{fmt(shown.max)}</span>
+      <span title={t('cal.meter.maxTip')}>
+        <span className="text-muted">{t('cal.meter.max')} </span><span className={num} data-testid="spl-max">{fmt(shown.max)}</span>
       </span>
       {calibrationPa && (
-        <span title="Highest instantaneous peak, not weighted">
-          <span className="text-muted">Peak </span><span className={num} data-testid="spl-peak">{fmt(shown.peak)}</span><span className="text-muted"> dB SPL</span>
+        <span title={t('cal.meter.peakTip')}>
+          <span className="text-muted">{t('cal.meter.peak')} </span><span className={num} data-testid="spl-peak">{fmt(shown.peak)}</span><span className="text-muted"> dB SPL</span>
         </span>
       )}
       {calibrationPa && (
-        <span className="flex items-center gap-1" role="group" aria-label="Frequency weighting">
+        <span className="flex items-center gap-1" role="group" aria-label={t('cal.meter.weightingAria')}>
           {(['A', 'Z'] as const).map((w) => (
             <button key={w} onClick={() => setWeighting(w)} aria-pressed={weighting === w}
-              title={w === 'A' ? 'A-weighted: how loud it sounds to the ear' : 'Not weighted: every frequency counts the same'}
+              title={w === 'A' ? t('cal.meter.tipA') : t('cal.meter.tipZ')}
               className={`px-1.5 py-0.5 rounded border transition-colors ${weighting === w ? 'bg-teal/20 border-teal/50 text-teal' : 'border-border text-muted hover:text-white'}`}>
               {w === 'A' ? 'dB(A)' : 'dB SPL'}
             </button>
           ))}
         </span>
       )}
-      <button onClick={reset} title="Start Leq, Max and Peak again"
+      <button onClick={reset} title={t('cal.meter.resetTip')}
         className="flex items-center gap-1 text-muted hover:text-white transition-colors">
-        <RotateCcw size={11} /> Reset
+        <RotateCcw size={11} /> {t('cal.meter.reset')}
       </button>
       {!calibrationPa && (
-        <span className="text-muted/80">Calibrate the microphone (Settings) to read dB SPL.</span>
+        <span className="text-muted/80">{t('cal.meter.calibrateHint')}</span>
       )}
     </div>
   )

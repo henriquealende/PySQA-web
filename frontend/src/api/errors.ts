@@ -1,5 +1,7 @@
+import { t } from '../i18n'
+
 export class SessionExpiredError extends Error {
-  constructor() { super('Session expired — please re-upload your files.') }
+  constructor() { super(t('cal.api.sessionExpired')) }
 }
 
 // FastAPI answers errors as {"detail": "..."}; show the sentence, not the JSON.
@@ -10,5 +12,5 @@ export async function errorText(res: Response): Promise<string> {
     if (typeof body.detail === 'string') return body.detail
     if (Array.isArray(body.detail)) return body.detail.map((d: any) => d?.msg ?? String(d)).join('; ')
   } catch { /* not JSON */ }
-  return text || `Request failed (${res.status})`
+  return text || t('cal.api.requestFailed', { status: res.status })
 }

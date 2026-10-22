@@ -7,12 +7,13 @@ import type {
   WaveformData, SpectrumData,
 } from '../types'
 import { metricLabel } from '../components/MetricSelector'
+import { t as tr } from '../i18n'
 import {
   fetchEnvelope, fetchMetric, fetchOctave, fetchSpectrogram, fetchSpectrum, fetchWaveform,
 } from './audioApi'
 
 export type Column = (number | string | null)[]
-export interface Sheet { name: string; columns: Record<string, Column> }
+export interface Sheet { id: string; name: string; columns: Record<string, Column> }
 export interface ExportData { label: string; sheets: Sheet[] }
 
 export interface ExportRequest {
@@ -38,24 +39,24 @@ function splitMinMax(t: number[], y: number[]) {
 }
 
 function waveformSheet(wf: WaveformData): Sheet {
-  const unit = wf.calibrated ? 'Pa' : 'full scale'
+  const unit = wf.calibrated ? 'Pa' : tr('pp.export.fullScale')
   if (wf.reduced) {
     const m = splitMinMax(wf.t, wf.amplitude)
-    return { name: 'Waveform', columns: { 'Time (s)': m.time, [`Minimum (${unit})`]: m.lo, [`Maximum (${unit})`]: m.hi } }
+    return { id: 'waveform', name: tr('pp.export.sheetWaveform'), columns: { [tr('pp.export.colTime')]: m.time, [tr('pp.export.colMinimum', { unit })]: m.lo, [tr('pp.export.colMaximum', { unit })]: m.hi } }
   }
-  return { name: 'Waveform', columns: { 'Time (s)': wf.t, [`Amplitude (${unit})`]: wf.amplitude } }
+  return { id: 'waveform', name: tr('pp.export.sheetWaveform'), columns: { [tr('pp.export.colTime')]: wf.t, [tr('pp.export.colAmplitude', { unit })]: wf.amplitude } }
 }
 
 function spectrumSheet(sp: SpectrumData): Sheet {
   const unit = sp.calibrated ? 'dB SPL re 20 µPa' : 'dBFS'
-  const columns: Record<string, Column> = { 'Frequency (Hz)': sp.freqs }
+  const columns: Record<string, Column> = { [tr('pp.export.colFrequency')]: sp.freqs }
   if (sp.average_db) {
-    columns[`Peak (${unit})`] = sp.magnitude_db
-    columns[`Average (${unit})`] = sp.average_db
+    columns[tr('pp.export.colPeak', { unit })] = sp.magnitude_db
+    columns[tr('pp.export.colAverage', { unit })] = sp.average_db
   } else {
-    columns[`Magnitude (${unit})`] = sp.magnitude_db
+    columns[tr('pp.export.colMagnitude', { unit })] = sp.magnitude_db
   }
-  return { name: 'Spectrum', columns }
+  return { id: 'spectrum', name: tr('pp.export.sheetSpectrum'), columns }
 }
 
 async function buildSheets(req: ExportRequest): Promise<ExportData> {
@@ -68,26 +69,27 @@ async function buildSheets(req: ExportRequest): Promise<ExportData> {
     const r = await fetchMetric(sid, aid, req.metricKey, req.fieldType, section)
     if (r.error) throw new Error(r.error)
     const sheets: Sheet[] = [{
-      name: 'Summary',
+      id: 'summary',
+      name: tr('pp.export.sheetSummary'),
       columns: {
-        Metric: [label], 'Global value': [r.global ?? null], Unit: [r.unit ?? ''], 'Field type': [req.fieldType],
-        Section: [section ? `${section[0]}-${section[1]} s` : 'Whole file'],
+        [tr('pp.export.colMetric')]: [label], [tr('pp.export.colGlobal')]: [r.global ?? null], [tr('pp.export.colUnit')]: [r.unit ?? ''], [tr('pp.export.colFieldType')]: [req.fieldType],
+        [tr('pp.export.colSection')]: [section ? `${section[0]}-${section[1]} s` : tr('pp.export.wholeFile')],
       },
     }]
     if (r.x_axis && r.y_axis) {
-      sheets.push({ name: 'By band', columns: { [r.x_label ?? 'x']: r.x_axis, [r.y_label ?? 'y']: r.y_axis } })
+      sheets.push({ id: 'byband', name: tr('pp.export.sheetByBand'), columns: { [r.x_label ?? 'x']: r.x_axis, [r.y_label ?? 'y']: r.y_axis } })
     }
     if (r.time_data) {
-      sheets.push({ name: 'Time-varying', columns: { 'Time (s)': r.time_data.t, [`${label} (${r.unit ?? ''})`]: r.time_data.values } })
+      sheets.push({ id: 'timevarying', name: tr('pp.export.sheetTimeVarying'), columns: { [tr('pp.export.colTime')]: r.time_data.t, [`${label} (${r.unit ?? ''})`]: r.time_data.values } })
     }
     return { label, sheets }
   }
 
   if (req.viewMode === 'spectrogram') {
     const d = await fetchSpectrogram(sid, aid, req.spectrogramParams, section)
-    const columns: Record<string, Column> = { 'Frequency (Hz)': d.f }
+    const columns: Record<string, Column> = { [tr('pp.export.colFrequency')]: d.f }
     d.t.forEach((time, j) => { columns[`${time.toFixed(3)} s`] = d.power_db.map((row) => row[j]) })
-    return { label: 'Spectrogram (dB)', sheets: [{ name: 'Spectrogram', columns }] }
+    return { label: tr('pp.export.labelSpectrogram'), sheets: [{ id: 'spectrogram', name: tr('pp.export.sheetSpectrogram'), columns }] }
   }
 
   if (req.viewMode === 'octave') {
@@ -97,8 +99,8 @@ async function buildSheets(req: ExportRequest): Promise<ExportData> {
       ? (w === 'A' ? 'dB(A) SPL' : w === 'C' ? 'dB(C) SPL' : 'dB SPL re 20 µPa')
       : (w === 'A' ? 'dB(A)' : w === 'C' ? 'dB(C)' : 'dBFS')
     return {
-      label: '1/3-octave bands',
-      sheets: [{ name: 'Third-octave', columns: { 'Band centre (Hz)': d.centres_hz, [`RMS level (${unit})`]: d.levels_db } }],
+      label: tr('pp.export.labelOctave'),
+      sheets: [{ id: 'octave', name: tr('pp.export.sheetThirdOctave'), columns: { [tr('pp.export.colBandCentre')]: d.centres_hz, [tr('pp.export.colRms', { unit })]: d.levels_db } }],
     }
   }
 
@@ -108,24 +110,24 @@ async function buildSheets(req: ExportRequest): Promise<ExportData> {
     let signal: Sheet
     if (d.reduced) {
       const m = splitMinMax(d.t, d.signal)
-      signal = { name: 'Envelope', columns: { 'Time (s)': m.time, 'Signal minimum': m.lo, 'Signal maximum': m.hi, Envelope: env } }
+      signal = { id: 'envelope', name: tr('pp.export.sheetEnvelope'), columns: { [tr('pp.export.colTime')]: m.time, [tr('pp.export.colSignalMin')]: m.lo, [tr('pp.export.colSignalMax')]: m.hi, [tr('pp.export.colEnvelope')]: env } }
     } else {
-      signal = { name: 'Envelope', columns: { 'Time (s)': d.t, Signal: d.signal, Envelope: env } }
+      signal = { id: 'envelope', name: tr('pp.export.sheetEnvelope'), columns: { [tr('pp.export.colTime')]: d.t, [tr('pp.export.colSignal')]: d.signal, [tr('pp.export.colEnvelope')]: env } }
     }
     return {
-      label: 'Envelope',
-      sheets: [signal, { name: 'Envelope spectrum', columns: { 'Frequency (Hz)': d.f_env, 'Magnitude (dB)': d.env_spec_db } }],
+      label: tr('pp.export.labelEnvelope'),
+      sheets: [signal, { id: 'envspectrum', name: tr('pp.export.sheetEnvSpectrum'), columns: { [tr('pp.export.colFrequency')]: d.f_env, [tr('pp.export.colMagnitudeDb')]: d.env_spec_db } }],
     }
   }
 
   // Default view: waveform and spectrum
   const [wf, sp] = await Promise.all([fetchWaveform(sid, aid), fetchSpectrum(sid, aid, section)])
-  return { label: 'Waveform and spectrum', sheets: [waveformSheet(wf), spectrumSheet(sp)] }
+  return { label: tr('pp.export.labelWaveSpec'), sheets: [waveformSheet(wf), spectrumSheet(sp)] }
 }
 
 /** The tables of the view on screen. With a section, the analysis tables cover only that part. */
 export async function buildExport(req: ExportRequest): Promise<ExportData> {
   const data = await buildSheets(req)
   if (!req.section) return data
-  return { ...data, label: `${data.label} (section ${req.section[0]}-${req.section[1]} s)` }
+  return { ...data, label: tr('pp.export.labelSection', { label: data.label, a: req.section[0], b: req.section[1] }) }
 }

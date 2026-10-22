@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Scissors } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { toast } from '../store/useToast'
+import { useT } from '../i18n'
 import type { Section } from '../types'
 
 export const MIN_SECTION_S = 0.05
@@ -32,6 +33,7 @@ export function toSection(a: number, b: number, duration: number, edge = 0.0005)
  * metrics. A short section is also what lets a long file be analysed on a small server.
  */
 export default function SectionBar({ audioId, duration }: { audioId: string; duration: number }) {
+  const t = useT()
   const section = useStore((s) => s.sections[audioId] ?? null)
   const setSection = useStore((s) => s.setSection)
   const lo = section ? section[0] : 0
@@ -50,7 +52,7 @@ export default function SectionBar({ audioId, duration }: { audioId: string; dur
     if (!Number.isFinite(a) || !Number.isFinite(b)) return reset()
     const next = toSection(a, b, duration)
     if (next === undefined) {
-      toast.error(`The section must last at least ${MIN_SECTION_S} s`)
+      toast.error(t('plot.section.tooShort', { min: MIN_SECTION_S }))
       return reset()
     }
     setSection(audioId, next)
@@ -71,32 +73,32 @@ export default function SectionBar({ audioId, duration }: { audioId: string; dur
       }`}
     >
       <Scissors size={12} className={section ? 'text-teal' : 'text-muted'} />
-      <span className="text-[11px] uppercase tracking-wider text-muted">Section</span>
+      <span className="text-[11px] uppercase tracking-wider text-muted">{t('plot.section.label')}</span>
       <input
-        type="number" min={0} step={0.1} value={from} aria-label="Section start (s)"
+        type="number" min={0} step={0.1} value={from} aria-label={t('plot.section.startAria')}
         onChange={(e) => setFrom(e.target.value)} onBlur={apply} onKeyDown={onKey} className={inputCls}
       />
       <span className="text-muted">–</span>
       <input
-        type="number" min={0} step={0.1} value={to} aria-label="Section end (s)"
+        type="number" min={0} step={0.1} value={to} aria-label={t('plot.section.endAria')}
         onChange={(e) => setTo(e.target.value)} onBlur={apply} onKeyDown={onKey} className={inputCls}
       />
       <span className="text-muted">s</span>
       {section ? (
         <>
-          <span className="text-teal">Analysing only this part · {(hi - lo).toFixed(2)} of {duration.toFixed(2)} s</span>
+          <span className="text-teal">{t('plot.section.only', { part: (hi - lo).toFixed(2), total: duration.toFixed(2) })}</span>
           <button
             onClick={() => setSection(audioId, null)}
             className="px-2 py-0.5 text-[11px] text-muted hover:text-white border border-border rounded transition-colors"
           >
-            Whole file
+            {t('plot.section.wholeBtn')}
           </button>
         </>
       ) : (
         <>
-          <span className="text-muted">Whole file · {duration.toFixed(2)} s</span>
+          <span className="text-muted">{t('plot.section.whole', { total: duration.toFixed(2) })}</span>
           <span className="ml-auto hidden md:inline text-[11px] text-muted/70">
-            Drag on the waveform (Normal view) or type the limits to analyse only a part
+            {t('plot.section.hint')}
           </span>
         </>
       )}

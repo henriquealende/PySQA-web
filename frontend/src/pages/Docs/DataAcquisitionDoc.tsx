@@ -23,9 +23,9 @@ export default function DataAcquisitionDoc() {
         <ol className="text-sm text-slate-200 leading-relaxed list-decimal pl-5 flex flex-col gap-1 max-w-[72ch]">
           <li><strong>Ajustar</strong> (coluna da esquerda): microfone, taxa de amostragem, canais, bits, duração e modo de captura.</li>
           <li><strong>Calibrar</strong> com um calibrador acústico (ou digitando a sensibilidade) para ler dB SPL.</li>
-          <li><strong>Monitorar</strong> (<K>Monitor</K>): abre o microfone e mostra nível, forma de onda e espectro ao vivo, sem gravar.</li>
-          <li><strong>Gravar</strong> (<K>Record</K>, ou <K>Watch</K> no modo por nível) e parar (<K>Stop</K>).</li>
-          <li><strong>Revisar:</strong> ouça e veja o take; <K>Accept</K> guarda, <K>Discard</K> descarta.</li>
+          <li><strong>Monitorar</strong> (<K>Monitorar</K>): abre o microfone e mostra nível, forma de onda e espectro ao vivo, sem gravar.</li>
+          <li><strong>Gravar</strong> (<K>Gravar</K>, ou <K>Aguardar</K> no modo por nível) e parar (<K>Parar</K>).</li>
+          <li><strong>Revisar:</strong> ouça e veja o take; <K>Aceitar</K> guarda, <K>Descartar</K> descarta.</li>
           <li><strong>Usar:</strong> baixar WAV ou CSV, ou enviar ao Post-Processing.</li>
         </ol>
         <Callout kind="info" title="Funciona em segundo plano">
@@ -39,19 +39,19 @@ export default function DataAcquisitionDoc() {
           head={['Recurso', 'O que faz', 'Opções']}
           widths={['22%', '50%', '28%']}
           rows={[
-            ['Input Device', 'Escolhe o microfone', 'Lista do sistema; Refresh'],
-            ['Sample Rate', 'Quantas amostras por segundo', '44 100, 48 000 ou 96 000 Hz'],
-            ['Channels', 'Mono, ou estéreo reduzido a mono', 'Mono; Stereo→Mono'],
-            ['Bit Depth', 'Formato do arquivo gravado', '16 bits (PCM) ou 32 bits (ponto flutuante)'],
-            ['Duration', 'Gravar até apertar Stop, ou por tempo exato', 'Free Run; Fixed (1 a 3 600 s)'],
-            ['Capture mode', 'Gravar já, ou esperar o som aparecer', 'Immediate; Level Trigger'],
-            ['Trigger', 'Parâmetros do disparo por nível', 'Threshold, Pre-roll, Hold, Edge'],
-            ['Averaging', 'Média de vários takes', '2 a 99 takes; início automático'],
-            ['Microphone calibration', 'Converte o nível digital em dB SPL', 'Calibrador (94, 114 dB ou outro); sensibilidade em mV/Pa'],
-            ['Signal Protection', 'Descarta takes saturados e para no silêncio', 'Overload abort; Auto-stop on silence'],
-            ['Level (VU) e SPL meter', 'Nível ao vivo; Fast, Leq, Max e Peak', 'Ponderação A ou Z; Reset'],
-            ['Waveform / Spectrum live', 'Últimos 3 s e espectro ao vivo', 'Média do espectro (Average)'],
-            ['Recordings', 'Lista de takes guardados no navegador', 'Ouvir, WAV, CSV, enviar, apagar'],
+            ['Dispositivo de entrada', 'Escolhe o microfone', 'Lista do sistema; Atualizar'],
+            ['Taxa de amostragem', 'Quantas amostras por segundo', '44 100, 48 000 ou 96 000 Hz'],
+            ['Canais', 'Mono, ou estéreo reduzido a mono', 'Mono; Estéreo→Mono'],
+            ['Resolução (bits)', 'Formato do arquivo gravado', '16 bits (PCM) ou 32 bits (ponto flutuante)'],
+            ['Duração', 'Gravar até apertar Parar, ou por tempo exato', 'Livre; Fixa (1 a 3 600 s)'],
+            ['Modo de captura', 'Gravar já, ou esperar o som aparecer', 'Imediato; Disparo por nível'],
+            ['Disparo', 'Parâmetros do disparo por nível', 'Limiar, Pré-gravação, Espera final, Borda'],
+            ['Média de takes', 'Média de vários takes', '2 a 99 takes; início automático'],
+            ['Calibração do microfone', 'Converte o nível digital em dB SPL', 'Calibrador (94, 114 dB ou outro); sensibilidade em mV/Pa'],
+            ['Proteção do sinal', 'Descarta takes saturados e para no silêncio', 'Abortar por sobrecarga; Parar no silêncio'],
+            ['Nível (VU) e medidor de SPL', 'Nível ao vivo; Fast, Leq, Máx. e Pico', 'Ponderação A ou Z; Zerar'],
+            ['Forma de onda e espectro ao vivo', 'Últimos 3 s e espectro ao vivo', 'Média do espectro (Média)'],
+            ['Gravações', 'Lista de takes guardados no navegador', 'Ouvir, WAV, CSV, enviar, apagar'],
           ]}
         />
       </Section>
@@ -59,7 +59,7 @@ export default function DataAcquisitionDoc() {
       <Section id="microfone" title="Microfone e permissão">
         <P>
           O navegador só libera o microfone com a sua permissão, e só em páginas seguras (<strong>https</strong> ou <strong>localhost</strong>)
-          <Cite ids={['w3cmedia']} />. Ao apertar <K>Monitor</K> pela primeira vez, aceite o aviso do navegador; só então os nomes reais dos dispositivos aparecem na lista.
+          <Cite ids={['w3cmedia']} />. Ao apertar <K>Monitorar</K> pela primeira vez, aceite o aviso do navegador; só então os nomes reais dos dispositivos aparecem na lista.
         </P>
         <P>
           Para gravar o som como ele é, o PySQA <strong>desliga</strong> o cancelamento de eco, a supressão de ruído e o controle automático de ganho que
@@ -92,7 +92,7 @@ export default function DataAcquisitionDoc() {
 
         <Section id="a-canais" title="Canais" level={3}>
           <P>
-            O PySQA grava um único canal. <K>Stereo→Mono</K> pede ao dispositivo dois canais e os combina em um (média dos dois). Use <K>Mono</K> com microfones simples.
+            O PySQA grava um único canal. <K>Estéreo→Mono</K> pede ao dispositivo dois canais e os combina em um (média dos dois). Use <K>Mono</K> com microfones simples.
           </P>
         </Section>
 
@@ -116,7 +116,7 @@ export default function DataAcquisitionDoc() {
 
       <Section id="duracao" title="Duração e parada exata">
         <P>
-          Em <K>Free Run</K>, a gravação dura até você apertar <K>Stop</K>. Em <K>Fixed</K>, ela dura o tempo pedido, de 1 a 3 600 s. A contagem é feita
+          Em <K>Livre</K>, a gravação dura até você apertar <K>Parar</K>. Em <K>Fixa</K>, ela dura o tempo pedido, de 1 a 3 600 s. A contagem é feita
           <strong> em amostras</strong>, na própria thread de áudio do navegador, e não por um cronômetro da página: um take de 5 s a 48 kHz tem exatamente 240 000 amostras.
           O relógio na tela segue as amostras gravadas, não o tempo do computador.
         </P>
@@ -128,17 +128,17 @@ export default function DataAcquisitionDoc() {
 
       <Section id="disparo" title="Captura por nível (trigger)">
         <P>
-          Em <K>Level Trigger</K>, você aperta <K>Watch</K> e o PySQA fica de olho no sinal; a gravação só começa quando o nível cruza um limiar. É o modo ideal
+          Em <K>Disparo por nível</K>, você aperta <K>Aguardar</K> e o PySQA fica de olho no sinal; a gravação só começa quando o nível cruza um limiar. É o modo ideal
           para eventos curtos e imprevisíveis, como um estalo, uma partida de compressor ou uma porta batendo.
         </P>
         <UL>
-          <li><strong>Threshold:</strong> o nível, de −80 a 0 dBFS, que dispara a gravação.</li>
-          <li><strong>Edge:</strong> <em>Rising</em> dispara quando o nível sobe acima do limiar; <em>Falling</em>, quando cai abaixo.</li>
+          <li><strong>Limiar:</strong> o nível, de −80 a 0 dBFS, que dispara a gravação.</li>
+          <li><strong>Borda:</strong> <em>Subida</em> dispara quando o nível sobe acima do limiar; <em>Descida</em>, quando cai abaixo.</li>
           <li>
-            <strong>Pre-roll</strong> (0 a 5 s): enquanto espera, o PySQA mantém na memória os últimos segundos de áudio. Quando dispara, esse trecho vem
+            <strong>Pré-gravação</strong> (0 a 5 s): enquanto espera, o PySQA mantém na memória os últimos segundos de áudio. Quando dispara, esse trecho vem
             <em> antes</em> do disparo, de modo que o começo do evento não se perde.
           </li>
-          <li><strong>Hold</strong> (0,5 a 10 s): depois do disparo, a gravação termina quando o sinal ficar abaixo do limiar por esse tempo.</li>
+          <li><strong>Espera final</strong> (0,5 a 10 s): depois do disparo, a gravação termina quando o sinal ficar abaixo do limiar por esse tempo.</li>
         </UL>
         <Figure n={3} title="Disparo por nível sobre um registro simulado com dois eventos. A área verde é o que seria gravado."
           source="PySQA (simulação nesta página)."
@@ -150,8 +150,8 @@ export default function DataAcquisitionDoc() {
 
       <Section id="media" title="Média de vários takes">
         <P>
-          Com <K>Averaging</K> ligado, você grava de 2 a 99 takes (com <K>Auto-start next take</K> ele recomeça sozinho) e o PySQA entrega um único arquivo, a
-          <strong> média no tempo</strong> de todos, amostra a amostra, cortados pelo menor deles. Cada take passa pela revisão (<K>Accept</K> ou <K>Discard</K>) antes de
+          Com <K>Média de takes</K> ligado, você grava de 2 a 99 takes (com <K>Iniciar o próximo take sozinho</K> ele recomeça sozinho) e o PySQA entrega um único arquivo, a
+          <strong> média no tempo</strong> de todos, amostra a amostra, cortados pelo menor deles. Cada take passa pela revisão (<K>Aceitar</K> ou <K>Descartar</K>) antes de
           entrar na média; o resultado é salvo como <K>…_avgN</K>.
         </P>
         <P>
@@ -172,7 +172,7 @@ export default function DataAcquisitionDoc() {
         <P>
           Sem calibração, o PySQA só sabe dizer o nível em <strong>dBFS</strong> (em relação ao fundo de escala do conversor). Calibrar é dizer quantos pascais
           correspondem a esse fundo de escala; a partir daí, os níveis passam a ser <strong>dB SPL</strong> <Cite ids={['iso1683']} />. Abra a calibração com o microfone fechado,
-          em <K>Microphone calibration</K>.
+          em <K>Calibração do microfone</K>.
         </P>
         <P><strong>Com calibrador acústico</strong> (o caminho recomendado). Um calibrador emite um tom de nível conhecido, em geral 94 dB (1 Pa) ou 114 dB, a 1 kHz
           <Cite ids={['iec60942']} />:</P>
@@ -216,13 +216,13 @@ export default function DataAcquisitionDoc() {
           <UL>
             <li><strong>Nível com ponderação temporal Fast:</strong> o nível “instantâneo”, suavizado com constante de tempo de 125 ms <Cite ids={['iec61672']} />.</li>
             <li><strong>Leq:</strong> o nível equivalente, a média de energia desde que o monitoramento começou (ou desde o início do take).</li>
-            <li><strong>Max:</strong> o maior valor Fast.</li>
-            <li><strong>Peak:</strong> o maior valor de pico, sem suavização.</li>
+            <li><strong>Máx.:</strong> o maior valor Fast.</li>
+            <li><strong>Pico:</strong> o maior valor de pico, sem suavização.</li>
           </UL>
           <P>
             Os botões <K>A</K> e <K>Z</K> escolhem a ponderação em frequência: A (a curva dos medidores de nível sonoro, dB(A), veja a Figura 7 da
             documentação do <Link to="/docs/post-processing" className="text-teal underline">Post-Processing</Link>) ou Z (nenhuma). O filtro A é projetado para a taxa de amostragem em uso e fica a
-            menos de 0,8 dB da norma até 10 kHz. <K>Reset</K> reinicia o Leq e o máximo.
+            menos de 0,8 dB da norma até 10 kHz. <K>Zerar</K> reinicia o Leq e o máximo.
           </P>
           <Figure n={6} title="Resposta do medidor a uma rajada de 1 s a 94 dB sobre um fundo de 40 dB."
             source="PySQA (simulação nesta página)."
@@ -239,11 +239,11 @@ export default function DataAcquisitionDoc() {
       <Section id="protecao" title="Proteção do sinal">
         <UL>
           <li>
-            <strong>Overload abort</strong> (padrão −6 dBFS, ajustável de −20 a 0): se o sinal ultrapassar esse nível durante a gravação, o take é descartado, porque
+            <strong>Abortar por sobrecarga</strong> (padrão −6 dBFS, ajustável de −20 a 0): se o sinal ultrapassar esse nível durante a gravação, o take é descartado, porque
             um sinal saturado dá medições erradas.
           </li>
           <li>
-            <strong>Auto-stop on silence</strong> (padrão 2 s, de 0,5 a 30 s): termina a gravação depois de passar esse tempo com o sinal abaixo de −50 dBFS. Vale em qualquer modo de captura.
+            <strong>Parar no silêncio</strong> (padrão 2 s, de 0,5 a 30 s): termina a gravação depois de passar esse tempo com o sinal abaixo de −50 dBFS. Vale em qualquer modo de captura.
           </li>
         </UL>
       </Section>
@@ -251,14 +251,14 @@ export default function DataAcquisitionDoc() {
       <Section id="ao-vivo" title="Gráficos ao vivo e revisão">
         <UL>
           <li><strong>Forma de onda ao vivo:</strong> os últimos 3 segundos, mostrando o mínimo e o máximo de cada coluna de pixels, para que picos curtos e saturação (em laranja) apareçam. Ela preenche enquanto a gravação corre.</li>
-          <li><strong>Espectro ao vivo:</strong> FFT de 4 096 pontos, de 20 Hz até a frequência de Nyquist, em escala logarítmica, de −90 a 0 dBFS. Com <K>Average</K> marcado, ele acumula a média de energia dos quadros: é o jeito de enxergar o piso de ruído de um som contínuo.</li>
-          <li><strong>Revisão:</strong> ao parar, o take aparece com a forma de onda completa, o espectro e um botão de reprodução com cursor. Só depois do <K>Accept</K> ele entra na lista.</li>
+          <li><strong>Espectro ao vivo:</strong> FFT de 4 096 pontos, de 20 Hz até a frequência de Nyquist, em escala logarítmica, de −90 a 0 dBFS. Com <K>Média</K> marcado, ele acumula a média de energia dos quadros: é o jeito de enxergar o piso de ruído de um som contínuo.</li>
+          <li><strong>Revisão:</strong> ao parar, o take aparece com a forma de onda completa, o espectro e um botão de reprodução com cursor. Só depois do <K>Aceitar</K> ele entra na lista.</li>
         </UL>
       </Section>
 
       <Section id="gravacoes" title="Gravações guardadas">
         <P>
-          Os takes aceitos ficam na lista <K>Recordings</K>, <strong>guardados no próprio navegador</strong> (banco de dados local, IndexedDB). Eles sobrevivem a recarregar a página e a reiniciar o navegador, mas
+          Os takes aceitos ficam na lista <K>Gravações</K>, <strong>guardados no próprio navegador</strong> (banco de dados local, IndexedDB). Eles sobrevivem a recarregar a página e a reiniciar o navegador, mas
           não saem do seu computador e podem ser apagados se você limpar os dados do site. Para cada take:
         </P>
         <UL>

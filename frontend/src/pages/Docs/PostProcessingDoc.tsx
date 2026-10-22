@@ -27,9 +27,9 @@ export default function PostProcessingDoc() {
         <P>O fluxo típico de trabalho tem cinco passos:</P>
         <ol className="text-sm text-slate-200 leading-relaxed list-decimal pl-5 flex flex-col gap-1 max-w-[72ch]">
           <li><strong>Importar:</strong> arraste arquivos WAV para a área de importação ou clique para escolher. É possível enviar vários de uma vez.</li>
-          <li><strong>Escolher a vista:</strong> Normal (forma de onda + espectro), Spectrogram, 1/3 Octave ou Envelope. Para uma métrica psicoacústica, escolha-a em <K>Metric</K>.</li>
+          <li><strong>Escolher a vista:</strong> Normal (forma de onda + espectro), Espectrograma, 1/3 de oitava ou Envelope. Para uma métrica psicoacústica, escolha-a em <K>Métrica</K>.</li>
           <li><strong>Processar (opcional):</strong> o botão de edição de cada arquivo abre filtros, janelas, ponderações e ajuste de loudness. O resultado vira um <em>novo arquivo</em>; o original nunca é alterado.</li>
-          <li><strong>Comparar e analisar em lote:</strong> sobreponha um segundo arquivo (<K>Compare with</K>) ou use <K>Batch</K> para calcular várias métricas em vários arquivos.</li>
+          <li><strong>Comparar e analisar em lote:</strong> sobreponha um segundo arquivo (<K>Comparar com</K>) ou use <K>Lote</K> para calcular várias métricas em vários arquivos.</li>
           <li><strong>Exportar:</strong> WAV, planilha (XLSX) ou tabela (CSV).</li>
         </ol>
         <Callout kind="info" title="Um canal por vez">
@@ -44,20 +44,20 @@ export default function PostProcessingDoc() {
           head={['Recurso', 'O que faz', 'Parâmetros principais']}
           widths={['22%', '48%', '30%']}
           rows={[
-            ['Waveform', 'Forma de onda no tempo, com pico do arquivo e aviso de saturação', 'Seleção de trecho; calibração'],
-            ['Spectrum', 'Espectro de frequência do trecho (FFT)', 'Janela de Hanning; eixo logarítmico'],
-            ['Spectrogram', 'Como o espectro muda no tempo', 'NFFT, sobreposição, janela, mapa de cores, escala, fmáx., faixa dinâmica'],
-            ['1/3 Octave', 'Nível por banda de 1/3 de oitava (31 bandas)', 'Ponderação Z (nenhuma) ou A'],
+            ['Forma de onda', 'Forma de onda no tempo, com pico do arquivo e aviso de saturação', 'Seleção de trecho; calibração'],
+            ['Espectro', 'Espectro de frequência do trecho (FFT)', 'Janela de Hanning; eixo logarítmico'],
+            ['Espectrograma', 'Como o espectro muda no tempo', 'NFFT, sobreposição, janela, mapa de cores, escala, fmáx., faixa dinâmica'],
+            ['1/3 de oitava', 'Nível por banda de 1/3 de oitava (31 bandas)', 'Ponderação Z (nenhuma) ou A'],
             ['Envelope', 'Contorno de amplitude do sinal e seu espectro', 'Suavização (ms), filtro passa-baixa (Hz)'],
-            ['Compare with', 'Sobrepõe um segundo arquivo ao primeiro', 'Qualquer arquivo carregado'],
-            ['Filtering', 'Passa-baixa, passa-alta, passa-banda, rejeita-banda, equalizador de 1/3 de oitava, entalhe harmônico', 'Frequências de corte, ordem, Q, ganhos'],
-            ['Windowing', 'Multiplica um trecho por uma janela (Retangular, Hanning, Hamming, Blackman, Bartlett, Kaiser)', 'Início, fim, tipo'],
-            ['Weighting', 'Ponderação em frequência A ou C', 'Curva'],
-            ['Loudness Adj.', 'Ajusta o nível de um arquivo para igualar a loudness de outro', 'Arquivo de referência'],
+            ['Comparar com', 'Sobrepõe um segundo arquivo ao primeiro', 'Qualquer arquivo carregado'],
+            ['Filtragem', 'Passa-baixa, passa-alta, passa-banda, rejeita-banda, equalizador de 1/3 de oitava, entalhe harmônico', 'Frequências de corte, ordem, Q, ganhos'],
+            ['Janelamento', 'Multiplica um trecho por uma janela (Retangular, Hanning, Hamming, Blackman, Bartlett, Kaiser)', 'Início, fim, tipo'],
+            ['Ponderação', 'Ponderação em frequência A ou C', 'Curva'],
+            ['Ajuste de loudness', 'Ajusta o nível de um arquivo para igualar a loudness de outro', 'Arquivo de referência'],
             ['Métricas', 'Loudness (ISO 532-1 e ECMA-418-2), sharpness, roughness (D&W e ECMA), fluctuation strength, tonalidade, IPM', 'Campo livre ou difuso'],
-            ['Mic Calibration', 'Converte o sinal digital em pascais (dB SPL)', 'Sensibilidade em mV/Pa'],
-            ['Batch', 'Várias métricas em vários arquivos, mais modelos de incômodo (SIL e ZWK)', 'Arquivos, métricas, trechos'],
-            ['Export', 'WAV, XLSX e CSV', 'Tabela escolhida'],
+            ['Calibração do microfone', 'Converte o sinal digital em pascais (dB SPL)', 'Sensibilidade em mV/Pa'],
+            ['Lote', 'Várias métricas em vários arquivos, mais modelos de incômodo (SIL e ZWK)', 'Arquivos, métricas, trechos'],
+            ['Exportar', 'WAV, XLSX e CSV', 'Tabela escolhida'],
           ]}
         />
       </Section>
@@ -73,7 +73,7 @@ export default function PostProcessingDoc() {
           L = 20 · log₁₀( p<sub>rms</sub> / p<sub>0</sub> )
         </Eq>
         <P>
-          Na barra lateral, <K>Mic Calibration</K> recebe a sensibilidade em mV/Pa. O PySQA assume 1 V no fundo de escala e calcula
+          Na barra lateral, <K>Calibração do microfone</K> recebe a sensibilidade em mV/Pa. O PySQA assume 1 V no fundo de escala e calcula
           a pressão que corresponde a ele:
         </P>
         <Eq n={2} where={<>Exemplo: um microfone de 50 mV/Pa dá 1000/50 = 20 Pa no fundo de escala; um tom de amplitude máxima vale então cerca de 117 dB SPL (RMS).</>}>
@@ -95,7 +95,7 @@ export default function PostProcessingDoc() {
       <Section id="trecho" title="Seleção de trecho">
         <P>
           Muitas vezes só uma parte da gravação interessa: um ruído de partida, um evento, um trecho estável. Na vista Normal,
-          arraste sobre a forma de onda (ou digite os limites na barra <K>Section</K>) para escolher o trecho. Todas as vistas, as
+          arraste sobre a forma de onda (ou digite os limites na barra <K>Trecho</K>) para escolher o trecho. Todas as vistas, as
           métricas e o lote passam a usar apenas esse trecho, e os eixos de tempo continuam mostrando o tempo original do arquivo.
         </P>
         <Callout kind="tip">Calcular só o trecho de interesse também reduz muito o tempo e a memória, principalmente nas métricas ECMA-418-2.</Callout>
@@ -198,7 +198,7 @@ export default function PostProcessingDoc() {
 
         <Section id="v-comparar" title="Comparar com outro arquivo" level={3}>
           <P>
-            <K>Compare with</K> sobrepõe a forma de onda (em azul), o espectro (em amarelo) ou a métrica de um segundo arquivo ao primeiro, usando
+            <K>Comparar com</K> sobrepõe a forma de onda (em azul), o espectro (em amarelo) ou a métrica de um segundo arquivo ao primeiro, usando
             o mesmo trecho. É a maneira mais direta de ver o efeito de um processamento: compare o original com a versão filtrada.
           </P>
         </Section>
@@ -262,7 +262,7 @@ export default function PostProcessingDoc() {
             ]}
           />
           <P>
-            Na aba <K>Windowing</K> você escolhe o início e o fim do trecho no gráfico; o PySQA mostra o sinal janelado e a curva da janela antes
+            Na aba <K>Janelamento</K> você escolhe o início e o fim do trecho no gráfico; o PySQA mostra o sinal janelado e a curva da janela antes
             de criar o novo arquivo.
           </P>
         </Section>
@@ -289,7 +289,7 @@ export default function PostProcessingDoc() {
 
         <Section id="p-loudness" title="Ajuste de loudness" level={3}>
           <P>
-            Para comparar o <em>timbre</em> de dois sons sem que a diferença de volume atrapalhe, a aba <K>Loudness Adj.</K> ajusta o nível
+            Para comparar o <em>timbre</em> de dois sons sem que a diferença de volume atrapalhe, a aba <K>Ajuste de loudness</K> ajusta o nível
             de um arquivo até que sua loudness (ISO 532-1, método estacionário, campo livre) seja igual à de um arquivo de referência
             <Cite ids={['iso532']} />. Como a loudness não é proporcional à amplitude (ela cresce com a amplitude elevada a cerca de 0,6),
             o PySQA parte dessa lei de potência e corrige o ganho em passos sucessivos, medindo a loudness de verdade, até acertar dentro
@@ -450,7 +450,7 @@ export default function PostProcessingDoc() {
         <P>
           Um microfone mede a pressão num ponto; o ouvido, porém, recebe o som de forma diferente conforme o ambiente. Em <strong>campo livre</strong>,
           o som vem de uma direção (sala anecoica, ar livre); em <strong>campo difuso</strong>, chega igualmente de todas as direções (sala reverberante).
-          Os modelos corrigem a resposta do ouvido de acordo com essa escolha. Na barra lateral, <K>Field Type</K> aplica-se a: loudness ISO 532-1,
+          Os modelos corrigem a resposta do ouvido de acordo com essa escolha. Na barra lateral, <K>Tipo de campo</K> aplica-se a: loudness ISO 532-1,
           sharpness, loudness ECMA-418-2, roughness ECMA-418-2 e tonalidade. As demais métricas (roughness D&amp;W, fluctuation strength e IPM)
           não dependem do campo. O padrão é campo livre.
         </P>
@@ -459,8 +459,8 @@ export default function PostProcessingDoc() {
       {/* ── 9 ── */}
       <Section id="lote" title="Análise em lote e incômodo">
         <P>
-          <K>Batch</K> calcula várias métricas em vários arquivos e junta tudo numa tabela. Marque os arquivos na coluna da esquerda, escolha as métricas
-          e clique em <K>Compute</K>. O cálculo é feito um arquivo e uma métrica por vez, com barra de progresso, estimativa de tempo e botão para cancelar
+          <K>Lote</K> calcula várias métricas em vários arquivos e junta tudo numa tabela. Marque os arquivos na coluna da esquerda, escolha as métricas
+          e clique em <K>Calcular</K>. O cálculo é feito um arquivo e uma métrica por vez, com barra de progresso, estimativa de tempo e botão para cancelar
           (o que já foi calculado é mantido). Se um arquivo tem um trecho selecionado, só ele entra no cálculo. Cálculos que o servidor recusa por falta de
           memória aparecem numa lista de avisos. O resultado pode ser exportado em XLSX.
         </P>

@@ -6,13 +6,14 @@ import { deviceKeys as keysOf, paFromSensitivity, saveCalibration, sensitivityFr
 import type { MicCalibration } from '../../api/micCalibration'
 import { RECORDER_WORKLET_URL } from './worklet'
 import { useDialog } from '../../hooks/useDialog'
+import { useT } from '../../i18n'
 
 const P0 = 20e-6
 const MEASURE_S = 5
 const PRESETS = [
-  { id: '94', label: '94 dB at 1 kHz', level: 94, freq: 1000 },
-  { id: '114', label: '114 dB at 1 kHz', level: 114, freq: 1000 },
-  { id: 'other', label: 'Other', level: 94, freq: 1000 },
+  { id: '94', labelKey: 'cal.wizard.preset94', level: 94, freq: 1000 },
+  { id: '114', labelKey: 'cal.wizard.preset114', level: 114, freq: 1000 },
+  { id: 'other', labelKey: 'cal.wizard.presetOther', level: 94, freq: 1000 },
 ]
 const dbfs = (lin: number) => 20 * Math.log10(Math.max(lin, 1e-9))
 
@@ -34,6 +35,7 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
   onClose: () => void
   onSaved: (c: MicCalibration) => void
 }) {
+  const t = useT()
   const [tab, setTab] = useState<'calibrator' | 'manual'>('calibrator')
   const [preset, setPreset] = useState('94')
   const [level, setLevel] = useState(94)
@@ -68,13 +70,13 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
   const analyse = (pcm: Float32Array, sr: number) => {
     const { level: lvl, freq: f0 } = params.current
     const m = measureTone(pcm, sr, f0)
-    if (!(m.toneRms > 0)) { setError('No tone was found in the recording.'); setPhase('error'); return }
+    if (!(m.toneRms > 0)) { setError(t('cal.wizard.noTone')); setPhase('error'); return }
     const calibrationPa = (P0 * Math.pow(10, lvl / 20)) / m.toneRms
     const warnings: Result['warnings'] = []
-    if (m.peak >= 0.999) warnings.push({ blocking: true, text: 'The signal is clipping. Lower the microphone volume and measure again.' })
-    if (dbfs(m.toneRms) < -60) warnings.push({ blocking: true, text: 'The tone is very quiet. Is the calibrator fitted and switched on? Raise the microphone volume if needed.' })
-    if (Math.abs(m.freqHz - f0) / f0 > 0.03) warnings.push({ blocking: false, text: `The tone found is at ${m.freqHz.toFixed(0)} Hz, not ${f0} Hz. Check the frequency you chose.` })
-    if (m.purity < 0.9) warnings.push({ blocking: false, text: 'The recording is not a clean tone (background noise, or the calibrator is not fitted tightly). Try a quieter place.' })
+    if (m.peak >= 0.999) warnings.push({ blocking: true, text: t('cal.wizard.warnClip') })
+    if (dbfs(m.toneRms) < -60) warnings.push({ blocking: true, text: t('cal.wizard.warnQuiet') })
+    if (Math.abs(m.freqHz - f0) / f0 > 0.03) warnings.push({ blocking: false, text: t('cal.wizard.warnFreq', { found: m.freqHz.toFixed(0), expected: f0 }) })
+    if (m.purity < 0.9) warnings.push({ blocking: false, text: t('cal.wizard.warnNoise') })
     setResult({ m, calibrationPa, warnings })
     setPhase('result')
   }
@@ -133,8 +135,8 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
     } catch (e: any) {
       closeRig()
       setError(e?.name === 'NotAllowedError'
-        ? 'Microphone access was blocked. Allow it in the browser, then try again.'
-        : 'Could not open the microphone: ' + (e?.message ?? e))
+        ? t('cal.wizard.micBlocked')
+        : t('cal.wizard.micFailed', { reason: e?.message ?? String(e) }))
       setPhase('error')
     }
   }
@@ -153,7 +155,7 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
       calibrationPa, sensitivityMvPa: sensitivityFromPa(calibrationPa), source,
       at: new Date().toISOString(), deviceLabel: label.current, ...extra,
     }
-    if (!saveCalibration(keys.current, cal)) { setError('This browser would not keep the calibration (is storage blocked?).'); return }
+    if (!saveCalibration(keys.current, cal)) { setError(t('cal.wizard.storageBlocked')); return }
     closeRig()
     onSaved(cal)
   }
@@ -172,27 +174,27 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
 
   const liveDb = live ? dbfs(live.rms) : null
   const liveNote = !live ? null
-    : live.peak >= 0.999 ? { text: 'Too loud: lower the microphone volume.', bad: true }
-    : dbfs(live.rms) < -55 ? { text: 'Very quiet: is the calibrator fitted and switched on?', bad: true }
-    : { text: 'Level is good. Press Measure.', bad: false }
+    : live.peak >= 0.999 ? { text: t('cal.wizard.liveLoud'), bad: true }
+    : dbfs(live.rms) < -55 ? { text: t('cal.wizard.liveQuiet'), bad: true }
+    : { text: t('cal.wizard.liveGood'), bad: false }
 
   const input = 'bg-panel border border-field rounded px-2 py-1 text-sm text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal'
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => { if (!busy) onClose() }}>
-      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Calibrate the microphone"
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t('cal.wizard.dialogLabel')}
         className="bg-surface border border-border rounded-xl w-[480px] max-w-[94vw] max-h-[92vh] overflow-y-auto shadow-2xl outline-none"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <span className="text-sm font-semibold text-white">Calibrate the microphone</span>
-          <button onClick={onClose} disabled={busy} className="text-muted hover:text-white disabled:opacity-40" aria-label="Close"><X size={15} /></button>
+          <span className="text-sm font-semibold text-white">{t('cal.wizard.title')}</span>
+          <button onClick={onClose} disabled={busy} className="text-muted hover:text-white disabled:opacity-40" aria-label={t('cal.wizard.close')}><X size={15} /></button>
         </div>
 
         <div className="p-4 flex flex-col gap-3 text-xs">
-          <p className="text-muted">Microphone: <span className="text-white">{deviceLabel}</span></p>
+          <p className="text-muted">{t('cal.wizard.microphone')} <span className="text-white">{deviceLabel}</span></p>
 
           <div className="flex gap-1 p-0.5 bg-panel rounded border border-border">
-            {([['calibrator', 'With a calibrator'], ['manual', 'I know the sensitivity']] as const).map(([k, label]) => (
+            {([['calibrator', t('cal.wizard.tabCalibrator')], ['manual', t('cal.wizard.tabManual')]] as const).map(([k, label]) => (
               <button key={k} onClick={() => setTab(k)} disabled={busy}
                 className={`flex-1 py-1 rounded font-medium transition-colors disabled:opacity-50 ${tab === k ? 'bg-teal/20 text-teal' : 'text-muted hover:text-white'}`}>
                 {label}
@@ -202,40 +204,40 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
 
           {tab === 'manual' && (
             <div className="flex flex-col gap-2">
-              <label className="text-muted" htmlFor="cal-manual">Sensitivity from the microphone's data sheet (mV/Pa)</label>
+              <label className="text-muted" htmlFor="cal-manual">{t('cal.wizard.manualLabel')}</label>
               <div className="flex gap-2">
-                <input id="cal-manual" type="number" min={0} step="any" value={manual} placeholder="e.g. 50"
+                <input id="cal-manual" type="number" min={0} step="any" value={manual} placeholder={t('cal.wizard.manualPlaceholder')}
                   onChange={(e) => setManual(e.target.value)} className={`${input} w-32`} />
                 <button disabled={!manualOk}
                   onClick={() => save(paFromSensitivity(manualValue), 'manual', {})}
                   className="px-3 py-1 rounded bg-teal text-dark font-semibold hover:bg-teal/80 disabled:opacity-40 transition-colors">
-                  Use this sensitivity
+                  {t('cal.wizard.manualUse')}
                 </button>
               </div>
-              <p className="text-muted/80">This assumes the recording is 1 V at full scale, the same assumption Post-Processing makes.</p>
+              <p className="text-muted/80">{t('cal.wizard.manualNote')}</p>
             </div>
           )}
 
           {tab === 'calibrator' && (<>
             <div className="flex flex-col gap-2">
-              <p className="text-white font-semibold">1. Fit the calibrator on the microphone and switch it on</p>
+              <p className="text-white font-semibold">{t('cal.wizard.step1')}</p>
               <div className="flex gap-3 flex-wrap items-center">
                 {PRESETS.map((p) => (
                   <label key={p.id} className="flex items-center gap-1.5 cursor-pointer select-none">
                     <input type="radio" name="cal-preset" checked={preset === p.id} disabled={busy}
                       onChange={() => chooseCalibrator(p.id)} className="accent-teal" />
-                    <span className={preset === p.id ? 'text-white' : 'text-muted'}>{p.label}</span>
+                    <span className={preset === p.id ? 'text-white' : 'text-muted'}>{t(p.labelKey)}</span>
                   </label>
                 ))}
               </div>
               {preset === 'other' && (
                 <div className="flex gap-3 items-center">
-                  <label className="flex items-center gap-1.5 text-muted">Level
-                    <input type="number" step="any" value={level} disabled={busy} aria-label="Calibrator level in dB SPL"
+                  <label className="flex items-center gap-1.5 text-muted">{t('cal.wizard.level')}
+                    <input type="number" step="any" value={level} disabled={busy} aria-label={t('cal.wizard.levelAria')}
                       onChange={(e) => setLevel(Number(e.target.value))} className={`${input} w-20`} /> dB SPL
                   </label>
-                  <label className="flex items-center gap-1.5 text-muted">at
-                    <input type="number" step="any" value={freq} disabled={busy} aria-label="Calibrator frequency in Hz"
+                  <label className="flex items-center gap-1.5 text-muted">{t('cal.wizard.at')}
+                    <input type="number" step="any" value={freq} disabled={busy} aria-label={t('cal.wizard.freqAria')}
                       onChange={(e) => setFreq(Number(e.target.value))} className={`${input} w-20`} /> Hz
                   </label>
                 </div>
@@ -243,21 +245,21 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
             </div>
 
             <div className="flex flex-col gap-2">
-              <p className="text-white font-semibold">2. Listen to the microphone</p>
+              <p className="text-white font-semibold">{t('cal.wizard.step2')}</p>
               {(phase === 'ready' || phase === 'error') && (
                 <button onClick={listen}
                   className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded bg-teal/20 text-teal font-medium hover:bg-teal/30 transition-colors">
-                  <Mic size={13} /> Listen
+                  <Mic size={13} /> {t('cal.wizard.listen')}
                 </button>
               )}
-              {phase === 'starting' && <p className="flex items-center gap-2 text-muted"><Loader2 size={13} className="animate-spin text-teal" /> Opening the microphone…</p>}
+              {phase === 'starting' && <p className="flex items-center gap-2 text-muted"><Loader2 size={13} className="animate-spin text-teal" /> {t('cal.wizard.opening')}</p>}
               {(phase === 'listening' || phase === 'measuring') && live && (
                 <div className="flex flex-col gap-1">
-                  <div className="h-2 bg-panel rounded overflow-hidden border border-border" role="meter" aria-label="Microphone level"
+                  <div className="h-2 bg-panel rounded overflow-hidden border border-border" role="meter" aria-label={t('cal.wizard.meterAria')}
                     aria-valuemin={-60} aria-valuemax={0} aria-valuenow={Math.round(liveDb ?? -60)}>
                     <div className="h-full bg-teal transition-all" style={{ width: `${Math.max(0, Math.min(100, ((liveDb ?? -60) + 60) / 60 * 100))}%` }} />
                   </div>
-                  <p className="tabular-nums text-muted">{(liveDb ?? -99).toFixed(1)} dBFS (RMS)</p>
+                  <p className="tabular-nums text-muted">{(liveDb ?? -99).toFixed(1)} {t('cal.wizard.rms')}</p>
                   {liveNote && phase === 'listening' && (
                     <p className={liveNote.bad ? 'text-amber' : 'text-teal'}>{liveNote.text}</p>
                   )}
@@ -266,36 +268,36 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
             </div>
 
             <div className="flex flex-col gap-2">
-              <p className="text-white font-semibold">3. Measure ({MEASURE_S} s)</p>
+              <p className="text-white font-semibold">{t('cal.wizard.step3', { seconds: MEASURE_S })}</p>
               <div className="flex items-center gap-3">
                 <button onClick={measure} disabled={phase !== 'listening' && phase !== 'result'}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-orange text-dark font-medium hover:bg-orange/80 disabled:opacity-40 transition-colors">
-                  {phase === 'result' ? 'Measure again' : 'Measure'}
+                  {phase === 'result' ? t('cal.wizard.measureAgain') : t('cal.wizard.measure')}
                 </button>
                 {phase === 'measuring' && (
                   <div className="flex-1 h-1.5 bg-panel rounded overflow-hidden border border-border">
                     <div className="h-full bg-orange transition-all" style={{ width: `${progress * 100}%` }} />
                   </div>
                 )}
-                {phase === 'analysing' && <span className="flex items-center gap-2 text-muted"><Loader2 size={13} className="animate-spin text-teal" /> Analysing…</span>}
+                {phase === 'analysing' && <span className="flex items-center gap-2 text-muted"><Loader2 size={13} className="animate-spin text-teal" /> {t('cal.wizard.analysing')}</span>}
               </div>
-              <p className="text-muted/80">Keep still and quiet while it measures. Do not move the calibrator.</p>
+              <p className="text-muted/80">{t('cal.wizard.keepStill')}</p>
             </div>
 
             {phase === 'result' && result && (
-              <div className="flex flex-col gap-2 p-3 rounded border border-border bg-panel/60" aria-label="Calibration result">
-                <p className="text-white">Tone found: <span className="tabular-nums">{result.m.freqHz.toFixed(1)} Hz</span> at <span className="tabular-nums">{dbfs(result.m.toneRms).toFixed(1)} dBFS</span> (RMS)</p>
-                <p className="text-white">Sensitivity: <span className="text-teal font-semibold tabular-nums" data-testid="cal-sens">{sensitivityFromPa(result.calibrationPa).toFixed(2)} mV/Pa</span>
-                  <span className="text-muted"> (for a 1 V full scale)</span></p>
-                <p className="text-muted">A full-scale signal is {result.calibrationPa.toFixed(2)} Pa peak, about {(20 * Math.log10(result.calibrationPa / P0)).toFixed(1)} dB SPL peak.</p>
+              <div className="flex flex-col gap-2 p-3 rounded border border-border bg-panel/60" aria-label={t('cal.wizard.resultAria')}>
+                <p className="text-white">{t('cal.wizard.toneFound')} <span className="tabular-nums">{result.m.freqHz.toFixed(1)} Hz</span> {t('cal.wizard.toneAt')} <span className="tabular-nums">{dbfs(result.m.toneRms).toFixed(1)} dBFS</span> {t('cal.wizard.rmsParen')}</p>
+                <p className="text-white">{t('cal.wizard.sensitivity')} <span className="text-teal font-semibold tabular-nums" data-testid="cal-sens">{sensitivityFromPa(result.calibrationPa).toFixed(2)} mV/Pa</span>
+                  <span className="text-muted">{t('cal.wizard.forFullScale')}</span></p>
+                <p className="text-muted">{t('cal.wizard.fullScale', { pa: result.calibrationPa.toFixed(2), db: (20 * Math.log10(result.calibrationPa / P0)).toFixed(1) })}</p>
                 {result.warnings.map((w, i) => (
                   <p key={i} className={`flex items-start gap-1.5 ${w.blocking ? 'text-orange' : 'text-amber'}`}><AlertTriangle size={12} className="mt-0.5 shrink-0" />{w.text}</p>
                 ))}
-                {!result.warnings.length && <p className="flex items-center gap-1.5 text-teal"><CheckCircle size={12} /> Clean tone, good level.</p>}
+                {!result.warnings.length && <p className="flex items-center gap-1.5 text-teal"><CheckCircle size={12} /> {t('cal.wizard.clean')}</p>}
                 <button disabled={blocked}
                   onClick={() => save(result.calibrationPa, 'calibrator', { levelDb: level, freqHz: result.m.freqHz })}
                   className="self-start px-4 py-1.5 rounded bg-teal text-dark font-semibold hover:bg-teal/80 disabled:opacity-40 transition-colors">
-                  Save calibration
+                  {t('cal.wizard.save')}
                 </button>
               </div>
             )}
@@ -304,8 +306,7 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
           {error && <p className="text-orange">{error}</p>}
 
           <p className="text-muted/80 border-t border-border/60 pt-2">
-            The calibration is kept in this browser for this microphone, and recordings made with it carry it into Post-Processing.
-            It only holds while the microphone volume in your system stays as it is now: do not change it afterwards.
+            {t('cal.wizard.footer1')} {t('cal.wizard.footer2')}
           </p>
         </div>
       </div>

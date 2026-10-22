@@ -1,6 +1,7 @@
 import { Trash2, Settings } from 'lucide-react'
 import clsx from 'clsx'
 import { AudioFile } from '../types'
+import { useT } from '../i18n'
 
 interface Props {
   files: AudioFile[]
@@ -17,6 +18,7 @@ function fmt(s: number) {
 }
 
 export default function AudioList({ files, selectedId, onSelect, onRemove, onEdit }: Props) {
+  const t = useT()
   if (!files.length) return null
 
   return (
@@ -43,7 +45,7 @@ export default function AudioList({ files, selectedId, onSelect, onRemove, onEdi
             </span>
             {/* Meta */}
             <span className="text-[11px] text-muted mt-0.5">
-              {fmt(f.duration_s)} · {f.sample_rate / 1000} kHz · {f.channels === 1 ? 'Mono' : 'Stereo'}
+              {fmt(f.duration_s)} · {f.sample_rate / 1000} kHz · {f.channels === 1 ? 'Mono' : t('pp.list.stereo')}
             </span>
 
             {/* Action buttons — visible on hover */}
@@ -56,14 +58,14 @@ export default function AudioList({ files, selectedId, onSelect, onRemove, onEdi
               <button
                 className="p-1 rounded text-muted hover:text-teal hover:bg-teal/10 transition-colors"
                 onClick={(e) => { e.stopPropagation(); onEdit(f.audio_id) }}
-                title="Processing"
+                title={t('pp.list.processing')}
               >
                 <Settings size={13} />
               </button>
               <button
                 className="p-1 rounded text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
                 onClick={(e) => { e.stopPropagation(); onRemove(f.audio_id) }}
-                title="Remove"
+                title={t('pp.list.remove')}
               >
                 <Trash2 size={13} />
               </button>

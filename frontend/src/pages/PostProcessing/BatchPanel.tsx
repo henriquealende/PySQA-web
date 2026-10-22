@@ -7,6 +7,7 @@ import { newClientId } from '../../api/http'
 import { MetricKey, FieldType } from '../../types'
 import { exportXlsx } from '../../api/exportApi'
 import { toast } from '../../store/useToast'
+import { useT } from '../../i18n'
 
 const BATCH_METRICS: { key: MetricKey; label: string; short: string }[] = [
   { key: 'loudness_zwk',         label: 'Loudness ZWK',    short: 'N (ZWK)' },
@@ -20,8 +21,8 @@ const BATCH_METRICS: { key: MetricKey; label: string; short: string }[] = [
 ]
 
 const ANNOYANCE_MODELS = [
-  { key: 'sil', label: 'SIL',  full: 'Annoyance SIL', tip: 'Requires N, S, R, IPM' },
-  { key: 'zwk', label: 'ZWK', full: 'Annoyance ZWK', tip: 'Requires N, S, R, FS' },
+  { key: 'sil', label: 'SIL', fullKey: 'pp.batch.annSil', tipKey: 'pp.batch.annSilTip' },
+  { key: 'zwk', label: 'ZWK', fullKey: 'pp.batch.annZwk', tipKey: 'pp.batch.annZwkTip' },
 ]
 
 function computeSIL(row: any) {
@@ -46,6 +47,7 @@ function computeZWK(row: any) {
 function BatchProgress({ step, total, label, elapsed, eta, onCancel }: {
   step: number; total: number; label: string; elapsed: number; eta: number | null; onCancel: () => void
 }) {
+  const t = useT()
   const pct = total > 0 ? Math.round((step/total)*100) : 0
   return (
     <div className="flex flex-col gap-2 py-3 px-4 bg-panel rounded-lg border border-border">
@@ -60,12 +62,12 @@ function BatchProgress({ step, total, label, elapsed, eta, onCancel }: {
       </div>
       <div className="flex items-center gap-2">
         <span className="text-[11px] text-muted/70 tabular-nums flex-1">
-          {Math.round(elapsed)} s{eta ? ` of about ${Math.round(eta)} s (from earlier calculations on this server)` : ''}
+          {Math.round(elapsed)} s{eta ? t('pp.batch.etaOf', { n: Math.round(eta) }) : ''}
         </span>
         <span className="text-[11px] text-muted/70 tabular-nums">{pct}%</span>
         <button onClick={onCancel}
           className="px-3 py-0.5 text-xs text-muted hover:text-white border border-border rounded transition-colors">
-          Cancel
+          {t('pp.batch.cancel')}
         </button>
       </div>
     </div>
@@ -73,6 +75,7 @@ function BatchProgress({ step, total, label, elapsed, eta, onCancel }: {
 }
 
 export default function BatchPanel() {
+  const t = useT()
   const { sessionId, files, fieldType, setFieldType, sections } = useStore()
 
   // File selection
@@ -119,7 +122,7 @@ export default function BatchPanel() {
 
   const keyLabel = (k: string) => {
     const ann = ANNOYANCE_MODELS.find(m => `annoyance_${m.key}` === k)
-    if (ann) return ann.full
+    if (ann) return t(ann.fullKey)
     return BATCH_METRICS.find(m => m.key === k)?.label ?? k
   }
 
@@ -144,7 +147,7 @@ export default function BatchPanel() {
     ctrlRef.current = ctrl
     setBusy(true); setError(''); setRows(null); setSkipped([])
     const total = selectedFiles.length * metrics.length
-    setPStep(0); setPTotal(total); setPLabel('Starting…'); setStartedAt(Date.now()); setEtaTotal(null)
+    setPStep(0); setPTotal(total); setPLabel(t('pp.batch.starting')); setStartedAt(Date.now()); setEtaTotal(null)
     const load = await fetchServerLoad()
     if (load?.timing_s_per_audio_s) {
       let eta = 0, known = true
@@ -173,23 +176,23 @@ export default function BatchPanel() {
           } catch (e: any) {
             if (isAbort(e) || e instanceof SessionExpiredError) throw e
             row[m] = null
-            skip.push({ audio_id: f.audio_id, name: f.name, metric: m, reason: e?.message ?? 'failed' })
+            skip.push({ audio_id: f.audio_id, name: f.name, metric: m, reason: e?.message ?? t('pp.batch.failed') })
           }
           setPStep(++step)
         }
         out.push(row)
       }
       setRows(out); setKeys(metrics); setSkipped(skip)
-      toast.success('Batch analysis complete')
+      toast.success(t('pp.batch.complete'))
     } catch (e: any) {
       if (isAbort(e)) {
         // Keep what was finished: the rows already done are shown, the rest is left out
         if (out.length) { setRows(out); setKeys(metrics); setSkipped(skip) }
-        toast.info(`Cancelled after ${step} of ${total} calculations`)
+        toast.info(t('pp.batch.cancelledAfter', { step, total }))
       } else if (e instanceof SessionExpiredError) {
-        setError('The server restarted and lost your files. Upload them again and repeat the batch.')
+        setError(t('pp.batch.sessionLost'))
       } else {
-        setError(e.message); toast.error('Batch failed')
+        setError(e.message); toast.error(t('pp.batch.batchFailed'))
       }
     } finally {
       setBusy(false); setPLabel('')
@@ -226,12 +229,12 @@ export default function BatchPanel() {
   const doExport = async () => {
     if (!augRows) return
     try {
-      const columns: Record<string,any[]> = { 'File': augRows.map(r => r.name) }
-      if (augRows.some(r => r.section)) columns['Section (s)'] = augRows.map(r => r.section ? `${r.section[0]}-${r.section[1]}` : 'whole file')
+      const columns: Record<string,any[]> = { [t('pp.batch.colFile')]: augRows.map(r => r.name) }
+      if (augRows.some(r => r.section)) columns[t('pp.batch.colSection')] = augRows.map(r => r.section ? `${r.section[0]}-${r.section[1]}` : t('pp.batch.wholeFile'))
       displayKeys.forEach(k => { columns[colHeader(k)] = augRows.map(r => r[k]??'') })
-      await exportXlsx(sessionId, selectedFiles.map(f => f.audio_id), [{ sheet_name:'Batch Results', columns }])
-      toast.success('XLSX exported')
-    } catch(e:any) { toast.error('Export failed') }
+      await exportXlsx(sessionId, selectedFiles.map(f => f.audio_id), [{ sheet_name: t('pp.batch.sheetName'), columns }])
+      toast.success(t('pp.batch.xlsxExported'))
+    } catch(e:any) { toast.error(t('pp.batch.exportFailed')) }
   }
 
   return (
@@ -240,14 +243,14 @@ export default function BatchPanel() {
       {/* ── Left column: file list ───────────────────────────────── */}
       <div className="w-52 shrink-0 border-r border-border flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-          <span className="text-[11px] text-muted uppercase tracking-wider font-semibold">Files</span>
+          <span className="text-[11px] text-muted uppercase tracking-wider font-semibold">{t('pp.batch.files')}</span>
           <button onClick={toggleAll} className="text-[11px] text-muted hover:text-teal transition-colors">
-            {allChecked ? 'None' : 'All'}
+            {allChecked ? t('pp.batch.none') : t('pp.batch.all')}
           </button>
         </div>
         <div className="flex-1 overflow-y-auto py-1">
           {files.length === 0 && (
-            <p className="text-[11px] text-muted text-center py-6">No files uploaded</p>
+            <p className="text-[11px] text-muted text-center py-6">{t('pp.batch.noFiles')}</p>
           )}
           {files.map(f => (
             <button
@@ -268,7 +271,7 @@ export default function BatchPanel() {
                 </span>
                 {sections[f.audio_id] && (
                   <span className="text-[11px] text-teal/80 truncate">
-                    section {sections[f.audio_id]![0]}–{sections[f.audio_id]![1]} s
+                    {t('pp.batch.section', { a: sections[f.audio_id]![0], b: sections[f.audio_id]![1] })}
                   </span>
                 )}
               </span>
@@ -276,7 +279,7 @@ export default function BatchPanel() {
           ))}
         </div>
         <div className="px-3 py-2 border-t border-border shrink-0">
-          <span className="text-[11px] text-muted">{selectedFiles.length} of {files.length} selected</span>
+          <span className="text-[11px] text-muted">{t('pp.batch.selectedCount', { n: selectedFiles.length, total: files.length })}</span>
         </div>
       </div>
 
@@ -288,7 +291,7 @@ export default function BatchPanel() {
 
           {/* Row 1: metrics */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] text-muted uppercase tracking-wider shrink-0 whitespace-nowrap">Metrics</span>
+            <span className="text-[11px] text-muted uppercase tracking-wider shrink-0 whitespace-nowrap">{t('pp.batch.metrics')}</span>
             {BATCH_METRICS.map(({ key, label }) => (
               <button key={key} onClick={() => toggle(key)} disabled={busy}
                 className={clsx('px-2.5 py-1 text-xs rounded border transition-colors disabled:opacity-40',
@@ -303,15 +306,15 @@ export default function BatchPanel() {
 
           {/* Row 2: annoyance + field type + compute */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] text-muted uppercase tracking-wider shrink-0 whitespace-nowrap">Annoyance</span>
-            {ANNOYANCE_MODELS.map(({ key, full, tip }) => (
-              <button key={key} onClick={() => toggleAnn(key)} disabled={busy} title={tip}
+            <span className="text-[11px] text-muted uppercase tracking-wider shrink-0 whitespace-nowrap">{t('pp.batch.annoyance')}</span>
+            {ANNOYANCE_MODELS.map(({ key, fullKey, tipKey }) => (
+              <button key={key} onClick={() => toggleAnn(key)} disabled={busy} title={t(tipKey)}
                 className={clsx('px-2.5 py-1 text-xs rounded border transition-colors disabled:opacity-40',
                   annoyance.includes(key)
                     ? 'bg-amber-500/20 border-amber-500 text-amber-400 font-medium'
                     : 'bg-panel border-border text-muted hover:text-white'
                 )}>
-                {full}
+                {t(fullKey)}
               </button>
             ))}
 
@@ -319,13 +322,13 @@ export default function BatchPanel() {
 
             {/* Field type */}
             <div className="flex items-center gap-1">
-              <span className="text-[11px] text-muted">Field:</span>
+              <span className="text-[11px] text-muted">{t('pp.batch.field')}</span>
               {(['free','diffuse'] as FieldType[]).map(ft => (
                 <button key={ft} onClick={() => setFieldType(ft)} disabled={busy}
                   className={clsx('px-2 py-0.5 text-[11px] rounded transition-colors disabled:opacity-40',
                     fieldType===ft ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white'
                   )}>
-                  {ft === 'free' ? 'Free' : 'Diffuse'}
+                  {ft === 'free' ? t('pp.batch.free') : t('pp.batch.diffuse')}
                 </button>
               ))}
             </div>
@@ -334,28 +337,28 @@ export default function BatchPanel() {
             <button onClick={compute}
               disabled={busy || !selected.length || !selectedFiles.length}
               className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 disabled:opacity-40 transition-colors">
-              {busy ? <><Loader2 size={12} className="animate-spin" /> Computing…</> : 'Compute'}
+              {busy ? <><Loader2 size={12} className="animate-spin" /> {t('pp.batch.computing')}</> : t('pp.batch.compute')}
             </button>
 
             {augRows && augRows.length > 0 && !busy && (
               <button onClick={doExport}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted hover:text-white rounded border border-border hover:bg-panel transition-colors">
-                <Download size={13} /> Export XLSX
+                <Download size={13} /> {t('pp.batch.exportXlsx')}
               </button>
             )}
           </div>
 
           {withSection.length > 0 && (
             <p className="text-[11px] text-muted">
-              Using only the selected section of <span className="text-teal">{withSection.length} file{withSection.length > 1 ? 's' : ''}</span>
-              {' '}(change it in the Normal view, Section bar).
+              {t('pp.batch.usingSectionPre')} <span className="text-teal">{t(withSection.length > 1 ? 'pp.batch.fileMany' : 'pp.batch.fileOne', { n: withSection.length })}</span>
+              {' '}{t('pp.batch.usingSectionPost')}
             </p>
           )}
 
           {/* Auto-added notice */}
           {autoAdded.length > 0 && (
             <p className="text-[11px] text-muted">
-              Auto-adding for annoyance: <span className="text-amber-400">{autoAdded.map(keyLabel).join(', ')}</span>
+              {t('pp.batch.autoAdding')} <span className="text-amber-400">{autoAdded.map(keyLabel).join(', ')}</span>
             </p>
           )}
         </div>
@@ -369,28 +372,28 @@ export default function BatchPanel() {
 
           {!busy && !augRows && !error && (
             <div className="flex-1 flex flex-col items-center justify-center gap-2 text-muted">
-              <p className="text-sm">Select metrics and click <span className="text-teal font-semibold">Compute</span></p>
-              <p className="text-[11px]">{selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected</p>
+              <p className="text-sm">{t('pp.batch.hintPre')} <span className="text-teal font-semibold">{t('pp.batch.compute')}</span></p>
+              <p className="text-[11px]">{t(selectedFiles.length !== 1 ? 'pp.batch.nSelectedMany' : 'pp.batch.nSelectedOne', { n: selectedFiles.length })}</p>
             </div>
           )}
 
           {skipped.length > 0 && (
             <div className="text-[11px] text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded px-3 py-2 space-y-1">
               <p className="font-semibold">
-                {skipped.length} calculation{skipped.length > 1 ? 's were' : ' was'} skipped to protect the server
+                {t(skipped.length > 1 ? 'pp.batch.skippedMany' : 'pp.batch.skippedOne', { n: skipped.length })}
               </p>
               {skipped.slice(0, 4).map((s, i) => (
                 <p key={i} className="text-amber-300/80">
                   {s.name.replace(/\.wav$/i, '')} · {keyLabel(s.metric)}: {s.reason}
                 </p>
               ))}
-              {skipped.length > 4 && <p className="text-amber-300/60">+{skipped.length - 4} more</p>}
+              {skipped.length > 4 && <p className="text-amber-300/60">{t('pp.batch.more', { n: skipped.length - 4 })}</p>}
             </div>
           )}
 
           {unexplainedFailures.length > 0 && (
             <p className="text-[11px] text-amber-400 bg-amber-400/10 border border-amber-400/30 rounded px-3 py-2">
-              No result for: {unexplainedFailures.map(keyLabel).join(', ')}. Check the server log for details.
+              {t('pp.batch.noResult', { list: unexplainedFailures.map(keyLabel).join(', ') })}
             </p>
           )}
 
@@ -404,7 +407,7 @@ export default function BatchPanel() {
                 </colgroup>
                 <thead>
                   <tr className="bg-panel sticky top-0 z-10">
-                    <th className="text-left px-3 py-2.5 text-muted font-semibold border-b border-border">File</th>
+                    <th className="text-left px-3 py-2.5 text-muted font-semibold border-b border-border">{t('pp.batch.colFile')}</th>
                     {displayKeys.map(k => (
                       <th key={k} className={clsx(
                         'text-right px-3 py-2.5 font-semibold border-b border-l border-border whitespace-nowrap',
@@ -424,7 +427,7 @@ export default function BatchPanel() {
                         title={row.name}
                         style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
                         {row.name.replace(/\.wav$/i,'')}
-                        {row.section && <span className="block text-[11px] text-teal/80">section {row.section[0]}–{row.section[1]} s</span>}
+                        {row.section && <span className="block text-[11px] text-teal/80">{t('pp.batch.section', { a: row.section[0], b: row.section[1] })}</span>}
                       </td>
                       {displayKeys.map(k => (
                         <td key={k} className={clsx(

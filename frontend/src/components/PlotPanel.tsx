@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import Plot from './Plot'
 import { Loader2, Settings } from 'lucide-react'
 import { useStore } from '../store/useStore'
@@ -16,6 +16,8 @@ import type {
 } from '../types'
 import SectionBar, { sectionKey, toSection } from './SectionBar'
 import MetricProgress from './MetricProgress'
+import { useT } from '../i18n'
+import { serverLabel } from '../i18n/serverLabels'
 
 // ─── Colors ─────────────────────────────────────────────────────────────────
 const C_TEAL   = '#50b89e'   // primary time
@@ -91,6 +93,7 @@ function harmonicShapes(f0: number, color = C_ORANGE): any[] {
 }
 
 function HarmonicInput({ f0, onChange }: { f0: number|null; onChange: (v: number|null) => void }) {
+  const t = useT()
   const [raw, setRaw] = useState(f0 ? String(f0) : '')
   const apply = () => { const v = parseFloat(raw); onChange(isNaN(v)||v<=0 ? null : v) }
   const clear = () => { setRaw(''); onChange(null) }
@@ -101,7 +104,7 @@ function HarmonicInput({ f0, onChange }: { f0: number|null; onChange: (v: number
         onChange={e => setRaw(e.target.value)}
         onKeyDown={e => e.key==='Enter' && apply()}
         className="w-16 bg-panel border border-field rounded px-1.5 py-0.5 text-xs text-white placeholder:text-muted/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal" />
-      <button onClick={apply} className="px-1.5 py-0.5 text-[11px] bg-teal/20 border border-teal/40 text-teal rounded hover:bg-teal/30 transition-colors">Set</button>
+      <button onClick={apply} className="px-1.5 py-0.5 text-[11px] bg-teal/20 border border-teal/40 text-teal rounded hover:bg-teal/30 transition-colors">{t('plot.set')}</button>
       {f0 && <button onClick={clear} className="px-1.5 py-0.5 text-[11px] text-muted hover:text-white transition-colors">✕</button>}
     </div>
   )
@@ -109,10 +112,11 @@ function HarmonicInput({ f0, onChange }: { f0: number|null; onChange: (v: number
 
 // ─── Helper components ───────────────────────────────────────────────────────
 function Spinner() {
+  const t = useT()
   return (
     <div className="flex flex-1 items-center justify-center gap-2 text-muted">
       <Loader2 size={18} className="animate-spin text-teal" />
-      <span className="text-xs">Loading…</span>
+      <span className="text-xs">{t('plot.loading')}</span>
     </div>
   )
 }
@@ -122,12 +126,13 @@ function ErrorMsg({ msg }: { msg: string }) {
 }
 
 function SessionExpiredMsg() {
+  const t = useT()
   const clearSession = useStore(s => s.clearSession)
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center px-4">
-      <p className="text-xs text-amber-400 max-w-xs">Your files are no longer on the server and this browser could not restore them.</p>
+      <p className="text-xs text-amber-400 max-w-xs">{t('plot.expired')}</p>
       <button onClick={clearSession} className="px-4 py-1.5 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">
-        Clear &amp; Re-upload files
+        {t('plot.clearReupload')}
       </button>
     </div>
   )
@@ -135,22 +140,23 @@ function SessionExpiredMsg() {
 
 // Shown after the user cancels a slow calculation
 function CancelledPanel({ wasRunning, onRetry, onBack }: { wasRunning: boolean; onRetry: () => void; onBack: () => void }) {
+  const t = useT()
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center px-6 h-full">
       <p className="text-xs text-muted max-w-sm">
-        Calculation cancelled.{' '}
+        {t('plot.cancelled.title')}{' '}
         {wasRunning
-          ? 'The server had already started it, so it finishes in the background and asking again will then be instant.'
-          : 'It was taken out of the server\'s queue before it started.'}
+          ? t('plot.cancelled.running')
+          : t('plot.cancelled.queued')}
       </p>
       <div className="flex gap-2">
         <button onClick={onRetry}
           className="px-4 py-1.5 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">
-          Calculate again
+          {t('plot.cancelled.retry')}
         </button>
         <button onClick={onBack}
           className="px-3 py-1.5 text-xs text-muted hover:text-white border border-border rounded transition-colors">
-          Back to the waveform
+          {t('plot.cancelled.back')}
         </button>
       </div>
     </div>
@@ -170,11 +176,12 @@ function CompareBadge({ name, color }: { name: string; color: string }) {
 
 // ─── Settings helpers ────────────────────────────────────────────────────────
 function SettingsOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  const t = useT()
   return (
     <div className="absolute inset-0 z-10 flex items-start justify-end pointer-events-none">
       <div className="pointer-events-auto mt-10 mr-2 w-64 bg-surface border border-border rounded-lg shadow-xl p-3 text-xs">
         <div className="flex items-center justify-between mb-2">
-          <span className="font-semibold text-white text-[11px] uppercase tracking-wider">Settings</span>
+          <span className="font-semibold text-white text-[11px] uppercase tracking-wider">{t('plot.settings')}</span>
           <button onClick={onClose} className="text-muted hover:text-white transition-colors text-base leading-none">×</button>
         </div>
         {children}
@@ -194,6 +201,7 @@ const inputCls  = 'w-full bg-panel border border-field rounded px-2 py-0.5 text-
 const selectCls = 'w-full bg-panel border border-field rounded px-2 py-0.5 text-white text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal'
 
 function SpectrogramSettings({ params, onChange }: { params: SpectrogramParams; onChange: (p: Partial<SpectrogramParams>) => void }) {
+  const t = useT()
   return (
     <div className="space-y-0.5">
       <LabeledRow label="NFFT">
@@ -201,38 +209,38 @@ function SpectrogramSettings({ params, onChange }: { params: SpectrogramParams; 
           {[256,512,1024,2048,4096,8192].map(v => <option key={v} value={v}>{v}</option>)}
         </select>
       </LabeledRow>
-      <LabeledRow label="Overlap (%)">
+      <LabeledRow label={t('plot.spec.overlap')}>
         <input className={inputCls} type="number" min={0} max={99} step={5} value={params.overlap}
           onChange={e => onChange({ overlap: Number(e.target.value) })} />
       </LabeledRow>
-      <LabeledRow label="Window">
+      <LabeledRow label={t('plot.spec.window')}>
         <select className={selectCls} value={params.window} onChange={e => onChange({ window: e.target.value })}>
           {['hann','hamming','blackman','bartlett','flattop','boxcar','kaiser'].map(v => <option key={v} value={v}>{v}</option>)}
         </select>
       </LabeledRow>
       {params.window === 'kaiser' && (
-        <LabeledRow label="Kaiser β">
+        <LabeledRow label={t('plot.spec.kaiser')}>
           <input className={inputCls} type="number" min={0} max={100} step={1}
             value={params.kaiser_beta ?? 14}
             onChange={e => onChange({ kaiser_beta: Number(e.target.value) })} />
         </LabeledRow>
       )}
-      <LabeledRow label="Colormap">
+      <LabeledRow label={t('plot.spec.colormap')}>
         <select className={selectCls} value={params.cmap} onChange={e => onChange({ cmap: e.target.value })}>
           {['magma','viridis','inferno','plasma','hot','jet','greys'].map(v => <option key={v} value={v}>{v}</option>)}
         </select>
       </LabeledRow>
-      <LabeledRow label="Freq scale">
+      <LabeledRow label={t('plot.spec.freqScale')}>
         <select className={selectCls} value={params.freq_scale} onChange={e => onChange({ freq_scale: e.target.value })}>
-          <option value="log">Log</option>
-          <option value="linear">Linear</option>
+          <option value="log">{t('plot.spec.log')}</option>
+          <option value="linear">{t('plot.spec.linear')}</option>
         </select>
       </LabeledRow>
-      <LabeledRow label="Fmax (Hz)">
-        <input className={inputCls} type="number" min={100} placeholder="auto" value={params.fmax ?? ''}
+      <LabeledRow label={t('plot.spec.fmax')}>
+        <input className={inputCls} type="number" min={100} placeholder={t('plot.spec.auto')} value={params.fmax ?? ''}
           onChange={e => onChange({ fmax: e.target.value ? Number(e.target.value) : null })} />
       </LabeledRow>
-      <LabeledRow label="Dyn range (dB)">
+      <LabeledRow label={t('plot.spec.dyn')}>
         <input className={inputCls} type="number" min={20} max={120} step={10} value={params.dyn_range}
           onChange={e => onChange({ dyn_range: Number(e.target.value) })} />
       </LabeledRow>
@@ -240,33 +248,36 @@ function SpectrogramSettings({ params, onChange }: { params: SpectrogramParams; 
   )
 }
 function OctaveSettings({ weighting, onChange }: { weighting: string; onChange: (w: string) => void }) {
+  const t = useT()
   return (
-    <LabeledRow label="Weighting">
+    <LabeledRow label={t('plot.oct.weighting')}>
       <select className={selectCls} value={weighting} onChange={e => onChange(e.target.value)}>
-        <option value="Z">Z (unweighted)</option>
-        <option value="A">A-weighting</option>
-        <option value="C">C-weighting</option>
+        <option value="Z">{t('plot.oct.z')}</option>
+        <option value="A">{t('plot.oct.a')}</option>
+        <option value="C">{t('plot.oct.c')}</option>
       </select>
     </LabeledRow>
   )
 }
 function EnvelopeSettings({ params, onChange }: { params: EnvelopeParams; onChange: (p: Partial<EnvelopeParams>) => void }) {
+  const t = useT()
   return (
     <div className="space-y-0.5">
-      <LabeledRow label="Smoothing (ms)">
+      <LabeledRow label={t('plot.env.smoothing')}>
         <input className={inputCls} type="number" min={0} step={1} value={params.smoothing_ms}
           onChange={e => onChange({ smoothing_ms: Number(e.target.value) })} />
       </LabeledRow>
-      <LabeledRow label="LPF cutoff (Hz)">
-        <input className={inputCls} type="number" min={1} placeholder="none" value={params.lpf_hz ?? ''}
+      <LabeledRow label={t('plot.env.lpf')}>
+        <input className={inputCls} type="number" min={1} placeholder={t('plot.env.none')} value={params.lpf_hz ?? ''}
           onChange={e => onChange({ lpf_hz: e.target.value ? Number(e.target.value) : null })} />
       </LabeledRow>
     </div>
   )
 }
 function GearButton({ onClick }: { onClick: () => void }) {
+  const t = useT()
   return (
-    <button onClick={onClick} title="Settings"
+    <button onClick={onClick} title={t('plot.settings')}
       className="absolute top-1 right-1 z-10 p-1 rounded text-muted hover:text-white hover:bg-panel/80 transition-colors">
       <Settings size={13} />
     </button>
@@ -293,6 +304,7 @@ function makePinAnnotation(p: {x: number; y: number}, isLogX: boolean, xFmt: str
 function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   sessionId: string; audioId: string; compareId: string|null; compareName: string; section: Section|null
 }) {
+  const t = useT()
   const { calibrations, audioIsPlaying, setSection } = useStore()
   const secKey = sectionKey(section)
   const isCalibrated = !!calibrations[audioId]
@@ -394,11 +406,11 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
 
   const wfData: Plotly.Data[] = [
     { x: wf.t, y: wf.amplitude, type: 'scatter', mode: 'lines',
-      line: { color: C_TEAL, width: 1 }, name: 'Waveform',
+      line: { color: C_TEAL, width: 1 }, name: t('plot.trace.waveform'),
       hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>' },
     ...(wfCmp ? [{
       x: wfCmp.t, y: wfCmp.amplitude, type: 'scatter' as const, mode: 'lines' as const,
-      line: { color: C_BLUE, width: 1, dash: 'dot' as const }, name: `Waveform (${compareName})`,
+      line: { color: C_BLUE, width: 1, dash: 'dot' as const }, name: `${t('plot.trace.waveform')} (${compareName})`,
       hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>',
     }] : []),
   ]
@@ -411,16 +423,16 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   const hasAvg = !!sp.average_db
   const spData: Plotly.Data[] = [
     { x: sp.freqs, y: sp.magnitude_db, type: 'scatter', mode: 'lines',
-      line: { color: hasAvg ? 'rgba(237,105,59,0.55)' : C_ORANGE, width: 1 }, name: hasAvg ? 'Peak' : 'Spectrum',
+      line: { color: hasAvg ? 'rgba(237,105,59,0.55)' : C_ORANGE, width: 1 }, name: hasAvg ? t('plot.trace.peak') : t('plot.trace.spectrum'),
       hovertemplate: `%{x:.1f} Hz — %{y:.1f} ${specUnit}<extra></extra>` },
     ...(hasAvg ? [{
       x: sp.freqs, y: sp.average_db, type: 'scatter' as const, mode: 'lines' as const,
-      line: { color: C_ORANGE, width: 1.6 }, name: 'Average',
+      line: { color: C_ORANGE, width: 1.6 }, name: t('plot.trace.average'),
       hovertemplate: `%{x:.1f} Hz — %{y:.1f} ${specUnit}<extra></extra>`,
     }] : []),
     ...(spCmp ? [{
       x: spCmp.freqs, y: spCmp.magnitude_db, type: 'scatter' as const, mode: 'lines' as const,
-      line: { color: C_YELLOW, width: 1, dash: 'dot' as const }, name: `Spectrum (${compareName})`,
+      line: { color: C_YELLOW, width: 1, dash: 'dot' as const }, name: `${t('plot.trace.spectrum')} (${compareName})`,
       hovertemplate: `%{x:.1f} Hz — %{y:.1f} ${specUnit}<extra></extra>`,
     }] : []),
   ]
@@ -454,8 +466,8 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
       <div className="relative flex-1 min-h-0">
       <Plot data={wfData}
         layout={{ ...BASE_LAYOUT,
-          xaxis: { ...BASE_LAYOUT.xaxis, title: 'Time (s)', ...(wfRange.current ? { range: wfRange.current, autorange: false } : {}) },
-          yaxis: { ...BASE_LAYOUT.yaxis, title: isCalibrated ? 'Pressure (Pa)' : 'Amplitude' },
+          xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time'), ...(wfRange.current ? { range: wfRange.current, autorange: false } : {}) },
+          yaxis: { ...BASE_LAYOUT.yaxis, title: isCalibrated ? t('plot.axis.pressure') : t('plot.axis.amplitude') },
           shapes: sectionShape,
           annotations: wfPins.map(p => makePinAnnotation(p, false, '.3f', '.4f')),
           dragmode: wfDrag, selectdirection: 'h',
@@ -480,8 +492,8 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
       </div>
       <Plot data={spData}
         layout={{ ...BASE_LAYOUT,
-          xaxis: { ...BASE_LAYOUT.xaxis, title: 'Frequency (Hz)', type: 'log' },
-          yaxis: { ...BASE_LAYOUT.yaxis, title: isCalibrated ? 'SPL (dB re 20 µPa)' : 'Magnitude (dBFS)' },
+          xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.frequency'), type: 'log' },
+          yaxis: { ...BASE_LAYOUT.yaxis, title: isCalibrated ? t('plot.axis.spl') : t('plot.axis.magnitudeDbfs') },
           shapes: f0 ? harmonicShapes(f0, C_ORANGE) : [],
           annotations: spPins.map(p => makePinAnnotation(p, true, '.0f', '.1f', specUnit)),
           showlegend: showLegend || hasAvg,
@@ -495,26 +507,26 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
         <span ref={cursorClock} className="text-[11px] font-mono tabular-nums text-orange shrink-0" style={{ display: 'none' }} />
         <span className="text-[11px] text-muted">f₀</span>
         <HarmonicInput f0={f0} onChange={setF0} />
-        <div className="flex items-center gap-1 ml-2 text-[11px]" role="group" aria-label="What dragging on the waveform does">
-          <span className="text-muted">Drag to</span>
+        <div className="flex items-center gap-1 ml-2 text-[11px]" role="group" aria-label={t('plot.normal.dragAria')}>
+          <span className="text-muted">{t('plot.normal.dragTo')}</span>
           {(['select', 'zoom'] as const).map(m => (
             <button key={m} onClick={() => setWfDrag(m)} aria-pressed={wfDrag === m}
               className={`px-1.5 py-0.5 rounded border transition-colors ${wfDrag === m ? 'bg-teal/20 border-teal/50 text-teal' : 'border-border text-muted hover:text-white'}`}>
-              {m === 'select' ? 'select a section' : 'zoom'}
+              {m === 'select' ? t('plot.normal.select') : t('plot.normal.zoom')}
             </button>
           ))}
         </div>
         {wf.peak !== undefined && (
           <span
             className={`ml-2 text-[11px] tabular-nums ${wf.peak >= 0.999 ? 'text-orange font-semibold' : 'text-muted'}`}
-            title="Highest absolute sample of the whole file (0 dBFS = full scale)">
-            Peak {wf.peak > 0 ? (20 * Math.log10(wf.peak)).toFixed(1) : '−∞'} dBFS{wf.peak >= 0.999 ? ' · clipping' : ''}
+            title={t('plot.normal.peakTitle')}>
+            {t('plot.normal.peakLevel', { db: wf.peak > 0 ? (20 * Math.log10(wf.peak)).toFixed(1) : '−∞' })}{wf.peak >= 0.999 ? ` · ${t('plot.normal.clipping')}` : ''}
           </span>
         )}
         {totalPins > 0 && (
           <button onClick={() => { setSpPins([]); setWfPins([]) }}
             className="ml-auto px-2 py-0.5 text-[11px] text-muted hover:text-white border border-border rounded transition-colors">
-            Clear {totalPins} pin{totalPins > 1 ? 's' : ''} (ESC)
+            {t(totalPins > 1 ? 'plot.pins.clearMany' : 'plot.pins.clearOne', { n: totalPins })}
           </button>
         )}
       </div>
@@ -538,6 +550,7 @@ function BarkBadge({ isHMS }: { isHMS: boolean }) {
 function MetricView({ sessionId, audioId, metricKey, compareId, compareName, section }: {
   sessionId: string; audioId: string; metricKey: string; compareId: string|null; compareName: string; section: Section|null
 }) {
+  const t = useT()
   const { fieldType, files, setMetricKey } = useStore()
   const secKey = sectionKey(section)
   const workSeconds = section ? section[1] - section[0] : (files.find(f => f.audio_id === audioId)?.duration_s ?? 0)
@@ -546,7 +559,9 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
   const [retry, setRetry] = useState(0)
   const [cancelled, setCancelled] = useState<{ wasRunning: boolean } | null>(null)
   const ctrlRef = useRef<AbortController | null>(null)
-  const [data,     setData]    = useState<MetricResult|null>(null)
+  const [rawData,  setData]    = useState<MetricResult|null>(null)
+  // the server names the axes in English; they are shown in the language of the interface
+  const data = useMemo(() => (rawData ? { ...rawData, y_label: serverLabel(rawData.y_label, t), threshold_label: serverLabel(rawData.threshold_label, t) } : null), [rawData, t])
   const [dataCmp,  setDataCmp] = useState<MetricResult|null>(null)
   const [err,      setErr]     = useState('')
   const [freqPins, setFreqPins] = useState<{x: number; y: number}[]>([])
@@ -586,7 +601,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
     <MetricProgress label={metricKey.replace(/_/g, ' ')} metricKey={metricKey} job={job} duration={workSeconds}
       onCancel={(wasRunning) => { setCancelled({ wasRunning }); ctrlRef.current?.abort() }} />
   )
-  if (data.error) return <ErrorMsg msg={data.error + (data.requires ? ` (requires ${data.requires})` : '')} />
+  if (data.error) return <ErrorMsg msg={data.error + (data.requires ? ` ${t('plot.metric.requires', { what: data.requires })}` : '')} />
 
   const xLabel   = (data.x_label ?? '').toLowerCase()
   const isBark   = xLabel.includes('bark')
@@ -595,10 +610,10 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
   const showLegend = !!compareId
 
   const globalLabel = data.global !== undefined
-    ? `Global: ${data.global.toFixed(3)} ${data.unit ?? ''}`
+    ? `${t('plot.metric.global')} ${data.global.toFixed(3)} ${data.unit ?? ''}`
     : ''
   const globalCmpLabel = dataCmp?.global !== undefined
-    ? ` · Compare: ${dataCmp.global.toFixed(3)} ${dataCmp.unit ?? ''}`
+    ? ` · ${t('plot.metric.compare')} ${dataCmp.global.toFixed(3)} ${dataCmp.unit ?? ''}`
     : ''
 
   const isBar  = data.plot_type === 'bar'
@@ -629,18 +644,18 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
       y: [data.threshold, data.threshold],
       type: 'scatter', mode: 'lines',
       line: { color: '#d35400', width: 2, dash: 'dash' },
-      name: data.threshold_label ?? 'Threshold',
+      name: data.threshold_label ?? t('plot.trace.threshold'),
     } as any)
   }
 
   const timeTraces: Plotly.Data[] = data.time_data ? [
     { x: data.time_data.t, y: data.time_data.values, type: 'scatter', mode: 'lines',
-      line: { color: C_TEAL, width: 1.5 }, name: 'Time-varying',
+      line: { color: C_TEAL, width: 1.5 }, name: t('plot.trace.timeVarying'),
       hovertemplate: `%{x:.2f} s — %{y:.4f} ${data.unit??''}<extra></extra>` },
     ...(dataCmp?.time_data ? [{
       x: dataCmp.time_data.t, y: dataCmp.time_data.values, type: 'scatter' as const, mode: 'lines' as const,
       line: { color: C_BLUE, width: 1.5, dash: 'dot' as const },
-      name: `Time-varying (${compareName})`,
+      name: `${t('plot.trace.timeVarying')} (${compareName})`,
       hovertemplate: `%{x:.2f} s — %{y:.4f} ${dataCmp.unit??''}<extra></extra>`,
     }] : []),
   ] : []
@@ -658,7 +673,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
       {data.time_data && (
         <Plot data={timeTraces}
           layout={{ ...BASE_LAYOUT, margin: { ...BASE_LAYOUT.margin, t: 8 },
-            xaxis: { ...BASE_LAYOUT.xaxis, title: 'Time (s)' },
+            xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time') },
             yaxis: { ...BASE_LAYOUT.yaxis, title: timeYLabel },
             showlegend: showLegend, legend: { font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' } }}
           config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
@@ -689,7 +704,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
               overlaying: 'x', side: 'top',
               range: data.x_axis?.length ? [Math.min(...data.x_axis), Math.max(...data.x_axis)] : undefined,
               tickvals: barkTicks.tickvals, ticktext: barkTicks.ticktext,
-              title: { text: 'Frequency (Hz)', font: { color: '#8ab4c9', size: 10 } },
+              title: { text: t('plot.axis.frequency'), font: { color: '#8ab4c9', size: 10 } },
               color: '#8ab4c9', gridcolor: 'transparent', showgrid: false,
               zeroline: false, fixedrange: true,
             } as any,
@@ -711,7 +726,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
         <div className="flex items-center px-2 shrink-0">
           <button onClick={() => setFreqPins([])}
             className="text-[11px] text-muted hover:text-white border border-border rounded px-2 py-0.5 transition-colors">
-            Clear {freqPins.length} pin{freqPins.length > 1 ? 's' : ''} (ESC)
+            {t(freqPins.length > 1 ? 'plot.pins.clearMany' : 'plot.pins.clearOne', { n: freqPins.length })}
           </button>
         </div>
       )}
@@ -720,6 +735,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
 }
 
 function SpectrogramView({ sessionId, audioId, section }: { sessionId: string; audioId: string; section: Section|null }) {
+  const t = useT()
   const { spectrogramParams, setSpectrogramParams } = useStore()
   const secKey = sectionKey(section)
   const [data, setData]               = useState<SpectrogramData|null>(null)
@@ -753,7 +769,7 @@ function SpectrogramView({ sessionId, audioId, section }: { sessionId: string; a
       {showSettings && (
         <SettingsOverlay onClose={() => setShowSettings(false)}>
           <SpectrogramSettings params={pending} onChange={p => setPending(prev => ({...prev,...p}))} />
-          <button onClick={handleApply} className="mt-2 w-full py-1 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">Apply</button>
+          <button onClick={handleApply} className="mt-2 w-full py-1 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">{t('plot.apply')}</button>
         </SettingsOverlay>
       )}
       {!data ? <Spinner /> : (
@@ -762,8 +778,8 @@ function SpectrogramView({ sessionId, audioId, section }: { sessionId: string; a
           colorbar: { title: 'dB', thickness: 12, len: 0.8, tickfont: { size: 9, color: '#8ab4c9' } },
           hovertemplate: '%{x:.3f} s — %{y:.0f} Hz — %{z:.1f} dB<extra></extra>' } as any]}
           layout={{ ...BASE_LAYOUT, margin: { l: 58, r: 64, t: 32, b: 48 },
-            xaxis: { ...BASE_LAYOUT.xaxis, title: 'Time (s)' },
-            yaxis: { ...BASE_LAYOUT.yaxis, title: 'Frequency (Hz)', type: yAxisType as any } }}
+            xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time') },
+            yaxis: { ...BASE_LAYOUT.yaxis, title: t('plot.axis.frequency'), type: yAxisType as any } }}
           config={PLOT_CONFIG} className="w-full h-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
       )}
     </div>
@@ -771,6 +787,7 @@ function SpectrogramView({ sessionId, audioId, section }: { sessionId: string; a
 }
 
 function OctaveView({ sessionId, audioId, section }: { sessionId: string; audioId: string; section: Section|null }) {
+  const t = useT()
   const { octaveWeighting, setOctaveWeighting, calibrations } = useStore()
   const secKey = sectionKey(section)
   const [data, setData]               = useState<OctaveData|null>(null)
@@ -797,7 +814,7 @@ function OctaveView({ sessionId, audioId, section }: { sessionId: string; audioI
   const octUnit = octCalibrated
     ? (octaveWeighting === 'A' ? 'dB(A) SPL' : octaveWeighting === 'C' ? 'dB(C) SPL' : 'dB SPL re 20 µPa')
     : (octaveWeighting === 'A' ? 'dB(A)' : 'dBFS')
-  const yLabel = `RMS Level (${octUnit})`
+  const yLabel = t('plot.axis.rmsLevel', { unit: octUnit })
 
   // Bars grow up from the bottom of the axis, so a louder band is a taller bar.
   // (Plotly draws negative values from 0 dB downwards, which inverted the chart.)
@@ -812,16 +829,16 @@ function OctaveView({ sessionId, audioId, section }: { sessionId: string; audioI
       {showSettings && (
         <SettingsOverlay onClose={() => setShowSettings(false)}>
           <OctaveSettings weighting={pending} onChange={setPending} />
-          <button onClick={handleApply} className="mt-2 w-full py-1 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">Apply</button>
+          <button onClick={handleApply} className="mt-2 w-full py-1 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">{t('plot.apply')}</button>
         </SettingsOverlay>
       )}
       {!data ? <Spinner /> : (
         <Plot data={[{ x: data.centres_hz.map(String), y: levels.map(v => v == null ? null : v - floorDb),
           base: floorDb, customdata: levels,
-          type: 'bar', marker: { color: C_ORANGE, opacity: 0.85 }, name: 'RMS Level',
+          type: 'bar', marker: { color: C_ORANGE, opacity: 0.85 }, name: t('plot.trace.rms'),
           hovertemplate: `%{x} Hz — %{customdata:.1f} ${octUnit}<extra></extra>` } as any]}
           layout={{ ...BASE_LAYOUT,
-            xaxis: { ...BASE_LAYOUT.xaxis, title: '1/3-Octave Band Centre (Hz)', type: 'category', tickangle: -45, tickfont: { size: 9 } },
+            xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.octCentre'), type: 'category', tickangle: -45, tickfont: { size: 9 } },
             yaxis: { ...BASE_LAYOUT.yaxis, title: yLabel, range: [floorDb, topDb] }, bargap: 0.15 }}
           config={PLOT_CONFIG} className="w-full h-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
       )}
@@ -830,6 +847,7 @@ function OctaveView({ sessionId, audioId, section }: { sessionId: string; audioI
 }
 
 function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audioId: string; section: Section|null }) {
+  const t = useT()
   const { envelopeParams, setEnvelopeParams } = useStore()
   const secKey = sectionKey(section)
   const [data, setData]               = useState<EnvelopeData|null>(null)
@@ -858,26 +876,26 @@ function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audi
       {showSettings && (
         <SettingsOverlay onClose={() => setShowSettings(false)}>
           <EnvelopeSettings params={pending} onChange={p => setPending(prev => ({...prev,...p}))} />
-          <button onClick={handleApply} className="mt-2 w-full py-1 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">Apply</button>
+          <button onClick={handleApply} className="mt-2 w-full py-1 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">{t('plot.apply')}</button>
         </SettingsOverlay>
       )}
       {!data ? <Spinner /> : (
         <>
           <Plot data={[
-            { x: data.t, y: data.signal,   type: 'scatter', mode: 'lines', line: { color: C_TEAL,  width: 0.8 }, name: 'Signal',   hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>' },
-            { x: data.t, y: data.envelope, type: 'scatter', mode: 'lines', line: { color: C_AMBER, width: 1.5 }, name: 'Envelope', hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>' },
+            { x: data.t, y: data.signal,   type: 'scatter', mode: 'lines', line: { color: C_TEAL,  width: 0.8 }, name: t('plot.trace.signal'),   hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>' },
+            { x: data.t, y: data.envelope, type: 'scatter', mode: 'lines', line: { color: C_AMBER, width: 1.5 }, name: t('plot.trace.envelope'), hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>' },
           ]}
             layout={{ ...BASE_LAYOUT,
-              xaxis: { ...BASE_LAYOUT.xaxis, title: 'Time (s)' },
-              yaxis: { ...BASE_LAYOUT.yaxis, title: 'Amplitude' },
+              xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time') },
+              yaxis: { ...BASE_LAYOUT.yaxis, title: t('plot.axis.amplitude') },
               legend: { font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' } }}
             config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
           <Plot data={[{ x: data.f_env, y: data.env_spec_db, type: 'scatter', mode: 'lines',
-            line: { color: C_ORANGE, width: 1 }, name: 'Envelope Spectrum',
+            line: { color: C_ORANGE, width: 1 }, name: t('plot.trace.envSpectrum'),
             hovertemplate: '%{x:.1f} Hz — %{y:.1f} dB<extra></extra>' }]}
             layout={{ ...BASE_LAYOUT,
-              xaxis: { ...BASE_LAYOUT.xaxis, title: 'Frequency (Hz)', type: 'log' },
-              yaxis: { ...BASE_LAYOUT.yaxis, title: 'Magnitude (dB)' } }}
+              xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.frequency'), type: 'log' },
+              yaxis: { ...BASE_LAYOUT.yaxis, title: t('plot.axis.magnitudeDb') } }}
             config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
         </>
       )}
@@ -888,12 +906,13 @@ function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audi
 // ─── Root ────────────────────────────────────────────────────────────────────
 export default function PlotPanel() {
   const { sessionId, selectedId, viewMode, metricKey, compareId, files, sections } = useStore()
+  const t = useT()
   const compareName = compareId ? (files.find(f => f.audio_id === compareId)?.name ?? '') : ''
 
   if (!selectedId) {
     return (
       <div className="flex flex-1 items-center justify-center text-muted text-xs">
-        Import a WAV file to begin
+        {t('plot.empty')}
       </div>
     )
   }

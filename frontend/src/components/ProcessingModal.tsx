@@ -1,4 +1,5 @@
 import { toast } from '../store/useToast'
+import { useT } from '../i18n'
 import { useEffect, useState } from 'react'
 import { useDialog } from '../hooks/useDialog'
 import Plot from './Plot'
@@ -18,6 +19,15 @@ type Tab = 'filter' | 'window' | 'weighting' | 'loudness'
 const FILTER_TYPES  = ['Band-pass', 'Low-pass', 'High-pass', 'Band-reject', '1/3-Octave band', 'Harmonic Notch']
 const WINDOW_TYPES  = ['Hanning', 'Hamming', 'Blackman', 'Bartlett', 'Kaiser', 'Rectangular']
 const WEIGHTING_OPTS = ['None', 'A-weighting', 'C-weighting']
+
+// Texts shown for the option values above (the values themselves are what the server receives)
+const FILTER_LABEL_KEYS: Record<string, string> = {
+  'Band-pass': 'pp.proc.ftBandPass', 'Low-pass': 'pp.proc.ftLowPass', 'High-pass': 'pp.proc.ftHighPass',
+  'Band-reject': 'pp.proc.ftBandReject', '1/3-Octave band': 'pp.proc.ftOctave', 'Harmonic Notch': 'pp.proc.ftHarmonic',
+}
+const WEIGHTING_LABEL_KEYS: Record<string, string> = {
+  'None': 'pp.proc.wNone', 'A-weighting': 'pp.proc.wA', 'C-weighting': 'pp.proc.wC',
+}
 
 // 1/3-octave band centres (ISO 266)
 const THIRD_OCT: number[] = [
@@ -180,6 +190,7 @@ function WaveformSelector({
   windowType: string
   onSelect: (start: number, end: number) => void
 }) {
+  const t = useT()
   const [wf,  setWf]  = useState<{ t: number[]; amplitude: number[] } | null>(null)
   const [sel, setSel] = useState<[number, number] | null>(null)
 
@@ -242,20 +253,20 @@ function WaveformSelector({
 
   if (!wf) return (
     <div className="flex items-center justify-center h-24 text-xs text-muted gap-1">
-      <Loader2 size={12} className="animate-spin text-teal" /> Loading waveform…
+      <Loader2 size={12} className="animate-spin text-teal" /> {t('pp.proc.loadingWaveform')}
     </div>
   )
 
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-[11px] text-muted">Drag on the chart to select a region</p>
+      <p className="text-[11px] text-muted">{t('pp.proc.dragHint')}</p>
       <Plot
         data={[
           {
             x: wf.t, y: wf.amplitude, type: 'scatter', mode: 'lines',
             line: { color: C_TEAL, width: 0.8 },
             opacity: baseOpacity,
-            showlegend: false, name: 'Waveform',
+            showlegend: false, name: t('pp.proc.traceWaveform'),
             hovertemplate: '%{x:.3f} s<extra></extra>',
           },
           ...overlayTraces,
@@ -264,8 +275,8 @@ function WaveformSelector({
           paper_bgcolor: 'transparent', plot_bgcolor: '#111c28',
           font: { color: '#e2e8f0', size: 9, family: 'Inter, sans-serif' },
           margin: { l: 42, r: 8, t: 4, b: 28 },
-          xaxis: { gridcolor: '#1e2d3d', color: '#8ab4c9', title: { text: 'Time (s)', font: { size: 9 } } },
-          yaxis: { gridcolor: '#1e2d3d', color: '#8ab4c9', title: { text: 'Amp', font: { size: 9 } } },
+          xaxis: { gridcolor: '#1e2d3d', color: '#8ab4c9', title: { text: t('pp.proc.axisTime'), font: { size: 9 } } },
+          yaxis: { gridcolor: '#1e2d3d', color: '#8ab4c9', title: { text: t('pp.proc.axisAmp'), font: { size: 9 } } },
           autosize: true,
           dragmode: 'select',
           selectdirection: 'h',
@@ -294,10 +305,10 @@ function WaveformSelector({
         <p className="text-[11px] text-teal">
           {sel[0].toFixed(4)} s → {sel[1].toFixed(4)} s &nbsp;|&nbsp;
           {(sel[1]-sel[0]).toFixed(4)} s &nbsp;|&nbsp;
-          {Math.round((sel[1]-sel[0])*sampleRate)} samples
+          {Math.round((sel[1]-sel[0])*sampleRate)} {t('pp.proc.samples')}
         </p>
       ) : (
-        <p className="text-[11px] text-muted">No selection</p>
+        <p className="text-[11px] text-muted">{t('pp.proc.noSelection')}</p>
       )}
     </div>
   )
@@ -318,6 +329,7 @@ interface Props {
 export default function ProcessingModal({
   sessionId, audioId, audioName, sampleRate, otherFiles, onClose, onResult,
 }: Props) {
+  const t = useT()
   const dialogRef = useDialog(onClose)
   const [tab, setTab]   = useState<Tab>('filter')
   const [busy, setBusy] = useState(false)
@@ -363,17 +375,17 @@ export default function ProcessingModal({
           isOctave ? octaveGains : undefined,
         )
       } else if (tab === 'window') {
-        if (endSample <= startSample) throw new Error('Select a valid region on the chart')
+        if (endSample <= startSample) throw new Error(t('pp.proc.errRegion'))
         result = await applyWindow(sessionId, audioId, startSample, endSample, windowType)
       } else if (tab === 'weighting') {
-        if (weightCurve === 'None') throw new Error('Select a weighting curve')
+        if (weightCurve === 'None') throw new Error(t('pp.proc.errCurve'))
         const curve = weightCurve === 'A-weighting' ? 'A' : 'C'
         result = await applyWeighting(sessionId, audioId, curve)
       } else {
-        if (!refId) throw new Error('Select a reference file')
+        if (!refId) throw new Error(t('pp.proc.errRef'))
         result = await applyLoudnessAdj(sessionId, audioId, refId)
       }
-      toast.success('Processing applied')
+      toast.success(t('pp.proc.applied'))
       onResult(result)
       onClose()
     } catch (e: any) {
@@ -387,16 +399,16 @@ export default function ProcessingModal({
   const labelCls = 'text-[11px] text-muted uppercase tracking-wider mb-0.5 block'
 
   const TABS: { key: Tab; label: string }[] = [
-    { key: 'filter',    label: 'Filtering' },
-    { key: 'window',    label: 'Windowing' },
-    { key: 'weighting', label: 'Weighting' },
-    { key: 'loudness',  label: 'Loudness Adj.' },
+    { key: 'filter',    label: t('pp.proc.tabFilter') },
+    { key: 'window',    label: t('pp.proc.tabWindow') },
+    { key: 'weighting', label: t('pp.proc.tabWeighting') },
+    { key: 'loudness',  label: t('pp.proc.tabLoudness') },
   ]
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={`Process ${audioName}`}
+        ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t('pp.proc.ariaLabel', { name: audioName })}
         className="bg-surface border border-border rounded-xl shadow-2xl flex flex-col outline-none"
         style={{ width: 'min(680px, 100%)', maxHeight: '90vh' }}
         onClick={e => e.stopPropagation()}
@@ -404,9 +416,9 @@ export default function ProcessingModal({
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
           <span className="text-sm font-semibold text-white truncate max-w-xs" title={audioName}>
-            Processing — {audioName.replace(/\.wav$/i, '')}
+            {t('pp.proc.header', { name: audioName.replace(/\.wav$/i, '') })}
           </span>
-          <button onClick={onClose} className="text-muted hover:text-white transition-colors ml-2">
+          <button onClick={onClose} aria-label={t('pp.proc.close')} className="text-muted hover:text-white transition-colors ml-2">
             <X size={15} />
           </button>
         </div>
@@ -432,32 +444,32 @@ export default function ProcessingModal({
             <div className="flex gap-4 items-start">
               <div className="flex-1 space-y-3 min-w-0">
                 <div>
-                  <label className={labelCls}>Filter type</label>
+                  <label className={labelCls}>{t('pp.proc.filterType')}</label>
                   <select value={filterType} onChange={e => setFilterType(e.target.value)} className={inputCls}>
-                    {FILTER_TYPES.map(ft => <option key={ft}>{ft}</option>)}
+                    {FILTER_TYPES.map(ft => <option key={ft} value={ft}>{t(FILTER_LABEL_KEYS[ft])}</option>)}
                   </select>
                 </div>
                 {isBand && (
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className={labelCls}>Low frequency (Hz)</label>
+                      <label className={labelCls}>{t('pp.proc.lowFreq')}</label>
                       <input type="number" value={cutoffLow} onChange={e => setCutoffLow(Number(e.target.value))} className={inputCls} min={1} />
                     </div>
                     <div>
-                      <label className={labelCls}>High frequency (Hz)</label>
+                      <label className={labelCls}>{t('pp.proc.highFreq')}</label>
                       <input type="number" value={cutoffHigh} onChange={e => setCutoffHigh(Number(e.target.value))} className={inputCls} min={1} />
                     </div>
                   </div>
                 )}
                 {isSingle && (
                   <div>
-                    <label className={labelCls}>Cutoff frequency (Hz)</label>
+                    <label className={labelCls}>{t('pp.proc.cutoffFreq')}</label>
                     <input type="number" value={cutoffLow} onChange={e => setCutoffLow(Number(e.target.value))} className={inputCls} min={1} />
                   </div>
                 )}
                 {(isBand || isSingle) && (
                   <div>
-                    <label className={labelCls}>Design</label>
+                    <label className={labelCls}>{t('pp.proc.design')}</label>
                     <select value={method} onChange={e => setMethod(e.target.value)} className={inputCls}>
                       <option>Butterworth</option>
                       <option>Linkwitz</option>
@@ -467,28 +479,28 @@ export default function ProcessingModal({
                 {isHarmonic && (
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className={labelCls}>Fundamental (Hz)</label>
+                      <label className={labelCls}>{t('pp.proc.fundamental')}</label>
                       <input type="number" value={fundamental} onChange={e => setFundamental(Number(e.target.value))} className={inputCls} min={1} />
                     </div>
                     <div>
-                      <label className={labelCls}>Q factor</label>
+                      <label className={labelCls}>{t('pp.proc.qFactor')}</label>
                       <input type="number" value={qFactor} onChange={e => setQFactor(Number(e.target.value))} className={inputCls} min={1} />
                     </div>
                   </div>
                 )}
                 {isOctave && (
                   <div className="border border-border rounded-lg p-2 bg-dark/40">
-                    <p className="text-[11px] text-muted mb-2 uppercase tracking-wider">1/3-octave band gain (dB) · −24 to +24</p>
+                    <p className="text-[11px] text-muted mb-2 uppercase tracking-wider">{t('pp.proc.octaveGain')}</p>
                     <OctaveEq gains={octaveGains} onChange={setOctaveGains} />
                     <button onClick={() => setOctaveGains(Array(31).fill(0))}
                       className="mt-2 text-[11px] text-muted hover:text-white transition-colors">
-                      Reset all
+                      {t('pp.proc.resetAll')}
                     </button>
                   </div>
                 )}
               </div>
               <div className="flex flex-col items-center gap-1 shrink-0">
-                <span className="text-[10px] text-muted uppercase tracking-wider">Response</span>
+                <span className="text-[10px] text-muted uppercase tracking-wider">{t('pp.proc.response')}</span>
                 <div className="border border-border rounded-lg p-2 bg-dark/40">
                   <FilterPreview type={filterType} />
                 </div>
@@ -501,23 +513,23 @@ export default function ProcessingModal({
             <div className="flex gap-4 items-start">
               <div className="flex-1 space-y-3 min-w-0">
                 <div>
-                  <label className={labelCls}>Window type</label>
+                  <label className={labelCls}>{t('pp.proc.windowType')}</label>
                   <select value={windowType} onChange={e => setWindowType(e.target.value)} className={inputCls}>
-                    {WINDOW_TYPES.map(w => <option key={w}>{w}</option>)}
+                    {WINDOW_TYPES.map(w => <option key={w} value={w}>{w === 'Rectangular' ? t('pp.proc.winRect') : w}</option>)}
                   </select>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={manualMode} onChange={e => setManualMode(e.target.checked)} className="accent-teal" />
-                  <span className="text-xs text-muted">Enter samples manually</span>
+                  <span className="text-xs text-muted">{t('pp.proc.manual')}</span>
                 </label>
                 {manualMode ? (
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className={labelCls}>Start (sample)</label>
+                      <label className={labelCls}>{t('pp.proc.startSample')}</label>
                       <input type="number" value={startSample} onChange={e => setStartSample(Number(e.target.value))} className={inputCls} min={0} />
                     </div>
                     <div>
-                      <label className={labelCls}>End (sample)</label>
+                      <label className={labelCls}>{t('pp.proc.endSample')}</label>
                       <input type="number" value={endSample} onChange={e => setEndSample(Number(e.target.value))} className={inputCls} min={1} />
                     </div>
                   </div>
@@ -530,7 +542,7 @@ export default function ProcessingModal({
                 )}
               </div>
               <div className="flex flex-col items-center gap-1 shrink-0">
-                <span className="text-[10px] text-muted uppercase tracking-wider">Shape</span>
+                <span className="text-[10px] text-muted uppercase tracking-wider">{t('pp.proc.shape')}</span>
                 <div className="border border-border rounded-lg p-2 bg-dark/40">
                   <WindowPreview type={windowType} />
                 </div>
@@ -543,19 +555,19 @@ export default function ProcessingModal({
             <div className="flex gap-4 items-start">
               <div className="flex-1 space-y-3 min-w-0">
                 <div>
-                  <label className={labelCls}>Weighting curve</label>
+                  <label className={labelCls}>{t('pp.proc.weightCurve')}</label>
                   <select value={weightCurve} onChange={e => setWeightCurve(e.target.value)} className={inputCls}>
-                    {WEIGHTING_OPTS.map(o => <option key={o}>{o}</option>)}
+                    {WEIGHTING_OPTS.map(o => <option key={o} value={o}>{t(WEIGHTING_LABEL_KEYS[o])}</option>)}
                   </select>
                 </div>
                 <p className="text-[11px] text-muted leading-relaxed">
-                  {weightCurve === 'A-weighting' && 'A-weighting — approximates human hearing sensitivity (IEC 61672). Standard for sound level measurements.'}
-                  {weightCurve === 'C-weighting' && 'C-weighting — flatter response, used for peak measurements and low-frequency analysis.'}
-                  {weightCurve === 'None'         && 'No weighting — original signal with no frequency response modification.'}
+                  {weightCurve === 'A-weighting' && t('pp.proc.descA')}
+                  {weightCurve === 'C-weighting' && t('pp.proc.descC')}
+                  {weightCurve === 'None'         && t('pp.proc.descNone')}
                 </p>
               </div>
               <div className="flex flex-col items-center gap-1 shrink-0">
-                <span className="text-[10px] text-muted uppercase tracking-wider">Response</span>
+                <span className="text-[10px] text-muted uppercase tracking-wider">{t('pp.proc.response')}</span>
                 <div className="border border-border rounded-lg p-2 bg-dark/40">
                   <WeightingPreview curve={weightCurve} />
                 </div>
@@ -567,16 +579,16 @@ export default function ProcessingModal({
           {tab === 'loudness' && (
             otherFiles.length === 0 ? (
               <p className="text-xs text-muted py-4 text-center">
-                Upload at least one other file to use as a loudness reference.
+                {t('pp.proc.needRef')}
               </p>
             ) : (
               <div className="space-y-2">
-                <label className={labelCls}>Reference file</label>
+                <label className={labelCls}>{t('pp.proc.refFile')}</label>
                 <select value={refId} onChange={e => setRefId(e.target.value)} className={inputCls}>
                   {otherFiles.map(f => <option key={f.audio_id} value={f.audio_id}>{f.name}</option>)}
                 </select>
                 <p className="text-[11px] text-muted mt-1">
-                  The current file will be scaled so its ISO 532-1 loudness matches the reference file.
+                  {t('pp.proc.loudnessHint')}
                 </p>
               </div>
             )
@@ -589,7 +601,7 @@ export default function ProcessingModal({
         <div className="flex justify-end gap-2 px-4 py-3 border-t border-border shrink-0">
           <button onClick={onClose}
             className="px-3 py-1.5 text-xs text-muted hover:text-white rounded hover:bg-panel transition-colors">
-            Cancel
+            {t('pp.proc.cancel')}
           </button>
           <button
             onClick={run}
@@ -597,7 +609,7 @@ export default function ProcessingModal({
             className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 disabled:opacity-40 transition-colors"
           >
             {busy && <Loader2 size={12} className="animate-spin" />}
-            Apply
+            {t('pp.proc.apply')}
           </button>
         </div>
       </div>

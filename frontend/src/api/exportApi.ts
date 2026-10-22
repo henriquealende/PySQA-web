@@ -15,7 +15,7 @@ export function downloadBlob(blob: Blob, fileName: string): void {
 
 /** File-name friendly version of a label: "1/3-octave bands" → "1-3-octave-bands". */
 export function slug(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'export'
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'export'
 }
 
 export async function exportXlsx(

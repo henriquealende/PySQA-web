@@ -5,6 +5,7 @@ import { useStore } from '../store/useStore'
 import { toast } from '../store/useToast'
 import { getWavUrl, exportXlsx, downloadCsv, slug } from '../api/exportApi'
 import { buildExport, rowCount, ExportData } from '../api/exportData'
+import { useT, currentLocale } from '../i18n'
 
 interface Props {
   sessionId: string
@@ -17,6 +18,7 @@ const optionCls =
   'flex items-center gap-3 w-full px-4 py-3 rounded-lg bg-panel border border-field hover:border-teal/40 hover:bg-teal/5 disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-panel transition-colors text-left'
 
 export default function ExportModal({ sessionId, audioId, audioName, onClose }: Props) {
+  const t = useT()
   const dialogRef = useDialog(onClose)
   // What is on screen when the dialog opens decides what is exported
   const [view] = useState(() => {
@@ -59,7 +61,7 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
         data.sheets.map((s) => ({ sheet_name: s.name, columns: s.columns })),
         `${base}_${slug(data.label)}.xlsx`,
       )
-      toast.success('Excel file ready')
+      toast.success(t('pp.export.xlsxReady'))
       onClose()
     } catch (e) {
       toast.error((e as Error).message)
@@ -72,9 +74,9 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
     setBusy('csv')
     try {
       // The analysis tables of a section say so in the file name; the waveform is always the whole file
-      const part = view.section && sheet.name !== 'Waveform' ? `_section-${slug(`${view.section[0]}-${view.section[1]}`)}` : ''
+      const part = view.section && sheet.id !== 'waveform' ? `_section-${slug(`${view.section[0]}-${view.section[1]}`)}` : ''
       downloadCsv(sheet.columns, `${base}_${slug(sheet.name)}${part}.csv`)
-      toast.success('CSV file ready')
+      toast.success(t('pp.export.csvReady'))
       onClose()
     } catch (e) {
       toast.error((e as Error).message)
@@ -86,36 +88,36 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Export"
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t('pp.export.title')}
         className="bg-surface border border-border rounded-xl w-[380px] max-w-[94vw] shadow-2xl outline-none" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <span className="text-sm font-semibold text-white">Export</span>
-          <button onClick={onClose} className="text-muted hover:text-white" aria-label="Close"><X size={15} /></button>
+          <span className="text-sm font-semibold text-white">{t('pp.export.title')}</span>
+          <button onClick={onClose} className="text-muted hover:text-white" aria-label={t('pp.export.close')}><X size={15} /></button>
         </div>
 
         <div className="p-4 space-y-2">
-          <p className="text-xs text-muted mb-3">Export from <em className="text-white">{audioName}</em></p>
+          <p className="text-xs text-muted mb-3">{t('pp.export.from')} <em className="text-white">{audioName}</em></p>
 
           <button onClick={handleWav} className={optionCls}>
             <FileAudio size={18} className="text-teal shrink-0" />
             <div>
-              <p className="text-xs font-semibold text-white">Audio (.wav)</p>
-              <p className="text-[11px] text-muted">Lossless: the file as you sent it, or 32-bit float if processed</p>
+              <p className="text-xs font-semibold text-white">{t('pp.export.audio')}</p>
+              <p className="text-[11px] text-muted">{t('pp.export.audioHint')}</p>
             </div>
           </button>
 
           <div className="pt-2">
             <p className="text-[11px] uppercase tracking-wider text-muted mb-1.5">
-              Data on screen{data ? ` — ${data.label}` : ''}
+              {t('pp.export.dataOnScreen')}{data ? ` — ${data.label}` : ''}
             </p>
             {loading && (
-              <p className="flex items-center gap-2 text-[11px] text-muted"><Loader2 size={12} className="animate-spin text-teal" /> Collecting the data…</p>
+              <p className="flex items-center gap-2 text-[11px] text-muted"><Loader2 size={12} className="animate-spin text-teal" /> {t('pp.export.collecting')}</p>
             )}
             {error && <p className="text-[11px] text-red-400">{error}</p>}
             {data && (
               <ul className="text-[11px] text-muted space-y-0.5 mb-2">
                 {data.sheets.map((s) => (
-                  <li key={s.name}>{s.name} · {rowCount(s).toLocaleString('en-US')} rows · {Object.keys(s.columns).length} columns</li>
+                  <li key={s.name}>{t('pp.export.sheetInfo', { name: s.name, rows: rowCount(s).toLocaleString(currentLocale()), cols: Object.keys(s.columns).length })}</li>
                 ))}
               </ul>
             )}
@@ -125,7 +127,7 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
             {busy === 'xlsx' ? <Loader2 size={18} className="animate-spin text-teal shrink-0" /> : <SheetIcon size={18} className="text-teal shrink-0" />}
             <div>
               <p className="text-xs font-semibold text-white">Excel (.xlsx)</p>
-              <p className="text-[11px] text-muted">{data && data.sheets.length > 1 ? `All ${data.sheets.length} tables, one sheet each` : 'The table on screen'}</p>
+              <p className="text-[11px] text-muted">{data && data.sheets.length > 1 ? t('pp.export.allTables', { n: data.sheets.length }) : t('pp.export.theTable')}</p>
             </div>
           </button>
 
@@ -134,14 +136,14 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
               <FileText size={18} className="text-teal shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-white">CSV (.csv)</p>
-                <p className="text-[11px] text-muted">One table, made in your browser</p>
+                <p className="text-[11px] text-muted">{t('pp.export.csvHint')}</p>
               </div>
             </button>
             {data && data.sheets.length > 1 && (
               <select
                 value={csvSheet}
                 onChange={(e) => setCsvSheet(e.target.value)}
-                aria-label="Table to export as CSV"
+                aria-label={t('pp.export.csvPick')}
                 className="w-28 shrink-0 bg-panel border border-field rounded-lg px-2 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal"
               >
                 {data.sheets.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}
@@ -152,7 +154,7 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
 
         <div className="px-4 pb-4">
           <button onClick={onClose} className="w-full py-1.5 text-xs text-muted hover:text-white rounded hover:bg-panel transition-colors">
-            Cancel
+            {t('pp.export.cancel')}
           </button>
         </div>
       </div>

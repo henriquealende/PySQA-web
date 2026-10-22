@@ -10,6 +10,7 @@
  */
 import type { AudioFile } from '../types'
 import { toast } from '../store/useToast'
+import { t } from '../i18n'
 import { errorText } from './errors'
 
 const DB_NAME = 'pysqa-recovery'
@@ -86,7 +87,7 @@ function storageProblem(err: unknown) {
   console.warn('[recovery] could not keep a copy in this browser:', err)
   if (!warned) {
     warned = true
-    toast.info("Couldn't keep a copy of your files in this browser, so they can't be restored automatically if the server restarts.")
+    toast.info(t('cal.api.noCopy'))
   }
 }
 
@@ -251,11 +252,11 @@ export async function restoreRecords(
 
   for (const rec of steps) {
     try {
-      if (rec.parents.some((p) => failedIds.has(p))) throw new Error('it depends on a file that could not be restored')
+      if (rec.parents.some((p) => failedIds.has(p))) throw new Error(t('cal.api.dependsOn'))
 
       if (rec.kind === 'upload') {
         const blob = db ? await reqP(db.transaction('blobs', 'readonly').objectStore('blobs').get(rec.id)) as Blob | undefined : undefined
-        if (!blob) throw new Error('this browser no longer has a copy of the original file')
+        if (!blob) throw new Error(t('cal.api.noOriginal'))
         const form = new FormData()
         form.append('session_id', sessionId)
         form.append('audio_ids', rec.audioId)

@@ -12,6 +12,7 @@
 import type { AudioFile } from '../types'
 import { useStore } from '../store/useStore'
 import { toast } from '../store/useToast'
+import { t } from '../i18n'
 import * as recovery from './recovery'
 import { errorText, SessionExpiredError } from './errors'
 
@@ -92,9 +93,9 @@ async function doRestore(sessionId: string): Promise<boolean> {
   try {
     const result = await recovery.restoreRecords(sessionId, missing, (done) => setRestore({ done, total: missing.length }))
     if (result.failed.length) {
-      toast.error(`Could not restore ${result.failed.map((f) => f.name).join(', ')}: ${result.failed[0].reason}`)
+      toast.error(t('cal.api.restoreFailed', { names: result.failed.map((f) => f.name).join(', '), reason: result.failed[0].reason }))
     } else {
-      toast.info(`Restored ${result.restored} file${result.restored > 1 ? 's' : ''} after the server restarted.`)
+      toast.info(t(result.restored > 1 ? 'cal.api.restoredMany' : 'cal.api.restoredOne', { count: result.restored }))
     }
     if (result.restored > 0) restoreEpoch++
     return result.restored > 0

@@ -18,7 +18,7 @@ export default function App() {
         <Route path="post-processing" element={<PostProcessingPage />} />
         <Route path="data-acquisition" element={null} />
         <Route path="system-analysis"  element={<SystemAnalysisPage />} />
-        <Route path="docs" element={<Navigate to="/docs/post-processing" replace />} />
+        <Route path="docs" element={<Navigate to="/docs/sobre" replace />} />
         <Route path="docs/:page" element={<Suspense fallback={null}><DocsPage /></Suspense>} />
       </Route>
       {/* There is no sign-in any more: old /login bookmarks and unknown addresses go to the app */}

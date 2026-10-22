@@ -13,23 +13,26 @@ import MetricSelector from '../../components/MetricSelector'
 import AudioPlayer from '../../components/AudioPlayer'
 import ExportModal from '../../components/ExportModal'
 import BatchPanel from './BatchPanel'
+import { useT } from '../../i18n'
 
 // Plotly is the heaviest part of the app: load it only when a chart is first needed
 const PlotPanel = lazy(() => import('../../components/PlotPanel'))
 const ProcessingModal = lazy(() => import('../../components/ProcessingModal'))
 
-const ChartFallback = () => (
-  <div className="flex h-full items-center justify-center text-xs text-teal animate-pulse">Loading charts…</div>
-)
+const ChartFallback = () => {
+  const t = useT()
+  return <div className="flex h-full items-center justify-center text-xs text-teal animate-pulse">{t('pp.page.loadingCharts')}</div>
+}
 
-const VIEW_MODES: { key: ViewMode; label: string; Icon: React.ElementType }[] = [
-  { key: 'normal',      label: 'Normal',      Icon: Waves },
-  { key: 'spectrogram', label: 'Spectrogram', Icon: LayoutGrid },
-  { key: 'octave',      label: '1/3 Octave',  Icon: BarChart2 },
-  { key: 'envelope',    label: 'Envelope',    Icon: TrendingUp },
+const VIEW_MODES: { key: ViewMode; labelKey: string; Icon: React.ElementType }[] = [
+  { key: 'normal',      labelKey: 'pp.page.viewNormal',      Icon: Waves },
+  { key: 'spectrogram', labelKey: 'pp.page.viewSpectrogram', Icon: LayoutGrid },
+  { key: 'octave',      labelKey: 'pp.page.viewOctave',      Icon: BarChart2 },
+  { key: 'envelope',    labelKey: 'pp.page.viewEnvelope',    Icon: TrendingUp },
 ]
 
 export default function PostProcessingPage() {
+  const t = useT()
   const {
     sessionId, files, selectedId,
     viewMode, metricKey, fieldType, calibrations, compareId,
@@ -57,14 +60,14 @@ export default function PostProcessingPage() {
     try {
       const uploaded = await uploadFiles(sessionId, rawFiles)
       addFiles(uploaded)
-      toast.success(`${uploaded.length} file${uploaded.length > 1 ? 's' : ''} uploaded`)
+      toast.success(t(uploaded.length > 1 ? 'pp.page.uploadedMany' : 'pp.page.uploadedOne', { n: uploaded.length }))
     } catch (e: any) {
       setUploadError(e.message)
-      toast.error('Upload failed: ' + e.message)
+      toast.error(t('pp.page.uploadFailed', { msg: e.message }))
     } finally {
       setUploading(false)
     }
-  }, [sessionId, addFiles])
+  }, [sessionId, addFiles, t])
 
   const handleRemove = useCallback(async (id: string) => {
     await deleteAudio(sessionId, id)
@@ -82,13 +85,13 @@ export default function PostProcessingPage() {
   const handleCalibrate = async () => {
     if (!selectedId) return
     const val = parseFloat(calInput)
-    if (isNaN(val) || val <= 0) { setCalError('Enter a positive number'); return }
+    if (isNaN(val) || val <= 0) { setCalError(t('pp.page.calPositive')); return }
     setCalBusy(true); setCalError('')
     try {
       await apiSetCalibration(sessionId, selectedId, val)
       setCalibration(selectedId, val)
       setCalInput('')
-      toast.success('Calibration applied')
+      toast.success(t('pp.page.calApplied'))
     } catch (e: any) {
       setCalError(e.message)
     } finally {
@@ -100,7 +103,7 @@ export default function PostProcessingPage() {
     if (!selectedId) return
     await apiClearCalibration(sessionId, selectedId)
     setCalibration(selectedId, null)
-    toast.info('Calibration cleared')
+    toast.info(t('pp.page.calCleared'))
   }
 
   const editFile   = editId ? files.find((f) => f.audio_id === editId) : null
@@ -108,7 +111,7 @@ export default function PostProcessingPage() {
 
   return (
     <div className="flex flex-1 overflow-hidden relative">
-      <h1 className="sr-only">Post-Processing</h1>
+      <h1 className="sr-only">{t('pp.page.title')}</h1>
 
       {sidebarOpen && (
         <div
@@ -124,7 +127,7 @@ export default function PostProcessingPage() {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'
       )}>
         <FileDropzone onFiles={handleFiles} disabled={uploading} highlight={files.length === 0 && !uploading} />
-        {uploading    && <p className="text-[11px] text-teal text-center animate-pulse">Uploading…</p>}
+        {uploading    && <p className="text-[11px] text-teal text-center animate-pulse">{t('pp.page.uploading')}</p>}
         {uploadError  && <p className="text-[11px] text-red-400 text-center">{uploadError}</p>}
 
         <AudioList
@@ -138,7 +141,7 @@ export default function PostProcessingPage() {
         {files.length > 0 && (
           <>
             <div className="border-t border-border pt-3 space-y-2">
-              <p className="text-[11px] text-muted uppercase tracking-wider">Metric</p>
+              <p className="text-[11px] text-muted uppercase tracking-wider">{t('pp.page.metric')}</p>
               <MetricSelector
                 value={metricKey}
                 onChange={(k) => { setMetricKey(k); if (k !== 'none') setViewMode('normal') }}
@@ -147,7 +150,7 @@ export default function PostProcessingPage() {
             </div>
 
             <div className="border-t border-border pt-3 space-y-2">
-              <p className="text-[11px] text-muted uppercase tracking-wider">Field Type</p>
+              <p className="text-[11px] text-muted uppercase tracking-wider">{t('pp.page.fieldType')}</p>
               <div className="flex gap-1">
                 {(['free', 'diffuse'] as FieldType[]).map((ft) => (
                   <button
@@ -155,7 +158,7 @@ export default function PostProcessingPage() {
                     onClick={() => setFieldType(ft)}
                     className={`flex-1 py-1 text-xs rounded transition-colors ${fieldType === ft ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white'}`}
                   >
-                    {ft === 'free' ? 'Free-field' : 'Diffuse'}
+                    {ft === 'free' ? t('pp.page.freeField') : t('pp.page.diffuse')}
                   </button>
                 ))}
               </div>
@@ -163,13 +166,13 @@ export default function PostProcessingPage() {
 
             {files.length > 1 && selectedId && !showBatch && (
               <div className="border-t border-border pt-3 space-y-2">
-                <p className="text-[11px] text-muted uppercase tracking-wider">Compare with</p>
+                <p className="text-[11px] text-muted uppercase tracking-wider">{t('pp.page.compareWith')}</p>
                 <select
                   value={compareId ?? ''}
                   onChange={e => setCompareId(e.target.value || null)}
                   className="w-full bg-panel border border-field rounded px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal"
                 >
-                  <option value="">— None —</option>
+                  <option value="">{t('pp.page.none')}</option>
                   {files.filter(f => f.audio_id !== selectedId).map(f => (
                     <option key={f.audio_id} value={f.audio_id}>
                       {f.name.replace(/\.wav$/i, '')}
@@ -188,7 +191,7 @@ export default function PostProcessingPage() {
 
             {selectedId && (
               <div className="border-t border-border pt-3 space-y-2">
-                <p className="text-[11px] text-muted uppercase tracking-wider">Mic Calibration</p>
+                <p className="text-[11px] text-muted uppercase tracking-wider">{t('pp.page.micCal')}</p>
                 {calibrations[selectedId] != null ? (
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] text-teal flex-1">
@@ -197,7 +200,7 @@ export default function PostProcessingPage() {
                     <button
                       onClick={handleClearCal}
                       className="text-[11px] text-muted hover:text-red-400 transition-colors"
-                    >Clear</button>
+                    >{t('pp.page.clear')}</button>
                   </div>
                 ) : (
                   <div className="flex gap-1">
@@ -212,7 +215,7 @@ export default function PostProcessingPage() {
                       onClick={handleCalibrate}
                       disabled={calBusy || !calInput}
                       className="px-2 py-0.5 text-xs bg-teal text-dark rounded hover:bg-teal/80 disabled:opacity-40 transition-colors font-semibold"
-                    >Set</button>
+                    >{t('pp.page.set')}</button>
                   </div>
                 )}
                 {calError && <p className="text-[11px] text-red-400">{calError}</p>}
@@ -228,13 +231,13 @@ export default function PostProcessingPage() {
           <button
             className="sm:hidden p-1.5 rounded text-muted hover:text-white hover:bg-panel transition-colors"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label="Toggle sidebar"
+            aria-label={t('pp.page.toggleSidebar')}
           >
             {sidebarOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
           </button>
 
           <div className="flex gap-1 flex-wrap">
-            {VIEW_MODES.map(({ key, label, Icon }) => (
+            {VIEW_MODES.map(({ key, labelKey, Icon }) => (
               <button
                 key={key}
                 onClick={() => { setViewMode(key); if (key !== 'normal') setMetricKey('none'); setShowBatch(false) }}
@@ -247,7 +250,7 @@ export default function PostProcessingPage() {
                 )}
               >
                 <Icon size={13} />
-                {label}
+                {t(labelKey)}
               </button>
             ))}
           </div>
@@ -263,7 +266,7 @@ export default function PostProcessingPage() {
               )}
             >
               <BarChart3 size={13} />
-              Batch
+              {t('pp.page.batch')}
             </button>
           )}
 
@@ -275,7 +278,7 @@ export default function PostProcessingPage() {
               className="flex items-center gap-1.5 px-3 py-1 text-xs text-muted hover:text-white rounded hover:bg-panel transition-colors"
             >
               <Download size={13} />
-              Export
+              {t('pp.page.export')}
             </button>
           )}
         </div>
