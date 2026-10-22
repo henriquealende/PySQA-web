@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDialog } from '../hooks/useDialog'
 import { X, FileAudio, Sheet as SheetIcon, FileText, Loader2 } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { toast } from '../store/useToast'
@@ -16,6 +17,7 @@ const optionCls =
   'flex items-center gap-3 w-full px-4 py-3 rounded-lg bg-panel border border-border hover:border-teal/40 hover:bg-teal/5 disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-panel transition-colors text-left'
 
 export default function ExportModal({ sessionId, audioId, audioName, onClose }: Props) {
+  const dialogRef = useDialog(onClose)
   // What is on screen when the dialog opens decides what is exported
   const [view] = useState(() => {
     const s = useStore.getState()
@@ -84,7 +86,8 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-surface border border-border rounded-xl w-[380px] max-w-[94vw] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Export"
+        className="bg-surface border border-border rounded-xl w-[380px] max-w-[94vw] shadow-2xl outline-none" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <span className="text-sm font-semibold text-white">Export</span>
           <button onClick={onClose} className="text-muted hover:text-white" aria-label="Close"><X size={15} /></button>

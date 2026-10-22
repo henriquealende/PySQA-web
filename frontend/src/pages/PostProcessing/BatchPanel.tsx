@@ -62,7 +62,7 @@ function BatchProgress({ step, total, label, elapsed, eta, onCancel }: {
         <span className="text-[10px] text-muted/70 tabular-nums flex-1">
           {Math.round(elapsed)} s{eta ? ` of about ${Math.round(eta)} s (from earlier calculations on this server)` : ''}
         </span>
-        <span className="text-[10px] text-muted/50 tabular-nums">{pct}%</span>
+        <span className="text-[10px] text-muted/70 tabular-nums">{pct}%</span>
         <button onClick={onCancel}
           className="px-3 py-0.5 text-xs text-muted hover:text-white border border-border rounded transition-colors">
           Cancel
@@ -255,7 +255,7 @@ export default function BatchPanel() {
               onClick={() => toggleFile(f.audio_id)}
               className={clsx(
                 'w-full flex items-center gap-2 px-3 py-2 text-left transition-colors',
-                checkedIds.has(f.audio_id) ? 'text-white' : 'text-muted/50'
+                checkedIds.has(f.audio_id) ? 'text-white' : 'text-muted/70'
               )}
             >
               {checkedIds.has(f.audio_id)
@@ -409,7 +409,7 @@ export default function BatchPanel() {
                       <th key={k} className={clsx(
                         'text-right px-3 py-2.5 font-semibold border-b border-l border-border whitespace-nowrap',
                         k.startsWith('annoyance') ? 'text-amber-400/80'
-                        : failedKeys.includes(k) ? 'text-muted/40' : 'text-muted'
+                        : failedKeys.includes(k) ? 'text-muted/70' : 'text-muted'
                       )}>
                         {keyLabel(k)}
                       </th>
@@ -431,7 +431,7 @@ export default function BatchPanel() {
                           'px-3 py-2 text-right font-mono tabular-nums border-b border-l border-border/50',
                           k.startsWith('annoyance') ? 'text-amber-400' : 'text-teal'
                         )}>
-                          {row[k] != null ? Number(row[k]).toFixed(3) : <span className="text-muted/40">—</span>}
+                          {row[k] != null ? Number(row[k]).toFixed(3) : <span className="text-muted/70">—</span>}
                         </td>
                       ))}
                     </tr>

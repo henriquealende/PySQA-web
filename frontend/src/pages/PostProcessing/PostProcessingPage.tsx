@@ -205,7 +205,7 @@ export default function PostProcessingPage() {
                       placeholder="mV/Pa"
                       value={calInput}
                       onChange={e => { setCalInput(e.target.value); setCalError('') }}
-                      className="flex-1 w-0 min-w-0 bg-panel border border-border rounded px-2 py-0.5 text-xs text-white placeholder:text-muted/50 focus:outline-none focus:border-teal"
+                      className="flex-1 w-0 min-w-0 bg-panel border border-border rounded px-2 py-0.5 text-xs text-white placeholder:text-muted/70 focus:outline-none focus:border-teal"
                     />
                     <button
                       onClick={handleCalibrate}

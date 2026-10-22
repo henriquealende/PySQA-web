@@ -5,6 +5,7 @@ import type { ToneMeasurement } from '../../api/toneMeasure'
 import { deviceKeys as keysOf, paFromSensitivity, saveCalibration, sensitivityFromPa } from '../../api/micCalibration'
 import type { MicCalibration } from '../../api/micCalibration'
 import { RECORDER_WORKLET_URL } from './worklet'
+import { useDialog } from '../../hooks/useDialog'
 
 const P0 = 20e-6
 const MEASURE_S = 5
@@ -161,6 +162,7 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
   const manualOk = Number.isFinite(manualValue) && manualValue > 0
   const blocked = !!result?.warnings.some((w) => w.blocking)
   const busy = phase === 'starting' || phase === 'measuring' || phase === 'analysing'
+  const dialogRef = useDialog(() => { if (!busy) onClose() })
 
   const chooseCalibrator = (id: string) => {
     setPreset(id)
@@ -178,8 +180,8 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => { if (!busy) onClose() }}>
-      <div role="dialog" aria-label="Calibrate the microphone"
-        className="bg-surface border border-border rounded-xl w-[480px] max-w-[94vw] max-h-[92vh] overflow-y-auto shadow-2xl"
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Calibrate the microphone"
+        className="bg-surface border border-border rounded-xl w-[480px] max-w-[94vw] max-h-[92vh] overflow-y-auto shadow-2xl outline-none"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <span className="text-sm font-semibold text-white">Calibrate the microphone</span>
@@ -267,7 +269,7 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
               <p className="text-white font-semibold">3. Measure ({MEASURE_S} s)</p>
               <div className="flex items-center gap-3">
                 <button onClick={measure} disabled={phase !== 'listening' && phase !== 'result'}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-orange text-white font-medium hover:bg-orange/80 disabled:opacity-40 transition-colors">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-orange text-dark font-medium hover:bg-orange/80 disabled:opacity-40 transition-colors">
                   {phase === 'result' ? 'Measure again' : 'Measure'}
                 </button>
                 {phase === 'measuring' && (

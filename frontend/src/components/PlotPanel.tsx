@@ -100,7 +100,7 @@ function HarmonicInput({ f0, onChange }: { f0: number|null; onChange: (v: number
       <input type="number" min={1} placeholder="Hz" value={raw}
         onChange={e => setRaw(e.target.value)}
         onKeyDown={e => e.key==='Enter' && apply()}
-        className="w-16 bg-panel border border-border rounded px-1.5 py-0.5 text-xs text-white placeholder:text-muted/40 focus:outline-none focus:border-teal" />
+        className="w-16 bg-panel border border-border rounded px-1.5 py-0.5 text-xs text-white placeholder:text-muted/70 focus:outline-none focus:border-teal" />
       <button onClick={apply} className="px-1.5 py-0.5 text-[10px] bg-teal/20 border border-teal/40 text-teal rounded hover:bg-teal/30 transition-colors">Set</button>
       {f0 && <button onClick={clear} className="px-1.5 py-0.5 text-[10px] text-muted hover:text-white transition-colors">✕</button>}
     </div>

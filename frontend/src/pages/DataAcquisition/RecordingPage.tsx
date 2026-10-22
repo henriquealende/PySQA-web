@@ -160,7 +160,7 @@ function VUMeter({ analyser, onClip, height = 64 }: { analyser: AnalyserNode|nul
       ctx.textAlign = 'center'
       for (const db of TICKS) {
         const tx = toX(db) / dpr
-        ctx.strokeStyle = '#3a5570'; ctx.lineWidth = 0.75
+        ctx.strokeStyle = '#6f8fa8'; ctx.lineWidth = 0.75
         ctx.beginPath(); ctx.moveTo(tx, BAR_Y + BAR_H + 1); ctx.lineTo(tx, BAR_Y + BAR_H + 5); ctx.stroke()
         if (db === 0 || db % 12 === 0 || db === -3 || db === -6) {
           ctx.fillStyle = db >= -3 ? '#ed693b' : '#5a7a94'
@@ -239,7 +239,7 @@ function LiveWaveform({ bufRef, posRef, sampleRate, windowSec = 3, idleMessage }
       ctx.beginPath(); ctx.moveTo(0, ch - y6);  ctx.lineTo(cw, ch - y6);  ctx.stroke()
 
       // dB labels on left
-      ctx.fillStyle = '#3a5570'; ctx.font = `9px Inter,ui-sans-serif,sans-serif`; ctx.textAlign = 'left'
+      ctx.fillStyle = '#6f8fa8'; ctx.font = `9px Inter,ui-sans-serif,sans-serif`; ctx.textAlign = 'left'
       ctx.fillText('0 dBFS', 3, midY - 3)
       ctx.fillText('-6', 3, y6 - 3)
 
@@ -329,14 +329,14 @@ function LiveSpectrum({ analyser, sampleRate, thresholdDb, showThreshold, avgMod
           const y = ch - ((db - DB_MIN) / (DB_MAX - DB_MIN)) * ch
           ctx.strokeStyle = '#1e2f40'; ctx.lineWidth = 0.5
           ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke()
-          if (db !== DB_MIN) { ctx.fillStyle = '#3a5570'; ctx.textAlign = 'left'; ctx.fillText(`${db}`, 3, y - 2) }
+          if (db !== DB_MIN) { ctx.fillStyle = '#6f8fa8'; ctx.textAlign = 'left'; ctx.fillText(`${db}`, 3, y - 2) }
         }
         for (const f of FREQ_LINES) {
           if (f < 20 || f > fmax) continue
           const x = (Math.log10(f / 20) / Math.log10(fmax / 20)) * cw
           ctx.strokeStyle = '#1e2f40'; ctx.lineWidth = 0.5
           ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ch); ctx.stroke()
-          ctx.fillStyle = '#3a5570'; ctx.textAlign = 'center'
+          ctx.fillStyle = '#6f8fa8'; ctx.textAlign = 'center'
           ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, x, ch - 3)
         }
         if (idleMessage) {
@@ -393,7 +393,7 @@ function LiveSpectrum({ analyser, sampleRate, thresholdDb, showThreshold, avgMod
         ctx.strokeStyle = '#1e2f40'; ctx.lineWidth = 0.5
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke()
         if (db !== DB_MIN) {
-          ctx.fillStyle = '#3a5570'; ctx.font = '9px Inter,ui-sans-serif,sans-serif'
+          ctx.fillStyle = '#6f8fa8'; ctx.font = '9px Inter,ui-sans-serif,sans-serif'
           ctx.textAlign = 'left'; ctx.fillText(`${db}`, 3, y - 2)
         }
       }
@@ -404,7 +404,7 @@ function LiveSpectrum({ analyser, sampleRate, thresholdDb, showThreshold, avgMod
         const x = freqToX(f, cw)
         ctx.strokeStyle = '#1e2f40'; ctx.lineWidth = 0.5
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ch); ctx.stroke()
-        ctx.fillStyle = '#3a5570'; ctx.font = '9px Inter,ui-sans-serif,sans-serif'; ctx.textAlign = 'center'
+        ctx.fillStyle = '#6f8fa8'; ctx.font = '9px Inter,ui-sans-serif,sans-serif'; ctx.textAlign = 'center'
         ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, x, ch - 3)
       }
 
@@ -545,7 +545,7 @@ function StaticWaveform({ pcm, sampleRate, playProgress }: {
 
     // Duration labels
     const dur = n / sampleRate
-    ctx.fillStyle = '#3a5570'; ctx.font = '9px Inter,sans-serif'; ctx.textAlign = 'left'
+    ctx.fillStyle = '#6f8fa8'; ctx.font = '9px Inter,sans-serif'; ctx.textAlign = 'left'
     ctx.fillText(`0 s`, 3, ch - 4)
     ctx.textAlign = 'right'
     ctx.fillText(`${dur.toFixed(1)} s`, cw - 3, ch - 4)
@@ -605,7 +605,7 @@ function StaticSpectrum({ pcm, sampleRate }: { pcm: Float32Array; sampleRate: nu
     // Grid lines + freq labels
     const GRID_HZ = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
     ctx.strokeStyle = '#1e2d3d'; ctx.lineWidth = 0.5; ctx.font = '8px Inter,sans-serif'
-    ctx.fillStyle = '#3a5570'; ctx.textAlign = 'center'
+    ctx.fillStyle = '#6f8fa8'; ctx.textAlign = 'center'
     for (const f of GRID_HZ) {
       if (f > sampleRate / 2) continue
       const x = freqToX(f)
@@ -642,7 +642,7 @@ function StaticSpectrum({ pcm, sampleRate }: { pcm: Float32Array; sampleRate: nu
 // ── Badges ────────────────────────────────────────────────────────────────────
 
 function ClipIndicator({ clipping }: { clipping: boolean }) {
-  return <div className={`px-2 py-0.5 rounded text-xs font-bold tracking-widest transition-colors ${clipping?'bg-orange text-white':'bg-panel text-border'}`}>CLIP</div>
+  return <div className={`px-2 py-0.5 rounded text-xs font-bold tracking-widest transition-colors ${clipping?'bg-orange text-dark':'bg-panel text-border'}`}>CLIP</div>
 }
 function WorkletBadge({ active }: { active: boolean }) {
   return <div title={active?'AudioWorklet PCM':'MediaRecorder fallback'} className={`px-2 py-0.5 rounded text-xs font-semibold ${active?'bg-teal/20 text-teal':'bg-panel text-muted'}`}>{active?'Worklet':'MediaRec'}</div>
@@ -1428,7 +1428,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             )}
             {isArmed && captureMode==='immediate' && (<>
               <button onClick={startRecording}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-orange text-white text-sm font-medium hover:bg-orange/80 transition-colors">
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-orange text-dark text-sm font-medium hover:bg-orange/80 transition-colors">
                 <span className="w-2.5 h-2.5 rounded-full bg-white"/> Record
               </button>
               <button onClick={()=>{stopStream();setRecState('idle')}}
@@ -1744,8 +1744,8 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         {/* Row 1: SR / Channels / Bit depth */}
         <div className="flex gap-2 flex-wrap">
           <div className="flex flex-col gap-1 flex-1 min-w-24">
-            <label className="text-xs text-muted">Sample Rate</label>
-            <select value={sampleRate} onChange={e=>setSampleRate(Number(e.target.value))} disabled={isActive}
+            <label htmlFor="da-sr" className="text-xs text-muted">Sample Rate</label>
+            <select id="da-sr" value={sampleRate} onChange={e=>setSampleRate(Number(e.target.value))} disabled={isActive}
               className="bg-panel border border-border rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-teal disabled:opacity-50">
               <option value={44100}>44 100 Hz</option>
               <option value={48000}>48 000 Hz</option>
@@ -1753,16 +1753,16 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             </select>
           </div>
           <div className="flex flex-col gap-1 flex-1 min-w-24">
-            <label className="text-xs text-muted">Channels</label>
-            <select value={channels} onChange={e=>setChannels(Number(e.target.value) as 1|2)} disabled={isActive}
+            <label htmlFor="da-ch" className="text-xs text-muted">Channels</label>
+            <select id="da-ch" value={channels} onChange={e=>setChannels(Number(e.target.value) as 1|2)} disabled={isActive}
               className="bg-panel border border-border rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-teal disabled:opacity-50">
               <option value={1}>Mono</option>
               <option value={2}>Stereo→Mono</option>
             </select>
           </div>
           <div className="flex flex-col gap-1 flex-1 min-w-24">
-            <label className="text-xs text-muted">Bit Depth</label>
-            <select value={bitDepth} onChange={e=>setBitDepth(Number(e.target.value) as 16|32)} disabled={isActive}
+            <label htmlFor="da-bits" className="text-xs text-muted">Bit Depth</label>
+            <select id="da-bits" value={bitDepth} onChange={e=>setBitDepth(Number(e.target.value) as 16|32)} disabled={isActive}
               className="bg-panel border border-border rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-teal disabled:opacity-50">
               <option value={16}>16-bit PCM</option>
               <option value={32}>32-bit Float</option>
@@ -1773,8 +1773,8 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         {/* Duration */}
         <div className="flex gap-2 items-end flex-wrap">
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted flex items-center gap-1"><Timer size={10}/> Duration</label>
-            <div className="flex gap-1 p-0.5 bg-panel rounded border border-border">
+            <span id="da-durmode" className="text-xs text-muted flex items-center gap-1"><Timer size={10}/> Duration</span>
+            <div role="group" aria-labelledby="da-durmode" className="flex gap-1 p-0.5 bg-panel rounded border border-border">
               {(['free','fixed'] as DurMode[]).map(m=>(
                 <button key={m} onClick={()=>setDurMode(m)} disabled={isRecording}
                   className={`px-3 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${durMode===m?'bg-teal/20 text-teal':'text-muted hover:text-white'}`}>
@@ -1785,8 +1785,8 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
           </div>
           {durMode==='fixed' && (
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted">Duration (s)</label>
-              <input type="number" min={1} max={3600} step={1} value={durSeconds}
+              <label htmlFor="da-dur" className="text-xs text-muted">Duration (s)</label>
+              <input id="da-dur" type="number" min={1} max={3600} step={1} value={durSeconds}
                 onChange={e=>setDurSeconds(Math.max(1,Number(e.target.value)))} disabled={isRecording}
                 className="w-24 bg-panel border border-border rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-teal disabled:opacity-50" />
             </div>
@@ -1809,23 +1809,23 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             <span className="text-xs font-semibold text-muted uppercase tracking-wider">Trigger</span>
             <div className="flex gap-3 flex-wrap">
               <div className="flex flex-col gap-1 flex-1 min-w-32">
-                <label className="text-xs text-muted">Threshold <span className="text-amber">{trigThresh} dBFS</span></label>
-                <input type="range" min={-80} max={0} step={1} value={trigThresh}
+                <label htmlFor="da-thresh" className="text-xs text-muted">Threshold <span className="text-amber">{trigThresh} dBFS</span></label>
+                <input id="da-thresh" type="range" min={-80} max={0} step={1} value={trigThresh}
                   onChange={e=>setTrigThresh(Number(e.target.value))} disabled={isWaiting||isRecording} className="accent-amber"/>
               </div>
               <div className="flex flex-col gap-1 flex-1 min-w-32">
-                <label className="text-xs text-muted">Pre-roll <span className="text-teal">{trigPreRoll} s</span></label>
-                <input type="range" min={0} max={5} step={0.5} value={trigPreRoll}
+                <label htmlFor="da-preroll" className="text-xs text-muted">Pre-roll <span className="text-teal">{trigPreRoll} s</span></label>
+                <input id="da-preroll" type="range" min={0} max={5} step={0.5} value={trigPreRoll}
                   onChange={e=>setTrigPreRoll(Number(e.target.value))} disabled={isWaiting||isRecording} className="accent-teal"/>
               </div>
               <div className="flex flex-col gap-1 flex-1 min-w-32">
-                <label className="text-xs text-muted">Hold <span className="text-muted">{trigHold} s</span></label>
-                <input type="range" min={0.5} max={10} step={0.5} value={trigHold}
+                <label htmlFor="da-hold" className="text-xs text-muted">Hold <span className="text-muted">{trigHold} s</span></label>
+                <input id="da-hold" type="range" min={0.5} max={10} step={0.5} value={trigHold}
                   onChange={e=>setTrigHold(Number(e.target.value))} disabled={isWaiting||isRecording} className="accent-border"/>
               </div>
             </div>
-            <div className="flex gap-1">
-              <label className="text-xs text-muted">Edge:</label>
+            <div role="group" aria-labelledby="da-edge" className="flex gap-1">
+              <span id="da-edge" className="text-xs text-muted">Edge:</span>
               {(['rising','falling'] as TrigEdge[]).map(e=>(
                 <button key={e} onClick={()=>setTrigEdge(e)} disabled={isWaiting||isRecording}
                   className={`px-2 py-0.5 rounded text-xs transition-colors disabled:opacity-50 ${trigEdge===e?'bg-amber/20 text-amber':'text-muted hover:text-white'}`}>
@@ -1853,8 +1853,8 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
           {avgEnabled && (
             <div className="flex gap-3 flex-wrap items-end">
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-muted">Number of takes</label>
-                <input type="number" min={2} max={99} step={1} value={avgTotal}
+                <label htmlFor="da-takes" className="text-xs text-muted">Number of takes</label>
+                <input id="da-takes" type="number" min={2} max={99} step={1} value={avgTotal}
                   onChange={e=>setAvgTotal(Math.max(2,Number(e.target.value)))} disabled={isActive||avgCount>0}
                   className="w-20 bg-panel border border-border rounded px-2 py-1.5 text-sm text-white focus:outline-none focus:border-teal disabled:opacity-50"/>
               </div>

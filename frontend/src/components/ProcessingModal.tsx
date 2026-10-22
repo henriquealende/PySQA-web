@@ -1,5 +1,6 @@
 import { toast } from '../store/useToast'
 import { useEffect, useState } from 'react'
+import { useDialog } from '../hooks/useDialog'
 import Plot from './Plot'
 import { X, Loader2 } from 'lucide-react'
 import clsx from 'clsx'
@@ -317,6 +318,7 @@ interface Props {
 export default function ProcessingModal({
   sessionId, audioId, audioName, sampleRate, otherFiles, onClose, onResult,
 }: Props) {
+  const dialogRef = useDialog(onClose)
   const [tab, setTab]   = useState<Tab>('filter')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -394,7 +396,8 @@ export default function ProcessingModal({
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-surface border border-border rounded-xl shadow-2xl flex flex-col"
+        ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={`Process ${audioName}`}
+        className="bg-surface border border-border rounded-xl shadow-2xl flex flex-col outline-none"
         style={{ width: 'min(680px, 100%)', maxHeight: '90vh' }}
         onClick={e => e.stopPropagation()}
       >
