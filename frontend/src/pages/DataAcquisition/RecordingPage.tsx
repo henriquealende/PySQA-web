@@ -191,9 +191,11 @@ interface LiveWaveformProps {
   posRef: React.MutableRefObject<number>
   sampleRate: number
   windowSec?: number
+  /** When set, the canvas shows only the grid and this message (microphone closed) */
+  idleMessage?: string
 }
 
-function LiveWaveform({ bufRef, posRef, sampleRate, windowSec = 3 }: LiveWaveformProps) {
+function LiveWaveform({ bufRef, posRef, sampleRate, windowSec = 3, idleMessage }: LiveWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef    = useRef<number>(0)
 
@@ -241,6 +243,11 @@ function LiveWaveform({ bufRef, posRef, sampleRate, windowSec = 3 }: LiveWavefor
       ctx.fillText('0 dBFS', 3, midY - 3)
       ctx.fillText('-6', 3, y6 - 3)
 
+      if (idleMessage) {
+        ctx.fillStyle = '#6b8aa3'; ctx.font = '12px Inter,ui-sans-serif,sans-serif'; ctx.textAlign = 'center'
+        ctx.fillText(idleMessage, cw / 2, midY + 4)
+        ctx.restore(); return
+      }
       if (displayLen < 2) { ctx.restore(); return }
 
       // Waveform: min/max per pixel column, so short peaks and clipping stay visible
@@ -268,7 +275,7 @@ function LiveWaveform({ bufRef, posRef, sampleRate, windowSec = 3 }: LiveWavefor
     }
     draw()
     return () => { ro.disconnect(); cancelAnimationFrame(rafRef.current) }
-  }, [bufRef, posRef, sampleRate, windowSec])
+  }, [bufRef, posRef, sampleRate, windowSec, idleMessage])
 
   return (
     <canvas ref={canvasRef}
@@ -284,8 +291,8 @@ const DB_MIN     = -90
 const DB_MAX     = 0
 const FREQ_LINES = [31.5, 63, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
 
-function LiveSpectrum({ analyser, sampleRate, thresholdDb, showThreshold, avgMode }: {
-  analyser: AnalyserNode|null; sampleRate: number
+function LiveSpectrum({ analyser, sampleRate, thresholdDb, showThreshold, avgMode, idleMessage }: {
+  analyser: AnalyserNode|null; sampleRate: number; idleMessage?: string
   thresholdDb?: number; showThreshold?: boolean; avgMode?: boolean
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -296,6 +303,7 @@ function LiveSpectrum({ analyser, sampleRate, thresholdDb, showThreshold, avgMod
     if (!canvas) return
     const dpr = window.devicePixelRatio || 1
     let W = 0, H = 0
+    let onResize: (() => void) | null = null
 
     const ro = new ResizeObserver(entries => {
       const rect = entries[0].contentRect
@@ -303,10 +311,42 @@ function LiveSpectrum({ analyser, sampleRate, thresholdDb, showThreshold, avgMod
       H = Math.round(rect.height * dpr)
       canvas.width  = W
       canvas.height = H
+      onResize?.()
     })
     ro.observe(canvas)
 
     if (!analyser) {
+      // Microphone closed: one still frame (grid and a hint), redrawn on resize
+      const drawIdle = () => {
+        if (W === 0 || H === 0) return
+        const ctx = canvas.getContext('2d')!
+        ctx.save(); ctx.scale(dpr, dpr)
+        const cw = W / dpr, ch = H / dpr
+        const fmax = sampleRate / 2
+        ctx.fillStyle = '#0f1923'; ctx.fillRect(0, 0, cw, ch)
+        ctx.font = '9px Inter,ui-sans-serif,sans-serif'
+        for (let db = DB_MIN; db <= DB_MAX; db += 10) {
+          const y = ch - ((db - DB_MIN) / (DB_MAX - DB_MIN)) * ch
+          ctx.strokeStyle = '#1e2f40'; ctx.lineWidth = 0.5
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke()
+          if (db !== DB_MIN) { ctx.fillStyle = '#3a5570'; ctx.textAlign = 'left'; ctx.fillText(`${db}`, 3, y - 2) }
+        }
+        for (const f of FREQ_LINES) {
+          if (f < 20 || f > fmax) continue
+          const x = (Math.log10(f / 20) / Math.log10(fmax / 20)) * cw
+          ctx.strokeStyle = '#1e2f40'; ctx.lineWidth = 0.5
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ch); ctx.stroke()
+          ctx.fillStyle = '#3a5570'; ctx.textAlign = 'center'
+          ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, x, ch - 3)
+        }
+        if (idleMessage) {
+          ctx.fillStyle = '#6b8aa3'; ctx.font = '12px Inter,ui-sans-serif,sans-serif'; ctx.textAlign = 'center'
+          ctx.fillText(idleMessage, cw / 2, ch / 2)
+        }
+        ctx.restore()
+      }
+      onResize = drawIdle
+      drawIdle()
       return () => { ro.disconnect(); cancelAnimationFrame(rafRef.current) }
     }
 
@@ -413,7 +453,7 @@ function LiveSpectrum({ analyser, sampleRate, thresholdDb, showThreshold, avgMod
     }
     draw()
     return () => { ro.disconnect(); cancelAnimationFrame(rafRef.current) }
-  }, [analyser, sampleRate, thresholdDb, showThreshold, avgMode])
+  }, [analyser, sampleRate, thresholdDb, showThreshold, avgMode, idleMessage])
 
   return (
     <canvas ref={canvasRef}
@@ -1367,16 +1407,17 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col flex-1 overflow-y-auto p-4 gap-4 text-white">
+    <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden text-white">
 
-      {/* Title */}
-      <div className="flex items-center gap-2">
+      {/* ── Graphics column ── */}
+      <main className="order-1 lg:order-2 flex flex-col flex-1 min-w-0 lg:overflow-y-auto">
+      <div className="flex items-center gap-2 px-4 pt-3 lg:hidden">
         <Mic size={18} className="text-teal" />
         <h1 className="text-base font-semibold">Data Acquisition</h1>
       </div>
 
-      {/* ── Sticky transport bar: Record, Stop, time and level stay in reach while scrolling ── */}
-      <div className="sticky -top-4 z-20 -mx-4 px-4 py-2 bg-dark/95 backdrop-blur border-b border-border flex flex-col gap-1.5">
+      {/* ── Transport bar: Record, Stop, time and level stay in reach while the column scrolls ── */}
+      <div className="sticky top-0 z-20 px-4 py-2 bg-dark/95 backdrop-blur border-b border-border flex flex-col gap-1.5">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2 shrink-0">
             {recState==='idle' && (
@@ -1460,18 +1501,233 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         )}
       </div>
 
+
+        <div className="flex flex-col gap-4 p-4">
+      {/* ── Live plots: always on screen, idle until the microphone opens ── */}
+      <div className="bg-surface border border-border rounded-lg p-4 flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-muted uppercase tracking-wider">Waveform — live</span>
+          <LiveWaveform bufRef={waveBufRef} posRef={wavePosRef} sampleRate={sampleRate}
+            idleMessage={isActive ? undefined : 'Press Monitor to open the microphone'}/>
+        </div>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Spectrum — live</span>
+            <label className="flex items-center gap-1 text-xs cursor-pointer select-none">
+              <input type="checkbox" checked={fftAvg} onChange={e=>setFftAvg(e.target.checked)} className="accent-teal w-3 h-3"/>
+              <span className="text-muted">Average</span>
+            </label>
+          </div>
+          <LiveSpectrum analyser={analyser} sampleRate={sampleRate}
+            thresholdDb={captureMode==='triggered'?trigThresh:undefined}
+            showThreshold={captureMode==='triggered'&&(isWaiting||isArmed)}
+            avgMode={fftAvg}
+            idleMessage={isActive ? undefined : 'Press Monitor to open the microphone'}/>
+        </div>
+
+        {/* Waiting indicator */}
+        {isWaiting && (
+          <div className="flex items-center gap-2 p-2 rounded bg-amber/10 border border-amber/30">
+            <span className="w-2 h-2 rounded-full bg-amber animate-pulse shrink-0"/>
+            <span className="text-sm text-amber">
+              Waiting for {trigEdge==='rising'?'↑':'↓'} trigger ({trigThresh} dBFS)…
+            </span>
+            <span className="text-xs text-muted ml-auto">Pre-roll: {trigPreRoll}s</span>
+          </div>
+        )}
+
+        {/* Recording name (while armed or recording) */}
+        {(isArmed||isRecording) && (
+          <input type="text" placeholder="Recording name (optional)"
+            value={recName} onChange={e=>setRecName(e.target.value)}
+            className="bg-panel border border-border rounded px-2 py-1.5 text-sm text-white placeholder-muted focus:outline-none focus:border-teal"/>
+        )}
+      </div>
+
+      {/* ── Accept / Decline gate ── */}
+      {isReviewing && pendingRec && (
+        <div className="bg-surface border border-teal/30 rounded-lg p-4 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-teal uppercase tracking-wider">
+              {avgEnabled && !pendingRec.mode.includes('average')
+                ? `Review Take ${avgCount + 1} / ${avgTotal}`
+                : pendingRec.mode.includes('average')
+                  ? `Review Averaged Result (${avgTotal} takes)`
+                  : 'Review Take'}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 bg-panel rounded px-3 py-2 border border-border">
+            <button onClick={()=>togglePlay(pendingRec)}
+              className="text-muted hover:text-white transition-colors shrink-0">
+              {playingId===pendingRec.id?<Pause size={14}/>:<Play size={14}/>}
+            </button>
+            <div className="flex flex-col flex-1 min-w-0">
+              <span className="text-sm truncate">{pendingRec.name}</span>
+              <span className="text-xs text-muted">
+                {fmtTime(pendingRec.durationSec)} · {pendingRec.bitDepth}-bit · {(pendingRec.sr/1000).toFixed(1)} kHz · {pendingRec.device}{pendingRec.calibrationPa ? ' · calibrated' : ''}
+              </span>
+            </div>
+          </div>
+          {/* Full-signal waveform with playback cursor */}
+          {pendingPcmRef.current && (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted uppercase tracking-wider">Waveform</span>
+              <StaticWaveform
+                pcm={pendingPcmRef.current.pcm}
+                sampleRate={pendingPcmRef.current.sr}
+                playProgress={playingId === pendingRec.id ? playProgress : 0}
+              />
+            </div>
+          )}
+          {/* Spectrum */}
+          {pendingPcmRef.current && (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted uppercase tracking-wider">Spectrum</span>
+              <StaticSpectrum pcm={pendingPcmRef.current.pcm} sampleRate={pendingPcmRef.current.sr} />
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button onClick={acceptRecording}
+              className="flex items-center gap-1.5 px-4 py-2 rounded bg-teal text-dark text-sm font-semibold hover:bg-teal/80 transition-colors">
+              <CheckCircle size={14}/> Accept
+            </button>
+            <button onClick={declineRecording}
+              className="flex items-center gap-1.5 px-4 py-2 rounded bg-panel border border-orange/40 text-orange text-sm font-medium hover:bg-orange/10 transition-colors">
+              <XCircle size={14}/> Discard
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Recordings list ── */}
+      {recordings.length > 0 && (
+        <div className="bg-surface border border-border rounded-lg p-4 flex flex-col gap-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Recordings ({recordings.length})<span className="ml-2 normal-case font-normal tracking-normal text-muted/70">kept in this browser</span></span>
+            <div className="flex items-center gap-1.5">
+              <button onClick={()=>setPlayMuted(m=>!m)} className="text-muted hover:text-white transition-colors">
+                {playMuted?<VolumeX size={13}/>:<Volume2 size={13}/>}
+              </button>
+              <input type="range" min={0} max={1} step={0.01} value={playMuted?0:playVolume}
+                onChange={e=>{setPlayVolume(Number(e.target.value));setPlayMuted(false)}}
+                className="w-16 h-1 cursor-pointer" style={{accentColor:'#50b89e'}}/>
+            </div>
+          </div>
+          {recordings.map(rec=>(
+            <div key={rec.id} className={`flex flex-col bg-panel rounded border overflow-hidden transition-colors ${selectedRecId===rec.id?'border-teal/40':'border-border'}`}>
+              <div className="flex items-center gap-2 px-3 py-2">
+                <button onClick={()=>togglePlay(rec)}
+                  className="text-muted hover:text-white transition-colors shrink-0"
+                  title={playingId===rec.id?'Pause':'Play'}>
+                  {playingId===rec.id?<Pause size={14}/>:<Play size={14}/>}
+                </button>
+                {/* Clicking the name row toggles waveform/spectrum expand */}
+                <div className="flex flex-col min-w-0 flex-1 cursor-pointer select-none"
+                  onClick={()=>selectRecording(rec)} title="Click to view waveform & spectrum">
+                  <span className="text-sm truncate">{rec.name}</span>
+                  <span className="text-xs text-muted truncate">
+                    {fmtTime(rec.durationSec)} · {rec.bitDepth}-bit · {(rec.sr/1000).toFixed(1)} kHz · {rec.device}{rec.calibrationPa ? ' · calibrated' : ''}
+                  </span>
+                </div>
+
+                {/* Download WAV */}
+                <button onClick={()=>downloadRecording(rec)} title="Download WAV"
+                  className="text-muted hover:text-white transition-colors shrink-0 p-1 rounded hover:bg-panel">
+                  <Download size={13}/>
+                </button>
+
+                {/* Export CSV */}
+                <button onClick={()=>exportCSV(rec)} title="Export CSV"
+                  className="text-muted hover:text-teal transition-colors shrink-0 px-1.5 py-1 rounded hover:bg-teal/10 text-xs font-medium">
+                  CSV
+                </button>
+
+                {/* Send */}
+                <button onClick={()=>sendToPostProcessing(rec)} disabled={sendingId===rec.id}
+                  title="Send to Post-Processing"
+                  className="flex items-center gap-1 text-xs text-teal hover:text-white disabled:opacity-50 transition-colors shrink-0 px-2 py-1 rounded hover:bg-teal/20">
+                  {sendingId===rec.id?<RefreshCw size={12} className="animate-spin"/>:<><Send size={12}/><ChevronRight size={10}/></>}
+                </button>
+
+                {/* Delete with confirm */}
+                {deleteConfId===rec.id ? (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <AlertTriangle size={11} className="text-orange"/>
+                    <span className="text-xs text-orange">Delete?</span>
+                    <button onClick={()=>deleteRecording(rec.id)} className="text-xs text-orange hover:text-white px-1">Yes</button>
+                    <button onClick={()=>setDeleteConfId(null)} className="text-xs text-muted hover:text-white px-1">No</button>
+                  </div>
+                ) : (
+                  <button onClick={()=>setDeleteConfId(rec.id)} title="Delete"
+                    className="text-muted hover:text-orange transition-colors shrink-0">
+                    <Trash2 size={13}/>
+                  </button>
+                )}
+              </div>
+
+              {/* Expanded waveform + spectrum panel */}
+              {selectedRecId === rec.id && (
+                <div className="px-3 pb-3 flex flex-col gap-2 border-t border-border/50">
+                  {selectedPcmLoading && (
+                    <div className="flex items-center gap-2 py-2 text-xs text-muted">
+                      <RefreshCw size={11} className="animate-spin"/> Decoding…
+                    </div>
+                  )}
+                  {selectedPcm && !selectedPcmLoading && (<>
+                    <div className="flex flex-col gap-1 pt-2">
+                      <span className="text-xs text-muted uppercase tracking-wider">Waveform</span>
+                      <StaticWaveform
+                        pcm={selectedPcm.pcm}
+                        sampleRate={selectedPcm.sr}
+                        playProgress={playingId === rec.id ? playProgress : 0}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted uppercase tracking-wider">Spectrum</span>
+                      <StaticSpectrum pcm={selectedPcm.pcm} sampleRate={selectedPcm.sr} />
+                    </div>
+                  </>)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Help */}
+      <div className="text-xs text-muted bg-surface border border-border rounded-lg p-3 leading-relaxed">
+        <strong className="text-white">Workflow:</strong> Monitor → Record / Watch → Stop → <strong className="text-teal">Accept</strong> (keeps) or <strong className="text-orange">Discard</strong> (throws away).
+        {' '}The <span className="text-teal font-semibold">Worklet</span> badge means lossless Float32 PCM capture (requires HTTPS or localhost).
+        <br/><br/>
+        <strong className="text-white">Signal protection:</strong> Overload abort automatically discards the take if the peak exceeds the threshold.
+        Silence stop ends the recording after N seconds of silence, in any capture mode.
+        <br/><br/>
+        <strong className="text-white">Trigger:</strong> ↑ Rising fires when the signal rises above the threshold;
+        ↓ Falling fires when it drops below. Pre-roll captures audio before the trigger (via AudioWorklet).
+        <br/><br/>
+        <strong className="text-white">Calibration and level:</strong> calibrate the microphone in Settings, with an acoustic calibrator or
+        the sensitivity from its data sheet, and the meter reads dB SPL or dB(A). Recordings made afterwards carry the calibration into Post-Processing.
+      </div>
+        </div>
+      </main>
+
+      {/* ── Settings column ── */}
+      <aside className="order-2 lg:order-1 shrink-0 lg:w-80 lg:border-r border-border p-3 lg:overflow-y-auto">
+        <div className="hidden lg:flex items-center gap-2 px-1 pb-3">
+          <Mic size={18} className="text-teal" />
+          <h2 className="text-base font-semibold">Data Acquisition</h2>
+        </div>
       {/* ── Device + Settings (fold away while the microphone is open) ── */}
-      <div className="bg-surface border border-border rounded-lg">
+      <div className="bg-surface border border-border rounded-lg lg:bg-transparent lg:border-0 lg:rounded-none">
         <button type="button" onClick={() => setSettingsOpen(o => !o)} aria-expanded={settingsOpen}
-          className="flex w-full items-center gap-2 px-4 py-2.5 text-left">
-          <ChevronRight size={14} className={`shrink-0 text-muted transition-transform ${settingsOpen ? 'rotate-90' : ''}`}/>
+          className="flex w-full items-center gap-2 px-4 py-2.5 text-left lg:px-1 lg:pt-0 lg:pointer-events-none">
+          <ChevronRight size={14} className={`shrink-0 text-muted transition-transform lg:hidden ${settingsOpen ? 'rotate-90' : ''}`}/>
           <span className="text-xs font-semibold text-muted uppercase tracking-wider shrink-0">Settings</span>
-          <span className="text-xs text-muted truncate">
+          <span className="text-xs text-muted truncate lg:hidden">
             {(sampleRate/1000).toFixed(1)} kHz · {channels===1?'Mono':'Stereo→Mono'} · {bitDepth}-bit · {captureMode==='immediate'?'Immediate':'Level trigger'}{durMode==='fixed'?` · ${durSeconds} s`:''}{avgEnabled?` · average of ${avgTotal}`:''}
           </span>
         </button>
-        {settingsOpen && (
-      <div className="px-4 pb-4 flex flex-col gap-3">
+      <div className={`px-4 pb-4 lg:px-1 flex-col gap-3 ${settingsOpen ? 'flex' : 'hidden'} lg:flex`}>
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-muted uppercase tracking-wider">Input Device</span>
           <button onClick={refreshDevices} className="flex items-center gap-1 text-xs text-muted hover:text-white transition-colors">
@@ -1675,223 +1931,8 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
           </div>
         </div>
       </div>
-        )}
       </div>
-
-      {/* ── Live plots: only while the microphone is open ── */}
-      {isActive && (
-      <div className="bg-surface border border-border rounded-lg p-4 flex flex-col gap-3">
-
-        {/* Live plots */}
-        {isActive && (
-          <>
-            {/* Waveform */}
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-semibold text-muted uppercase tracking-wider">Waveform — live</span>
-              <LiveWaveform bufRef={waveBufRef} posRef={wavePosRef} sampleRate={sampleRate}/>
-            </div>
-            {/* Spectrum */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold text-muted uppercase tracking-wider">Spectrum — live</span>
-                <label className="flex items-center gap-1 text-xs cursor-pointer select-none">
-                  <input type="checkbox" checked={fftAvg} onChange={e=>setFftAvg(e.target.checked)} className="accent-teal w-3 h-3"/>
-                  <span className="text-muted">Average</span>
-                </label>
-              </div>
-              <LiveSpectrum analyser={analyser} sampleRate={sampleRate}
-                thresholdDb={captureMode==='triggered'?trigThresh:undefined}
-                showThreshold={captureMode==='triggered'&&(isWaiting||isArmed)}
-                avgMode={fftAvg}/>
-            </div>
-          </>
-        )}
-
-        {/* Waiting indicator */}
-        {isWaiting && (
-          <div className="flex items-center gap-2 p-2 rounded bg-amber/10 border border-amber/30">
-            <span className="w-2 h-2 rounded-full bg-amber animate-pulse shrink-0"/>
-            <span className="text-sm text-amber">
-              Waiting for {trigEdge==='rising'?'↑':'↓'} trigger ({trigThresh} dBFS)…
-            </span>
-            <span className="text-xs text-muted ml-auto">Pre-roll: {trigPreRoll}s</span>
-          </div>
-        )}
-
-        {/* Recording name (while armed or recording) */}
-        {(isArmed||isRecording) && (
-          <input type="text" placeholder="Recording name (optional)"
-            value={recName} onChange={e=>setRecName(e.target.value)}
-            className="bg-panel border border-border rounded px-2 py-1.5 text-sm text-white placeholder-muted focus:outline-none focus:border-teal"/>
-        )}
-
-      </div>
-      )}
-
-      {/* ── Accept / Decline gate ── */}
-      {isReviewing && pendingRec && (
-        <div className="bg-surface border border-teal/30 rounded-lg p-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-teal uppercase tracking-wider">
-              {avgEnabled && !pendingRec.mode.includes('average')
-                ? `Review Take ${avgCount + 1} / ${avgTotal}`
-                : pendingRec.mode.includes('average')
-                  ? `Review Averaged Result (${avgTotal} takes)`
-                  : 'Review Take'}
-            </span>
-          </div>
-          <div className="flex items-center gap-3 bg-panel rounded px-3 py-2 border border-border">
-            <button onClick={()=>togglePlay(pendingRec)}
-              className="text-muted hover:text-white transition-colors shrink-0">
-              {playingId===pendingRec.id?<Pause size={14}/>:<Play size={14}/>}
-            </button>
-            <div className="flex flex-col flex-1 min-w-0">
-              <span className="text-sm truncate">{pendingRec.name}</span>
-              <span className="text-xs text-muted">
-                {fmtTime(pendingRec.durationSec)} · {pendingRec.bitDepth}-bit · {(pendingRec.sr/1000).toFixed(1)} kHz · {pendingRec.device}{pendingRec.calibrationPa ? ' · calibrated' : ''}
-              </span>
-            </div>
-          </div>
-          {/* Full-signal waveform with playback cursor */}
-          {pendingPcmRef.current && (
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted uppercase tracking-wider">Waveform</span>
-              <StaticWaveform
-                pcm={pendingPcmRef.current.pcm}
-                sampleRate={pendingPcmRef.current.sr}
-                playProgress={playingId === pendingRec.id ? playProgress : 0}
-              />
-            </div>
-          )}
-          {/* Spectrum */}
-          {pendingPcmRef.current && (
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted uppercase tracking-wider">Spectrum</span>
-              <StaticSpectrum pcm={pendingPcmRef.current.pcm} sampleRate={pendingPcmRef.current.sr} />
-            </div>
-          )}
-          <div className="flex gap-2">
-            <button onClick={acceptRecording}
-              className="flex items-center gap-1.5 px-4 py-2 rounded bg-teal text-dark text-sm font-semibold hover:bg-teal/80 transition-colors">
-              <CheckCircle size={14}/> Accept
-            </button>
-            <button onClick={declineRecording}
-              className="flex items-center gap-1.5 px-4 py-2 rounded bg-panel border border-orange/40 text-orange text-sm font-medium hover:bg-orange/10 transition-colors">
-              <XCircle size={14}/> Discard
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Recordings list ── */}
-      {recordings.length > 0 && (
-        <div className="bg-surface border border-border rounded-lg p-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Recordings ({recordings.length})<span className="ml-2 normal-case font-normal tracking-normal text-muted/70">kept in this browser</span></span>
-            <div className="flex items-center gap-1.5">
-              <button onClick={()=>setPlayMuted(m=>!m)} className="text-muted hover:text-white transition-colors">
-                {playMuted?<VolumeX size={13}/>:<Volume2 size={13}/>}
-              </button>
-              <input type="range" min={0} max={1} step={0.01} value={playMuted?0:playVolume}
-                onChange={e=>{setPlayVolume(Number(e.target.value));setPlayMuted(false)}}
-                className="w-16 h-1 cursor-pointer" style={{accentColor:'#50b89e'}}/>
-            </div>
-          </div>
-          {recordings.map(rec=>(
-            <div key={rec.id} className={`flex flex-col bg-panel rounded border overflow-hidden transition-colors ${selectedRecId===rec.id?'border-teal/40':'border-border'}`}>
-              <div className="flex items-center gap-2 px-3 py-2">
-                <button onClick={()=>togglePlay(rec)}
-                  className="text-muted hover:text-white transition-colors shrink-0"
-                  title={playingId===rec.id?'Pause':'Play'}>
-                  {playingId===rec.id?<Pause size={14}/>:<Play size={14}/>}
-                </button>
-                {/* Clicking the name row toggles waveform/spectrum expand */}
-                <div className="flex flex-col min-w-0 flex-1 cursor-pointer select-none"
-                  onClick={()=>selectRecording(rec)} title="Click to view waveform & spectrum">
-                  <span className="text-sm truncate">{rec.name}</span>
-                  <span className="text-xs text-muted truncate">
-                    {fmtTime(rec.durationSec)} · {rec.bitDepth}-bit · {(rec.sr/1000).toFixed(1)} kHz · {rec.device}{rec.calibrationPa ? ' · calibrated' : ''}
-                  </span>
-                </div>
-
-                {/* Download WAV */}
-                <button onClick={()=>downloadRecording(rec)} title="Download WAV"
-                  className="text-muted hover:text-white transition-colors shrink-0 p-1 rounded hover:bg-panel">
-                  <Download size={13}/>
-                </button>
-
-                {/* Export CSV */}
-                <button onClick={()=>exportCSV(rec)} title="Export CSV"
-                  className="text-muted hover:text-teal transition-colors shrink-0 px-1.5 py-1 rounded hover:bg-teal/10 text-xs font-medium">
-                  CSV
-                </button>
-
-                {/* Send */}
-                <button onClick={()=>sendToPostProcessing(rec)} disabled={sendingId===rec.id}
-                  title="Send to Post-Processing"
-                  className="flex items-center gap-1 text-xs text-teal hover:text-white disabled:opacity-50 transition-colors shrink-0 px-2 py-1 rounded hover:bg-teal/20">
-                  {sendingId===rec.id?<RefreshCw size={12} className="animate-spin"/>:<><Send size={12}/><ChevronRight size={10}/></>}
-                </button>
-
-                {/* Delete with confirm */}
-                {deleteConfId===rec.id ? (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <AlertTriangle size={11} className="text-orange"/>
-                    <span className="text-xs text-orange">Delete?</span>
-                    <button onClick={()=>deleteRecording(rec.id)} className="text-xs text-orange hover:text-white px-1">Yes</button>
-                    <button onClick={()=>setDeleteConfId(null)} className="text-xs text-muted hover:text-white px-1">No</button>
-                  </div>
-                ) : (
-                  <button onClick={()=>setDeleteConfId(rec.id)} title="Delete"
-                    className="text-muted hover:text-orange transition-colors shrink-0">
-                    <Trash2 size={13}/>
-                  </button>
-                )}
-              </div>
-
-              {/* Expanded waveform + spectrum panel */}
-              {selectedRecId === rec.id && (
-                <div className="px-3 pb-3 flex flex-col gap-2 border-t border-border/50">
-                  {selectedPcmLoading && (
-                    <div className="flex items-center gap-2 py-2 text-xs text-muted">
-                      <RefreshCw size={11} className="animate-spin"/> Decoding…
-                    </div>
-                  )}
-                  {selectedPcm && !selectedPcmLoading && (<>
-                    <div className="flex flex-col gap-1 pt-2">
-                      <span className="text-xs text-muted uppercase tracking-wider">Waveform</span>
-                      <StaticWaveform
-                        pcm={selectedPcm.pcm}
-                        sampleRate={selectedPcm.sr}
-                        playProgress={playingId === rec.id ? playProgress : 0}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted uppercase tracking-wider">Spectrum</span>
-                      <StaticSpectrum pcm={selectedPcm.pcm} sampleRate={selectedPcm.sr} />
-                    </div>
-                  </>)}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Help */}
-      <div className="text-xs text-muted bg-surface border border-border rounded-lg p-3 leading-relaxed">
-        <strong className="text-white">Workflow:</strong> Monitor → Record / Watch → Stop → <strong className="text-teal">Accept</strong> (keeps) or <strong className="text-orange">Discard</strong> (throws away).
-        {' '}The <span className="text-teal font-semibold">Worklet</span> badge means lossless Float32 PCM capture (requires HTTPS or localhost).
-        <br/><br/>
-        <strong className="text-white">Signal protection:</strong> Overload abort automatically discards the take if the peak exceeds the threshold.
-        Silence stop ends the recording after N seconds of silence, in any capture mode.
-        <br/><br/>
-        <strong className="text-white">Trigger:</strong> ↑ Rising fires when the signal rises above the threshold;
-        ↓ Falling fires when it drops below. Pre-roll captures audio before the trigger (via AudioWorklet).
-        <br/><br/>
-        <strong className="text-white">Calibration and level:</strong> calibrate the microphone in Settings, with an acoustic calibrator or
-        the sensitivity from its data sheet, and the meter reads dB SPL or dB(A). Recordings made afterwards carry the calibration into Post-Processing.
-      </div>
+      </aside>
 
       {wizardOpen && (
         <CalibrationWizard

@@ -7,6 +7,7 @@ import { uploadFiles, deleteAudio, setCalibration as apiSetCalibration, clearCal
 import { restoreSession } from '../../api/http'
 import { AudioFile, ViewMode, MetricKey, FieldType } from '../../types'
 import FileDropzone from '../../components/FileDropzone'
+import ImportCallout from '../../components/ImportCallout'
 import AudioList from '../../components/AudioList'
 import MetricSelector from '../../components/MetricSelector'
 import PlotPanel from '../../components/PlotPanel'
@@ -115,7 +116,7 @@ export default function PostProcessingPage() {
         'fixed top-0 left-0 h-full w-72 z-30 bg-surface sm:bg-transparent',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'
       )}>
-        <FileDropzone onFiles={handleFiles} disabled={uploading} />
+        <FileDropzone onFiles={handleFiles} disabled={uploading} highlight={files.length === 0 && !uploading} />
         {uploading    && <p className="text-[10px] text-teal text-center animate-pulse">Uploading…</p>}
         {uploadError  && <p className="text-[10px] text-red-400 text-center">{uploadError}</p>}
 
@@ -278,7 +279,9 @@ export default function PostProcessingPage() {
             : (
               <div className="flex flex-col flex-1 overflow-hidden p-2 gap-1">
                 <div className="flex-1 overflow-hidden">
-                  <PlotPanel />
+                  {files.length === 0
+                    ? <ImportCallout onFiles={handleFiles} disabled={uploading} />
+                    : <PlotPanel />}
                 </div>
                 {selectedFile && (
                   <AudioPlayer src={streamUrl} fileName={selectedFile.name} onError={() => { void restoreSession(sessionId) }} />
