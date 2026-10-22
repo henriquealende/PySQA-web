@@ -32,3 +32,17 @@ export const DATA_ACQUISITION_TOC: { id: string; title: string }[] = [
   { id: 'limites', title: 'Limites e boas práticas' },
   { id: 'referencias', title: 'Referências' },
 ]
+
+export const SYSTEM_ANALYSIS_TOC: { id: string; title: string }[] = [
+  { id: 'visao-geral', title: 'Visão geral' },
+  { id: 'mapa', title: 'Mapa de recursos' },
+  { id: 'conceitos', title: 'Conceitos básicos' },
+  { id: 'dados', title: 'Carregando as medições' },
+  { id: 'estimar', title: 'Estimando a FRF' },
+  { id: 'impacto', title: 'Ensaio com martelo de impacto' },
+  { id: 'vistas', title: 'Vistas dos resultados' },
+  { id: 'modos', title: 'Modos e amortecimento' },
+  { id: 'exportacao', title: 'Exportação' },
+  { id: 'limites', title: 'Limites e boas práticas' },
+  { id: 'referencias', title: 'Referências' },
+]

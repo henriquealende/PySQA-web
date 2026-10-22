@@ -48,6 +48,27 @@ export const REFS: Record<string, Ref> = {
     entry: 'EOMYS ENGINEERING. **MoSQITo**: modular sound quality integrated toolbox. [S. l.]: GitHub, 2024. Disponível em: https://github.com/Eomys/MoSQITo. ' + ACCESS,
     url: 'https://github.com/Eomys/MoSQITo',
   },
+  brandt2011: {
+    id: 'brandt2011', cite: 'BRANDT, 2011', sort: 'BRANDT',
+    entry: 'BRANDT, A. **Noise and vibration analysis**: signal analysis and experimental procedures. Chichester: Wiley, 2011.',
+  },
+  ewins2000: {
+    id: 'ewins2000', cite: 'EWINS, 2000', sort: 'EWINS',
+    entry: 'EWINS, D. J. **Modal testing**: theory, practice and application. 2. ed. Baldock: Research Studies Press, 2000.',
+  },
+  iso76265: {
+    id: 'iso76265', cite: 'ISO, 2019', sort: 'INTERNATIONAL ORGANIZATION 2019',
+    entry: 'INTERNATIONAL ORGANIZATION FOR STANDARDIZATION. **ISO 7626-5:2019**: vibration and shock – experimental determination of mechanical mobility – Part 5: measurements using impact excitation with an exciter which is not attached to the structure. 2. ed. Geneva: ISO, 2019.',
+  },
+  pyuff: {
+    id: 'pyuff', cite: 'LADISK, [s. d.]', sort: 'LADISK',
+    entry: 'LADISK. **pyuff**: read and write Universal File Format (UFF) files. [S. l.]: GitHub, [s. d.]. Disponível em: https://github.com/ladisk/pyuff. Acesso em: 22 out. 2026.',
+    url: 'https://github.com/ladisk/pyuff',
+  },
+  welch1967: {
+    id: 'welch1967', cite: 'WELCH, 1967', sort: 'WELCH',
+    entry: 'WELCH, P. D. The use of fast Fourier transform for the estimation of power spectra: a method based on time averaging over short, modified periodograms. **IEEE Transactions on Audio and Electroacoustics**, [s. l.], v. 15, n. 2, p. 70-73, jun. 1967. DOI: 10.1109/TAU.1967.1161901.',
+  },
   fastl2007: {
     id: 'fastl2007', cite: 'FASTL; ZWICKER, 2007', sort: 'FASTL',
     entry: 'FASTL, H.; ZWICKER, E. **Psychoacoustics**: facts and models. 3. ed. Berlin: Springer, 2007. (Springer Series in Information Sciences, v. 22). DOI: 10.1007/978-3-540-68888-4.',

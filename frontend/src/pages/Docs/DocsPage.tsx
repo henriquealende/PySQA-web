@@ -3,20 +3,22 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { BookOpen, Hammer } from 'lucide-react'
 import clsx from 'clsx'
 import { CiteContext } from './ui'
-import { DATA_ACQUISITION_TOC, POST_PROCESSING_TOC } from './tocs'
+import { DATA_ACQUISITION_TOC, POST_PROCESSING_TOC, SYSTEM_ANALYSIS_TOC } from './tocs'
 
 const PostProcessingDoc = lazy(() => import('./PostProcessingDoc'))
 const DataAcquisitionDoc = lazy(() => import('./DataAcquisitionDoc'))
+const SystemAnalysisDoc = lazy(() => import('./SystemAnalysisDoc'))
 
 const PAGES = [
   { key: 'data-acquisition', label: 'Data Acquisition', ready: true },
   { key: 'post-processing',  label: 'Post-Processing',  ready: true },
-  { key: 'system-analysis',  label: 'System Analysis',  ready: false },
+  { key: 'system-analysis',  label: 'System Analysis',  ready: true },
 ] as const
 
 const TOCS: Record<string, { id: string; title: string }[]> = {
   'post-processing': POST_PROCESSING_TOC,
   'data-acquisition': DATA_ACQUISITION_TOC,
+  'system-analysis': SYSTEM_ANALYSIS_TOC,
 }
 
 export default function DocsPage() {
@@ -112,7 +114,7 @@ export default function DocsPage() {
           {current.ready ? (
             <CiteContext.Provider value={used.current}>
               <Suspense fallback={<p className="text-xs text-teal animate-pulse">Carregando a documentação…</p>}>
-                {page === 'data-acquisition' ? <DataAcquisitionDoc /> : <PostProcessingDoc />}
+                {page === 'data-acquisition' ? <DataAcquisitionDoc /> : page === 'system-analysis' ? <SystemAnalysisDoc /> : <PostProcessingDoc />}
               </Suspense>
             </CiteContext.Provider>
           ) : (
