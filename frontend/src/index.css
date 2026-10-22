@@ -18,6 +18,31 @@ html, body, #root {
 ::-webkit-scrollbar-thumb { background: #2b3c50; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #50b89e; }
 
+/* PySQA cube: builds itself once, lifts apart on hover, shows what the app is doing */
+.pysqa-logo { filter: drop-shadow(0 0 9px rgba(80, 184, 158, 0.30)); }
+.pysqa-logo .logo-face { transform-box: fill-box; transform-origin: center; transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+a:hover .pysqa-logo .logo-top   { transform: translateY(-6px); }
+a:hover .pysqa-logo .logo-left  { transform: translateX(-4px); }
+a:hover .pysqa-logo .logo-right { transform: translateX(4px); }
+
+@keyframes logo-in-left  { from { transform: translateX(-26px); opacity: 0; } }
+@keyframes logo-in-right { from { transform: translateX(26px);  opacity: 0; } }
+@keyframes logo-in-top   { from { transform: translateY(-34px); opacity: 0; } }
+@keyframes logo-sweep    { 0%, 100% { opacity: 1; } 40% { opacity: 0.35; } }
+@keyframes logo-record   { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.45); } }
+@keyframes logo-breathe  { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.2); } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .pysqa-logo.logo-intro .logo-left  { animation: logo-in-left  0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+  .pysqa-logo.logo-intro .logo-right { animation: logo-in-right 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.08s backwards; }
+  .pysqa-logo.logo-intro .logo-top   { animation: logo-in-top   0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.24s backwards; }
+  .pysqa-logo[data-state=working] .logo-left  { animation: logo-sweep 1.3s ease-in-out infinite; }
+  .pysqa-logo[data-state=working] .logo-right { animation: logo-sweep 1.3s ease-in-out 0.22s infinite; }
+  .pysqa-logo[data-state=working] .logo-top   { animation: logo-sweep 1.3s ease-in-out 0.44s infinite; }
+  .pysqa-logo[data-state=recording] .logo-top  { animation: logo-record 1.1s ease-in-out infinite; }
+  .pysqa-logo[data-state=monitoring] .logo-top { animation: logo-breathe 2.4s ease-in-out infinite; }
+}
+
 /* Touch screens: controls need a 44 px target */
 @media (pointer: coarse) {
   main button, aside button, main select, aside select,

@@ -3,7 +3,9 @@ import ToastContainer from './ToastContainer'
 import StatusBanner from './StatusBanner'
 import RecordingPage from '../pages/DataAcquisition/RecordingPage'
 import { useStore } from '../store/useStore'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useFrfStore } from '../store/useFrfStore'
+import Logo from './Logo'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Activity, Mic, BarChart2, Menu, X } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -27,6 +29,9 @@ function DaqDot({ state }: { state: 'idle' | 'monitoring' | 'recording' }) {
 export default function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const daqState = useStore((s) => s.daqState)
+  const serverWaking = useStore((s) => s.serverWaking)
+  const frfBusy = useFrfStore((s) => s.busy)
+  const logoState = daqState === 'recording' ? 'recording' : serverWaking || frfBusy ? 'working' : daqState === 'monitoring' ? 'monitoring' : 'idle'
 
   // Data Acquisition stays mounted once opened (it is only hidden on other pages), so a recording,
   // a take under review and the open microphone survive a visit to Post-Processing.
@@ -44,14 +49,10 @@ export default function Layout() {
       {/* ── Top bar ──────────────────────────────────────────────────── */}
       <header className="flex items-center h-14 bg-surface border-b border-border shrink-0">
         {/* Logo: this block is as wide as the settings column below it, so the tabs start where the results start */}
-        <div className="flex items-center gap-3 px-4 h-full lg:w-80 lg:shrink-0 lg:border-r lg:border-border">
-          <img
-            src="/pysqa_logo.png"
-            alt="PySQA"
-            className="h-8 w-8 object-contain shrink-0"
-          />
-          <span className="font-bold text-teal tracking-wide text-base hidden sm:block">PySQA</span>
-        </div>
+        <Link to="/" className="flex items-center gap-3 px-4 h-full lg:w-80 lg:shrink-0 lg:border-r lg:border-border" aria-label="PySQA, home">
+          <Logo state={logoState} className="h-12 w-12 shrink-0" />
+          <span className="font-bold text-teal tracking-wide text-xl hidden sm:block" aria-hidden="true">PySQA</span>
+        </Link>
 
         {/* Desktop nav */}
         <nav className="hidden sm:flex gap-2 px-3" aria-label="Pages">
