@@ -331,8 +331,9 @@ def compute_spectrogram(entry: AudioEntry, params: dict | None = None,
 
     return {
         "t": np.round(t + sec.offset_s, 6).tolist(),
-        "f": f.tolist(),
-        "power_db": Sxx_db.tolist(),
+        "f": np.round(f, 2).tolist(),
+        # 0.1 dB steps are finer than any colour scale shows; levels below the floor are drawn as the floor
+        "power_db": np.round(np.maximum(Sxx_db, vmin), 1).tolist(),
         "z_min": vmin,
         "z_max": vmax,
         "cmap": str(p.get("cmap", "magma")),

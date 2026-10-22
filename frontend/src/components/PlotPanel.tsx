@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import Plot from 'react-plotly.js'
+import Plot from './Plot'
 import { Loader2, Settings } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { audioElementRef, audioTimeListeners } from '../hooks/useAudioPlayer'

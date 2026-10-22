@@ -1,6 +1,6 @@
 import { toast } from '../store/useToast'
 import { useEffect, useState } from 'react'
-import Plot from 'react-plotly.js'
+import Plot from './Plot'
 import { X, Loader2 } from 'lucide-react'
 import clsx from 'clsx'
 import { AudioFile } from '../types'

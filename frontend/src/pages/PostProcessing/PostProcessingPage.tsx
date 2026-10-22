@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, lazy, Suspense } from 'react'
 import { Download, PanelLeftOpen, PanelLeftClose, BarChart3, Waves, LayoutGrid, BarChart2, TrendingUp } from 'lucide-react'
 import clsx from 'clsx'
 import { useStore } from '../../store/useStore'
@@ -10,11 +10,17 @@ import FileDropzone from '../../components/FileDropzone'
 import ImportCallout from '../../components/ImportCallout'
 import AudioList from '../../components/AudioList'
 import MetricSelector from '../../components/MetricSelector'
-import PlotPanel from '../../components/PlotPanel'
 import AudioPlayer from '../../components/AudioPlayer'
-import ProcessingModal from '../../components/ProcessingModal'
 import ExportModal from '../../components/ExportModal'
 import BatchPanel from './BatchPanel'
+
+// Plotly is the heaviest part of the app: load it only when a chart is first needed
+const PlotPanel = lazy(() => import('../../components/PlotPanel'))
+const ProcessingModal = lazy(() => import('../../components/ProcessingModal'))
+
+const ChartFallback = () => (
+  <div className="flex h-full items-center justify-center text-xs text-teal animate-pulse">Loading charts…</div>
+)
 
 const VIEW_MODES: { key: ViewMode; label: string; Icon: React.ElementType }[] = [
   { key: 'normal',      label: 'Normal',      Icon: Waves },
@@ -281,7 +287,7 @@ export default function PostProcessingPage() {
                 <div className="flex-1 overflow-hidden">
                   {files.length === 0
                     ? <ImportCallout onFiles={handleFiles} disabled={uploading} />
-                    : <PlotPanel />}
+                    : <Suspense fallback={<ChartFallback />}><PlotPanel /></Suspense>}
                 </div>
                 {selectedFile && (
                   <AudioPlayer src={streamUrl} fileName={selectedFile.name} onError={() => { void restoreSession(sessionId) }} />
@@ -293,7 +299,7 @@ export default function PostProcessingPage() {
       </div>
 
       {editId && editFile && (
-        <ProcessingModal
+        <Suspense fallback={null}><ProcessingModal
           sessionId={sessionId}
           audioId={editId}
           audioName={editFile.name}
@@ -301,7 +307,7 @@ export default function PostProcessingPage() {
           otherFiles={otherFiles}
           onClose={() => setEditId(null)}
           onResult={handleProcessed}
-        />
+        /></Suspense>
       )}
 
       {showExport && selectedFile && (
