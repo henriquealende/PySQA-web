@@ -94,6 +94,8 @@ function AboutPt() {
         <UL>
           <li>ao <strong>Prof. Erasmo Vergara</strong>, meu orientador, e ao <strong>Prof. Arcanjo Lenzi</strong>;</li>
           <li>à <strong>UFSC</strong>, ao <strong>POSMEC</strong> e ao <strong>LVA</strong>, onde a ferramenta cresceu;</li>
+          <li>a <strong>Ricardo Brum</strong>, colega, pela amizade e pela contribuição na plataforma;</li>
+          <li>a <strong>Jucélio Tavares</strong> e <strong>Taiana Barbosa</strong>, bolsistas neste projeto, pela dedicação;</li>
           <li>à comunidade da <strong>MoSQITo</strong> (Eomys Engineering e Green Forge Coop) e do <strong>Sottek Hearing Model</strong> (Mike Lotinga e Roland Sottek), cujas bibliotecas abertas sustentam boa parte dos cálculos;</li>
           <li>às comunidades do NumPy e do SciPy.</li>
         </UL>
@@ -176,6 +178,8 @@ function AboutEn() {
         <UL>
           <li><strong>Prof. Erasmo Vergara</strong>, my supervisor, and <strong>Prof. Arcanjo Lenzi</strong>;</li>
           <li><strong>UFSC</strong>, <strong>POSMEC</strong> and <strong>LVA</strong>, where the tool grew;</li>
+          <li><strong>Ricardo Brum</strong>, a colleague, for the friendship and the contributions to the platform;</li>
+          <li><strong>Jucélio Tavares</strong> and <strong>Taiana Barbosa</strong>, scholarship researchers on this project, for their dedication;</li>
           <li>the <strong>MoSQITo</strong> community (Eomys Engineering and Green Forge Coop) and the <strong>Sottek Hearing Model</strong> (Mike Lotinga and Roland Sottek), whose open libraries support a large part of the calculations;</li>
           <li>the NumPy and SciPy communities.</li>
         </UL>

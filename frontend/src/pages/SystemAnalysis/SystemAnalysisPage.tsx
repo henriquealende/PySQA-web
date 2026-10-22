@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Upload, Loader2, Download, X, Waves, Activity, CircleDot, LineChart } from 'lucide-react'
+import { Upload, Loader2, Download, X, Waves, Activity, CircleDot, LineChart, BarChart2 } from 'lucide-react'
 import clsx from 'clsx'
 import { useFrfStore } from '../../store/useFrfStore'
 import { toast } from '../../store/useToast'
@@ -131,9 +131,12 @@ export default function SystemAnalysisPage() {
   return (
     <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden text-white">
 
-      <h1 className="sr-only">{t('sa.page.title')}</h1>
       {/* ── Settings column ── */}
       <aside className="shrink-0 lg:w-80 lg:border-r border-border p-3 flex flex-col gap-3 lg:overflow-y-auto">
+        <div className="flex items-center gap-2 px-1 pb-1">
+          <BarChart2 size={18} className="text-teal" aria-hidden="true" />
+          <h1 className="text-base font-semibold">{t('sa.page.title')}</h1>
+        </div>
 
         <label
           className={clsx('flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed cursor-pointer transition-colors py-5 px-4',

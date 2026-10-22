@@ -1,5 +1,5 @@
 import React, { useState, useCallback, lazy, Suspense } from 'react'
-import { Download, PanelLeftOpen, PanelLeftClose, BarChart3, Waves, LayoutGrid, BarChart2, TrendingUp } from 'lucide-react'
+import { Download, PanelLeftOpen, PanelLeftClose, BarChart3, Waves, LayoutGrid, BarChart2, TrendingUp, Activity } from 'lucide-react'
 import clsx from 'clsx'
 import { useStore } from '../../store/useStore'
 import { toast } from '../../store/useToast'
@@ -111,7 +111,6 @@ export default function PostProcessingPage() {
 
   return (
     <div className="flex flex-1 overflow-hidden relative">
-      <h1 className="sr-only">{t('pp.page.title')}</h1>
 
       {sidebarOpen && (
         <div
@@ -126,6 +125,10 @@ export default function PostProcessingPage() {
         'fixed top-0 left-0 h-full w-72 z-30 bg-surface sm:bg-transparent',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'
       )}>
+        <div className="flex items-center gap-2 px-1 pb-1">
+          <Activity size={18} className="text-teal" aria-hidden="true" />
+          <h1 className="text-base font-semibold">{t('pp.page.title')}</h1>
+        </div>
         <FileDropzone onFiles={handleFiles} disabled={uploading} highlight={files.length === 0 && !uploading} />
         {uploading    && <p className="text-[11px] text-teal text-center animate-pulse">{t('pp.page.uploading')}</p>}
         {uploadError  && <p className="text-[11px] text-red-400 text-center">{uploadError}</p>}
