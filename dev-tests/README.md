@@ -18,5 +18,5 @@ coherence, impact averaging, mode detection and damping, and the UFF/WAV/CSV rea
 
 Other files:
 - `test_aweight.js` (Node): the A-weighting filter of the recorder against IEC 61672.
-- `docker-test/`, `drive.py`, `stress.py`: reproduce the Render plan (512 MB, 0.5 CPU) in Docker and measure memory.
+- `docker-test/`, `drive.py`, `stress.py`: reproduce the old Render Starter plan (512 MB, 0.5 CPU) in Docker; for the current Standard plan (2 GB, 1 CPU) use `--memory=2g --cpus=1` and measure memory.
 - `edits.py`: exact-once text replacement; the Edit tool has truncated files on the OneDrive folder.

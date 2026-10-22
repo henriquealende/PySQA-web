@@ -101,12 +101,12 @@ Without it, those three metrics are disabled; all other features work normally.
 
 ## Hosted deployment: resource limits
 
-On a small container (for example a 512 MiB Render instance, such as the Starter plan) the server protects itself instead of
+On a small container (the project runs on the Render Standard plan, 2 GiB and 1 CPU; it used to run on Starter, 512 MiB) the server protects itself instead of
 running out of memory. The limits switch on automatically when a memory limit is detected (the
 container's cgroup limit, `PYSQA_MEMORY_MB`, or the `RENDER` variable) and stay off on a local
 machine. `GET /api/health` reports the limits in force.
 
-| Variable | Hosted default (512 MiB) | Meaning |
+| Variable | Hosted default (512 MiB; ×4 on 2 GiB) | Meaning |
 |----------|--------------------------|---------|
 | `PYSQA_MEMORY_MB` | detected | Memory budget of the process |
 | `PYSQA_MAX_UPLOAD_MB` | 30 | Largest upload |
@@ -123,6 +123,9 @@ Only one heavy calculation runs at a time, and a calculation whose estimated mem
 refused up front with a message instead of crashing the process. Measured on a 512 MiB container:
 Loudness ISO 532-1 and Sharpness accept about 4-5 s of audio, Loudness ECMA-418-2 about 1.7 s, and
 Roughness / Tonality ECMA-418-2 do not fit at all (they need roughly 440 and 540 MB per second of audio).
+On the 2 GiB Standard plan the caps are four times larger (120 MB upload, 240 s, 80 files, 480 MB of audio, 400000 cells)
+and, estimated from the same cost table, Loudness ISO 532-1 and Sharpness accept about 30 s, Loudness ECMA-418-2 about 10 s,
+and Roughness / Tonality ECMA-418-2 about 2.5-3 s.
 
 On Linux the server also tunes the memory allocator when the limits are on: it answers each request in
 its own thread, and without this the memory freed by one calculation stayed in that thread's arena, so the

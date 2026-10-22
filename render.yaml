@@ -1,14 +1,17 @@
 # Render Blueprint — PySQA Web (single web service: FastAPI + built frontend)
-# Starter plan: 512 MB, 0.5 CPU. The disk is ephemeral, so sessions are lost on every restart and
+# Standard plan (US$ 25/month, upgraded from Starter in 2026-10): 2 GB, 1 CPU. The disk is ephemeral, so sessions are lost on every restart and
 # deploy; the browser keeps a copy of the uploaded files and puts them back on its own.
 services:
   - type: web
     name: pysqa-web
     runtime: python
-    plan: starter
+    plan: standard
     region: oregon
     branch: main
     buildCommand: pip install -r backend/requirements.txt && npm ci --prefix frontend && npm run build --prefix frontend
     startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     autoDeploy: true
+    envVars:
+      - key: PYSQA_MEMORY_MB    # explicit, so the limits never fall back to the 512 MB assumed when the cgroup cannot be read
+        value: "2048"
