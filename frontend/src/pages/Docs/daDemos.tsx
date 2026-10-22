@@ -1,28 +1,34 @@
 import { useMemo, useState } from 'react'
+import { useLang } from '../../i18n'
 import { AMBER, BLUE, Chart, ORANGE, TEAL, ax, dots, line } from './demos'
+import { tr } from './demoTr'
+
+/** Number locale of the active language (decimal comma in Portuguese, point in English). */
+const useLoc = () => (useLang((s) => s.lang) === 'en' ? 'en-US' : 'pt-BR')
 
 const Slider = ({ label, value, min, max, step, unit, onChange }: {
   label: string; value: number; min: number; max: number; step: number; unit: string; onChange: (v: number) => void
 }) => (
   <label className="flex items-center gap-3 text-xs text-muted">
-    <span className="w-44 shrink-0">{label}</span>
+    <span className="w-44 shrink-0">{tr(label)}</span>
     <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))}
-      className="accent-teal flex-1 min-w-24 max-w-64" aria-label={label} />
+      className="accent-teal flex-1 min-w-24 max-w-64" aria-label={tr(label)} />
     <span className="text-white font-semibold tabular-nums w-24">{value} {unit}</span>
   </label>
 )
 
 const Stat = ({ title, value, hint }: { title: string; value: string; hint?: string }) => (
   <div className="rounded-lg bg-panel/60 border border-border px-3 py-2">
-    <dt className="text-muted text-[12px]">{title}</dt>
+    <dt className="text-muted text-[12px]">{tr(title)}</dt>
     <dd className="text-white text-sm font-semibold tabular-nums">{value}</dd>
-    {hint && <dd className="text-muted text-[11px] leading-snug">{hint}</dd>}
+    {hint && <dd className="text-muted text-[11px] leading-snug">{tr(hint)}</dd>}
   </div>
 )
 
 // ── Sampling rate and aliasing ────────────────────────────────────────────────
 
 export function SamplingDemo() {
+  const loc = useLoc()
   const [f, setF] = useState(5000)
   const [fs, setFs] = useState(48000)
   const nyq = fs / 2
@@ -38,10 +44,10 @@ export function SamplingDemo() {
       <div className="flex flex-col gap-2">
         <Slider label="Frequência do tom" value={f} min={100} max={30000} step={100} unit="Hz" onChange={setF} />
         <label className="flex items-center gap-3 text-xs text-muted">
-          <span className="w-44 shrink-0">Taxa de amostragem</span>
+          <span className="w-44 shrink-0">{tr('Taxa de amostragem')}</span>
           <select value={fs} onChange={(e) => setFs(Number(e.target.value))}
-            className="bg-panel border border-field rounded px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal" aria-label="Taxa de amostragem">
-            {[8000, 16000, 44100, 48000, 96000].map((r) => <option key={r} value={r}>{r.toLocaleString('pt-BR')} Hz</option>)}
+            className="bg-panel border border-field rounded px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal" aria-label={tr('Taxa de amostragem')}>
+            {[8000, 16000, 44100, 48000, 96000].map((r) => <option key={r} value={r}>{r.toLocaleString(loc)} Hz</option>)}
           </select>
         </label>
       </div>
@@ -51,9 +57,9 @@ export function SamplingDemo() {
         ...(aliased ? [line(t.map((x) => x * 1000), t.map((x) => Math.sin(2 * Math.PI * (f - k * fs) * x)), 'O que o computador “enxerga”', ORANGE, { line: { color: ORANGE, width: 2, dash: 'dash' } })] : []),
       ]} layout={{ xaxis: ax('Tempo (ms)'), yaxis: ax('Amplitude', { range: [-1.25, 1.25] }), hovermode: 'closest' }} />
       <dl className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        <Stat title="Frequência de Nyquist" value={`${nyq.toLocaleString('pt-BR')} Hz`} hint="metade da taxa de amostragem" />
-        <Stat title="Frequência registrada" value={`${apparent.toLocaleString('pt-BR')} Hz`} hint={aliased ? 'diferente da real: é o “alias”' : 'igual à real'} />
-        <Stat title="Situação" value={aliased ? 'Aliasing' : 'Correto'} hint={aliased ? 'o tom está acima de Nyquist' : 'o tom cabe na banda'} />
+        <Stat title="Frequência de Nyquist" value={`${nyq.toLocaleString(loc)} Hz`} hint="metade da taxa de amostragem" />
+        <Stat title="Frequência registrada" value={`${apparent.toLocaleString(loc)} Hz`} hint={aliased ? 'diferente da real: é o “alias”' : 'igual à real'} />
+        <Stat title="Situação" value={tr(aliased ? 'Aliasing' : 'Correto')} hint={aliased ? 'o tom está acima de Nyquist' : 'o tom cabe na banda'} />
       </dl>
     </div>
   )
@@ -62,6 +68,7 @@ export function SamplingDemo() {
 // ── Bit depth ────────────────────────────────────────────────────────────────
 
 export function BitsDemo() {
+  const loc = useLoc()
   const [bits, setBits] = useState(4)
   const n = 400
   const x = Array.from({ length: n }, (_, i) => i / (n - 1) * 2)
@@ -82,9 +89,9 @@ export function BitsDemo() {
           layout={{ xaxis: ax('Tempo (1 período = 1)'), yaxis: ax('Erro (fundo de escala = 1)', { exponentformat: 'power' }), showlegend: false }} />
       </div>
       <dl className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        <Stat title="Níveis possíveis" value={(2 ** bits).toLocaleString('pt-BR')} />
-        <Stat title="Relação sinal-ruído" value={`${snr.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} dB`} hint="de um tom de amplitude máxima: 6,02·N + 1,76" />
-        <Stat title="Em 16 e 24 bits" value="98 dB e 146 dB" hint="a faixa dinâmica teórica dos formatos comuns" />
+        <Stat title="Níveis possíveis" value={(2 ** bits).toLocaleString(loc)} />
+        <Stat title="Relação sinal-ruído" value={`${snr.toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} dB`} hint="de um tom de amplitude máxima: 6,02·N + 1,76" />
+        <Stat title="Em 16 e 24 bits" value={tr('98 dB e 146 dB')} hint="a faixa dinâmica teórica dos formatos comuns" />
       </dl>
     </div>
   )
@@ -107,6 +114,7 @@ function levelHistory() {
 }
 
 export function TriggerDemo() {
+  const loc = useLoc()
   const [thr, setThr] = useState(-35)
   const [pre, setPre] = useState(0.5)
   const [hold, setHold] = useState(1)
@@ -138,9 +146,9 @@ export function TriggerDemo() {
         shapes: start != null && end != null ? [{ type: 'rect', xref: 'x', yref: 'paper', x0: start, x1: end, y0: 0, y1: 1, fillcolor: 'rgba(80,184,158,0.18)', line: { width: 0 } }] : [],
       }} />
       <dl className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        <Stat title="Disparo" value={trig >= 0 ? `${t[trig].toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s` : 'não disparou'} hint="primeiro instante acima do limiar" />
-        <Stat title="Gravação começa em" value={start != null ? `${start.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s` : '—'} hint="disparo menos a pré-gravação" />
-        <Stat title="Duração do take" value={start != null && end != null ? `${(end - start).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s` : '—'} hint="área verde do gráfico" />
+        <Stat title="Disparo" value={trig >= 0 ? `${t[trig].toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s` : tr('não disparou')} hint="primeiro instante acima do limiar" />
+        <Stat title="Gravação começa em" value={start != null ? `${start.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s` : '—'} hint="disparo menos a pré-gravação" />
+        <Stat title="Duração do take" value={start != null && end != null ? `${(end - start).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s` : '—'} hint="área verde do gráfico" />
       </dl>
     </div>
   )
@@ -149,6 +157,7 @@ export function TriggerDemo() {
 // ── Fast time weighting and Leq ───────────────────────────────────────────────
 
 export function FastDemo() {
+  const loc = useLoc()
   const dt = 0.005, total = 3.2
   const t = Array.from({ length: Math.round(total / dt) }, (_, i) => i * dt)
   const on = (x: number) => (x >= 0.5 && x < 1.5 ? 1 : 0)                      // a burst of 1 s at 94 dB
@@ -164,7 +173,7 @@ export function FastDemo() {
       line(t, p.map((v) => 10 * Math.log10(v)), 'Nível instantâneo', '#6b8aa3', { line: { color: '#6b8aa3', width: 1, shape: 'hv' } }),
       line(t, fast, 'Fast (τ = 125 ms)', TEAL),
       line(t, slow, 'Slow (τ = 1 s)', BLUE, { line: { color: BLUE, width: 1.5, dash: 'dot' } }),
-      line([0, total], [leq, leq], `Leq do trecho (${leq.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} dB)`, AMBER, { line: { color: AMBER, width: 1.5, dash: 'dash' } }),
+      line([0, total], [leq, leq], `${loc === 'en-US' ? 'Leq of the segment' : 'Leq do trecho'} (${leq.toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} dB)`, AMBER, { line: { color: AMBER, width: 1.5, dash: 'dash' } }),
     ]} layout={{ xaxis: ax('Tempo (s)'), yaxis: ax('Nível (dB SPL)', { range: [30, 100] }), hovermode: 'x unified' }} />
   )
 }
@@ -172,6 +181,7 @@ export function FastDemo() {
 // ── Calibration calculator ────────────────────────────────────────────────────
 
 export function CalibrationDemo() {
+  const loc = useLoc()
   const [level, setLevel] = useState(94)
   const [dbfs, setDbfs] = useState(-23)
   const pRms = 20e-6 * 10 ** (level / 20)                // Pa RMS of the calibrator
@@ -183,8 +193,8 @@ export function CalibrationDemo() {
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
         <label className="flex items-center gap-3 text-xs text-muted">
-          <span className="w-44 shrink-0">Nível do calibrador</span>
-          <div className="flex gap-1.5" role="group" aria-label="Nível do calibrador">
+          <span className="w-44 shrink-0">{tr('Nível do calibrador')}</span>
+          <div className="flex gap-1.5" role="group" aria-label={tr('Nível do calibrador')}>
             {[94, 114].map((l) => (
               <button key={l} onClick={() => setLevel(l)} aria-pressed={level === l}
                 className={`px-3 py-1 rounded text-xs font-medium border transition-colors ${level === l ? 'bg-teal text-dark border-teal' : 'bg-panel border-field text-white hover:border-teal'}`}>{l} dB</button>
@@ -194,10 +204,10 @@ export function CalibrationDemo() {
         <Slider label="Nível medido na gravação" value={dbfs} min={-60} max={-3} step={0.5} unit="dBFS" onChange={setDbfs} />
       </div>
       <dl className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <Stat title="Pressão do calibrador" value={`${pRms.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} Pa`} hint="valor eficaz (RMS)" />
-        <Stat title="Fundo de escala" value={`${paFs.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Pa`} hint="pressão que o valor 1,0 representa" />
-        <Stat title="Sensibilidade" value={`${sens.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} mV/Pa`} hint="para 1 V no fundo de escala" />
-        <Stat title="Tom de amplitude máxima" value={`${fsSpl.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} dB SPL`} hint="o maior nível que cabe sem saturar" />
+        <Stat title="Pressão do calibrador" value={`${pRms.toLocaleString(loc, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} Pa`} hint="valor eficaz (RMS)" />
+        <Stat title="Fundo de escala" value={`${paFs.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Pa`} hint="pressão que o valor 1,0 representa" />
+        <Stat title="Sensibilidade" value={`${sens.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} mV/Pa`} hint="para 1 V no fundo de escala" />
+        <Stat title="Tom de amplitude máxima" value={`${fsSpl.toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} dB SPL`} hint="o maior nível que cabe sem saturar" />
       </dl>
     </div>
   )
@@ -209,6 +219,7 @@ function rng(seed: number) { let s = seed; return () => { s = (s * 1664525 + 101
 const gauss = (r: () => number) => Math.sqrt(-2 * Math.log(Math.max(r(), 1e-12))) * Math.cos(2 * Math.PI * r())
 
 export function AveragingDemo() {
+  const loc = useLoc()
   const [takes, setTakes] = useState(4)
   const n = 300
   const t = Array.from({ length: n }, (_, i) => i / n)
@@ -227,13 +238,13 @@ export function AveragingDemo() {
     <div className="flex flex-col gap-3">
       <Slider label="Número de takes" value={takes} min={1} max={64} step={1} unit="takes" onChange={setTakes} />
       <Chart height={260} data={[
-        line(t, avg, `Média de ${takes} take${takes > 1 ? 's' : ''}`, TEAL, { line: { color: TEAL, width: 1.5 } }),
+        line(t, avg, (loc === 'en-US' ? `Average of ${takes} take${takes > 1 ? 's' : ''}` : `Média de ${takes} take${takes > 1 ? 's' : ''}`), TEAL, { line: { color: TEAL, width: 1.5 } }),
         line(t, clean, 'Sinal verdadeiro', AMBER, { line: { color: AMBER, width: 2, dash: 'dash' } }),
       ]} layout={{ xaxis: ax('Tempo (fração do take)'), yaxis: ax('Amplitude', { range: [-2, 2] }) }} />
       <dl className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        <Stat title="Relação sinal-ruído obtida" value={`${snr.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} dB`} hint="medida nesta simulação" />
-        <Stat title="Ganho teórico" value={`${(10 * Math.log10(takes)).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} dB`} hint="10·log₁₀(N): +3 dB cada vez que dobra" />
-        <Stat title="Ruído restante" value={`${(100 / Math.sqrt(takes)).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} %`} hint="da amplitude de um take sozinho" />
+        <Stat title="Relação sinal-ruído obtida" value={`${snr.toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} dB`} hint="medida nesta simulação" />
+        <Stat title="Ganho teórico" value={`${(10 * Math.log10(takes)).toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} dB`} hint="10·log₁₀(N): +3 dB cada vez que dobra" />
+        <Stat title="Ruído restante" value={`${(100 / Math.sqrt(takes)).toLocaleString(loc, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} %`} hint="da amplitude de um take sozinho" />
       </dl>
     </div>
   )

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import Plot from '../../components/Plot'
 import { DEMO } from './demoData'
+import { trDeep, tr } from './demoTr'
+import { useLang } from '../../i18n'
 
 const AXIS = { gridcolor: '#1e2d3d', zerolinecolor: '#2b3c50', color: '#8ab4c9', linecolor: '#2b3c50' }
 export const TEAL = '#50b89e', ORANGE = '#ed693b', AMBER = '#ffa94d', BLUE = '#60a5fa'
@@ -19,9 +21,10 @@ const BASE: any = {
 const CONFIG = { displayModeBar: false, responsive: true }
 
 export function Chart({ data, layout, height = 300 }: { data: any[]; layout?: any; height?: number }) {
+  useLang((s) => s.lang)   // re-render (and re-translate) when the language changes
   return (
     <div style={{ height }}>
-      <Plot data={data} layout={{ ...BASE, ...layout }} config={CONFIG} useResizeHandler
+      <Plot data={trDeep(data)} layout={trDeep({ ...BASE, ...layout })} config={CONFIG} useResizeHandler
         style={{ width: '100%', height: '100%' }} className="w-full h-full" />
     </div>
   )
@@ -73,6 +76,8 @@ function windowSpectrum(w: number[]) {
 }
 
 export function WindowDemo() {
+  const en = useLang((s) => s.lang) === 'en'
+  const loc = en ? 'en-US' : 'pt-BR'
   const [key, setKey] = useState('hanning')
   const all = useMemo(() => {
     const out: Record<string, { w: number[]; sp: ReturnType<typeof windowSpectrum> }> = {}
@@ -97,11 +102,11 @@ export function WindowDemo() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Janela">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={tr('Janela')}>
         {Object.entries(WINDOWS).map(([k, v]) => (
           <button key={k} onClick={() => setKey(k)} aria-pressed={key === k}
             className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${key === k ? 'bg-teal text-dark border-teal' : 'bg-panel border-field text-white hover:border-teal'}`}>
-            {v.label}
+            {tr(v.label)}
           </button>
         ))}
       </div>
@@ -117,10 +122,10 @@ export function WindowDemo() {
       </div>
       <dl className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[12px]">
         {[
-          ['Ganho coerente', stats.cg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }), 'média dos pesos: quanto um tom perde de altura'],
-          ['Banda de ruído (ENBW)', `${stats.enbw.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} bins`, 'largura efetiva de cada linha'],
-          ['Lóbulo principal', `±${stats.nullBin.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} bins`, 'até o primeiro zero'],
-          ['Maior lóbulo lateral', `${stats.side.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} dB`, 'vazamento para linhas distantes'],
+          [tr('Ganho coerente'), stats.cg.toLocaleString(loc, { minimumFractionDigits: 3, maximumFractionDigits: 3 }), tr('média dos pesos: quanto um tom perde de altura')],
+          [tr('Banda de ruído (ENBW)'), `${stats.enbw.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} bins`, tr('largura efetiva de cada linha')],
+          [tr('Lóbulo principal'), `±${stats.nullBin.toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} bins`, tr('até o primeiro zero')],
+          [tr('Maior lóbulo lateral'), `${stats.side.toLocaleString(loc, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} dB`, tr('vazamento para linhas distantes')],
         ].map(([t, v, d]) => (
           <div key={t} className="rounded-lg bg-panel/60 border border-border px-3 py-2">
             <dt className="text-muted">{t}</dt>
@@ -129,7 +134,7 @@ export function WindowDemo() {
           </div>
         ))}
       </dl>
-      <p className="text-[12px] text-muted">Perda por “scalloping” (tom entre duas linhas): {stats.scallop.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} dB. Valores calculados nesta página a partir das mesmas fórmulas usadas pelo PySQA.</p>
+      <p className="text-[12px] text-muted">{en ? 'Scalloping loss (tone between two lines)' : 'Perda por “scalloping” (tom entre duas linhas)'}: {stats.scallop.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} dB. {tr('Valores calculados nesta página a partir das mesmas fórmulas usadas pelo PySQA.')}</p>
     </div>
   )
 }
@@ -160,14 +165,15 @@ export function WeightingDemo() {
 // ── Butterworth: one pass and forward-backward ────────────────────────────────
 
 export function FilterDemo() {
+  useLang((s) => s.lang)
   const [order, setOrder] = useState(4)
   const f = useMemo(() => Array.from({ length: 240 }, (_, i) => 100 * Math.pow(100, i / 239)), [])
   const one = f.map((x) => -10 * Math.log10(1 + (x / 1000) ** (2 * order)))
   return (
     <div className="flex flex-col gap-2">
       <label className="flex items-center gap-3 text-xs text-muted">
-        Ordem do filtro: <span className="text-white font-semibold tabular-nums w-4">{order}</span>
-        <input type="range" min={1} max={8} step={1} value={order} onChange={(e) => setOrder(Number(e.target.value))} className="accent-teal w-48" aria-label="Ordem do filtro Butterworth" />
+        {tr('Ordem do filtro:')} <span className="text-white font-semibold tabular-nums w-4">{order}</span>
+        <input type="range" min={1} max={8} step={1} value={order} onChange={(e) => setOrder(Number(e.target.value))} className="accent-teal w-48" aria-label={tr('Ordem do filtro Butterworth')} />
       </label>
       <Chart height={300} data={[
         line(f, one, 'Uma passada (resposta do filtro)', '#6b8aa3', { line: { color: '#6b8aa3', width: 2, dash: 'dot' } }),

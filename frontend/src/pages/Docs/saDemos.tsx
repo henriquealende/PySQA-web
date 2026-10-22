@@ -2,26 +2,29 @@ import { useMemo, useState } from 'react'
 import Plot from '../../components/Plot'
 import { AMBER, BLUE, Chart, ORANGE, TEAL, ax, line } from './demos'
 import { FRF_DEMO as D } from './demoFrf'
+import { tr as tt, trDeep } from './demoTr'
+import { useLang } from '../../i18n'
 
-const fmt = (v: number, d = 2) => v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d })
+const loc = () => (useLang.getState().lang === 'en' ? 'en-US' : 'pt-BR')
+const fmt = (v: number, d = 2) => v.toLocaleString(loc(), { minimumFractionDigits: d, maximumFractionDigits: d })
 const pct = (v: number | null | undefined) => (v == null ? '—' : fmt(v * 100, 2) + ' %')
 
 const Slider = ({ label, value, min, max, step, unit, onChange }: {
   label: string; value: number; min: number; max: number; step: number; unit: string; onChange: (v: number) => void
 }) => (
   <label className="flex items-center gap-3 text-xs text-muted">
-    <span className="w-48 shrink-0">{label}</span>
+    <span className="w-48 shrink-0">{tt(label)}</span>
     <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))}
-      className="accent-teal flex-1 min-w-24 max-w-64" aria-label={label} />
+      className="accent-teal flex-1 min-w-24 max-w-64" aria-label={tt(label)} />
     <span className="text-white font-semibold tabular-nums w-24">{fmt(value, step < 1 ? 1 : 0)} {unit}</span>
   </label>
 )
 
 const Stat = ({ title, value, hint }: { title: string; value: string; hint?: string }) => (
   <div className="rounded-lg bg-panel/60 border border-border px-3 py-2">
-    <dt className="text-muted text-[12px]">{title}</dt>
+    <dt className="text-muted text-[12px]">{tt(title)}</dt>
     <dd className="text-white text-sm font-semibold tabular-nums">{value}</dd>
-    {hint && <dd className="text-muted text-[11px] leading-snug">{hint}</dd>}
+    {hint && <dd className="text-muted text-[11px] leading-snug">{tt(hint)}</dd>}
   </div>
 )
 
@@ -53,7 +56,7 @@ export function BodeCoherenceChart() {
     xaxis3: { ...AX, type: 'log', anchor: 'y3', matches: 'x', title: { text: 'Frequência (Hz)' } },
     yaxis3: { ...AX, domain: [0, 0.23], title: { text: 'Coerência' }, range: [0, 1.05], dtick: 0.5 },
   }
-  return <div style={{ height: 420 }}><Plot data={data} layout={layout} config={{ displayModeBar: false, responsive: true }} useResizeHandler style={{ width: '100%', height: '100%' }} className="w-full h-full" /></div>
+  return <div style={{ height: 420 }}><Plot data={trDeep(data)} layout={trDeep(layout)} config={{ displayModeBar: false, responsive: true }} useResizeHandler style={{ width: '100%', height: '100%' }} className="w-full h-full" /></div>
 }
 
 // ── H1, H2 and Hv when the force is noisy too ─────────────────────────────────
@@ -134,7 +137,7 @@ export function HalfPowerDemo() {
         { x: [lo, hi], y: [1 / Math.SQRT2, 1 / Math.SQRT2], name: 'f1 e f2', type: 'scatter', mode: 'markers', marker: { size: 10, color: ORANGE } },
       ]} layout={{ xaxis: ax('Frequência (Hz)'), yaxis: ax('|H| / pico', { range: [0, 1.1] }), hovermode: 'closest' }} />
       <dl className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <Stat title="f1 e f2 (−3 dB)" value={`${fmt(lo, 1)} e ${fmt(hi, 1)} Hz`} hint="onde a curva cai a 70,7 % do pico" />
+        <Stat title="f1 e f2 (−3 dB)" value={`${fmt(lo, 1)} ${tt('e')} ${fmt(hi, 1)} Hz`} hint="onde a curva cai a 70,7 % do pico" />
         <Stat title="Largura Δf" value={`${fmt(hi - lo, 2)} Hz`} />
         <Stat title="ζ estimado" value={pct(est)} hint="Δf / (2·fn)" />
         <Stat title="Erro" value={`${fmt((est / zeta - 1) * 100, 1)} %`} hint="pequeno com pouco amortecimento" />
@@ -182,8 +185,8 @@ export function ModesCheckTable() {
       <table className="w-full text-[13px] border-collapse">
         <thead>
           <tr className="text-muted border-b border-border">
-            <th className={th}>Modo</th><th className={th}>fn verdadeira</th><th className={th}>fn estimada</th>
-            <th className={th}>ζ verdadeiro</th><th className={th}>ζ meia-potência</th><th className={th}>ζ ajuste</th><th className={th}>ζ impacto</th>
+            <th className={th}>{tt('Modo')}</th><th className={th}>{tt('fn verdadeira')}</th><th className={th}>{tt('fn estimada')}</th>
+            <th className={th}>{tt('ζ verdadeiro')}</th><th className={th}>{tt('ζ meia-potência')}</th><th className={th}>{tt('ζ ajuste')}</th><th className={th}>{tt('ζ impacto')}</th>
           </tr>
         </thead>
         <tbody>
@@ -215,14 +218,14 @@ export function ResolutionDemo() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-4 text-xs text-muted">
-        <label className="flex items-center gap-2">Taxa de amostragem
+        <label className="flex items-center gap-2">{tt('Taxa de amostragem')}
           <select value={fs} onChange={(e) => setFs(Number(e.target.value))} className="bg-panel border border-field rounded px-2 py-1 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal">
-            {[1024, 2048, 4096, 8192, 16384, 48000].map((r) => <option key={r} value={r}>{r.toLocaleString('pt-BR')} Hz</option>)}
+            {[1024, 2048, 4096, 8192, 16384, 48000].map((r) => <option key={r} value={r}>{r.toLocaleString(loc())} Hz</option>)}
           </select>
         </label>
-        <label className="flex items-center gap-2">Comprimento do bloco
+        <label className="flex items-center gap-2">{tt('Comprimento do bloco')}
           <select value={block} onChange={(e) => setBlock(Number(e.target.value))} className="bg-panel border border-field rounded px-2 py-1 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal">
-            {[1024, 2048, 4096, 8192, 16384, 32768, 65536].map((b) => <option key={b} value={b}>{b.toLocaleString('pt-BR')} amostras</option>)}
+            {[1024, 2048, 4096, 8192, 16384, 32768, 65536].map((b) => <option key={b} value={b}>{b.toLocaleString(loc())} {tt('amostras')}</option>)}
           </select>
         </label>
       </div>
@@ -230,7 +233,7 @@ export function ResolutionDemo() {
       <dl className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Stat title="Resolução Δf" value={`${fmt(df, 3)} Hz`} hint="fs / N: distância entre linhas" />
         <Stat title="Duração do bloco" value={`${fmt(T, 2)} s`} hint="N / fs: precisa abrigar a resposta" />
-        <Stat title="Médias (50 % de sobreposição)" value={avgs.toLocaleString('pt-BR')} hint="mais médias, menos ruído" />
+        <Stat title="Médias (50 % de sobreposição)" value={avgs.toLocaleString(loc())} hint="mais médias, menos ruído" />
         <Stat title="Redução do ruído" value={avgs > 0 ? `${fmt(100 / Math.sqrt(avgs), 0)} %` : '—'} hint="1/√médias, em amplitude" />
       </dl>
     </div>

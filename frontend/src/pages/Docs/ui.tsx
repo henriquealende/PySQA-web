@@ -2,6 +2,7 @@ import { createContext, ReactNode, useContext } from 'react'
 import { Info, Lightbulb, TriangleAlert } from 'lucide-react'
 import clsx from 'clsx'
 import { REFS, sortRefs } from './refs'
+import { useLang } from '../../i18n'
 
 /** The references cited so far on the page being drawn; filled by <Cite>, listed by <Bibliography>. */
 export const CiteContext = createContext<Set<string>>(new Set())
@@ -79,15 +80,17 @@ export function Eq({ n, children, where }: { n: number; children: ReactNode; whe
 }
 
 /** Figure with a numbered title above and the source below (ABNT NBR 14724). */
-export function Figure({ n, title, source = 'PySQA (cálculo próprio).', children, note }: {
+export function Figure({ n, title, source, children, note }: {
   n: number; title: string; source?: ReactNode; children: ReactNode; note?: ReactNode
 }) {
+  const en = useLang((s) => s.lang) === 'en'
+  source ??= en ? 'PySQA (own calculation).' : 'PySQA (cálculo próprio).'
   return (
     <figure className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4 max-w-[860px]">
-      <figcaption className="text-[13px] text-white font-medium">Figura {n} – {title}</figcaption>
+      <figcaption className="text-[13px] text-white font-medium">{en ? 'Figure' : 'Figura'} {n} – {title}</figcaption>
       {children}
       {note && <p className="text-[12px] text-muted leading-relaxed">{note}</p>}
-      <p className="text-[12px] text-muted">Fonte: {source}</p>
+      <p className="text-[12px] text-muted">{en ? 'Source' : 'Fonte'}: {source}</p>
     </figure>
   )
 }

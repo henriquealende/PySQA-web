@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { BookOpen, Hammer } from 'lucide-react'
 import clsx from 'clsx'
-import { CiteContext, Callout } from './ui'
+import { CiteContext } from './ui'
 import { DATA_ACQUISITION_TOC, POST_PROCESSING_TOC, SYSTEM_ANALYSIS_TOC } from './tocs'
 import { ABOUT_TOC } from './AboutDoc'
 import { useLang, useT } from '../../i18n'
@@ -11,6 +11,9 @@ const AboutDoc = lazy(() => import('./AboutDoc'))
 const PostProcessingDoc = lazy(() => import('./PostProcessingDoc'))
 const DataAcquisitionDoc = lazy(() => import('./DataAcquisitionDoc'))
 const SystemAnalysisDoc = lazy(() => import('./SystemAnalysisDoc'))
+const PostProcessingDocEn = lazy(() => import('./PostProcessingDocEn'))
+const DataAcquisitionDocEn = lazy(() => import('./DataAcquisitionDocEn'))
+const SystemAnalysisDocEn = lazy(() => import('./SystemAnalysisDocEn'))
 
 const PAGES = [
   { key: 'sobre',            label: 'docs.about',       ready: true },
@@ -19,7 +22,7 @@ const PAGES = [
   { key: 'system-analysis',  label: 'nav.sysAnalysis',  ready: true },
 ] as const
 
-const TOCS: Record<string, { id: string; title: string }[]> = {
+const TOCS: Record<string, Record<'pt' | 'en', { id: string; title: string }[]>> = {
   'post-processing': POST_PROCESSING_TOC,
   'data-acquisition': DATA_ACQUISITION_TOC,
   'system-analysis': SYSTEM_ANALYSIS_TOC,
@@ -34,7 +37,7 @@ export default function DocsPage() {
   used.current.clear()                       // citations are collected again on every render of the page
   const scroller = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState('')
-  const toc = page === 'sobre' ? ABOUT_TOC[lang] : (TOCS[page] ?? [])
+  const toc = page === 'sobre' ? ABOUT_TOC[lang] : (TOCS[page]?.[lang] ?? [])
 
   useEffect(() => { scroller.current?.scrollTo({ top: 0 }) }, [page])
 
@@ -76,10 +79,11 @@ export default function DocsPage() {
     </a>
   ))
 
+  const en = lang === 'en'
   const body = page === 'sobre' ? <AboutDoc />
-    : page === 'data-acquisition' ? <DataAcquisitionDoc />
-    : page === 'system-analysis' ? <SystemAnalysisDoc />
-    : <PostProcessingDoc />
+    : page === 'data-acquisition' ? (en ? <DataAcquisitionDocEn /> : <DataAcquisitionDoc />)
+    : page === 'system-analysis' ? (en ? <SystemAnalysisDocEn /> : <SystemAnalysisDoc />)
+    : (en ? <PostProcessingDocEn /> : <PostProcessingDoc />)
 
   return (
     <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden text-white">
@@ -122,9 +126,6 @@ export default function DocsPage() {
       {/* ── Content ── */}
       <section ref={scroller} aria-label={t(current.label)} className="flex-1 min-w-0 lg:overflow-y-auto">
         <div className="px-4 py-6 lg:px-10 max-w-[960px] flex flex-col gap-4">
-          {lang === 'en' && page !== 'sobre' && (
-            <Callout kind="info" title={t('docs.enNoticeTitle')}>{t('docs.enNotice')}</Callout>
-          )}
           {current.ready ? (
             <CiteContext.Provider value={used.current}>
               <Suspense fallback={<p className="text-xs text-teal animate-pulse">{t('docs.loading')}</p>}>
