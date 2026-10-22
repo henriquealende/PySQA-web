@@ -16,6 +16,7 @@ export interface StoredTake {
   device: string
   capturedAt: string      // ISO date
   mode: string
+  calibrationPa?: number | null   // Pa at full scale, when the microphone was calibrated
 }
 
 let dbPromise: Promise<IDBDatabase | null> | null = null

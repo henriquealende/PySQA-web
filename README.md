@@ -220,6 +220,9 @@ PySQA web/
 | Export WAV / XLSX / CSV | Done |
 | Audio playback (Web Audio API) | Done |
 | Lossless WAV playback and download (the upload is kept as sent; processed files are 32-bit float) | Done |
+| Data Acquisition: microphone calibration wizard (acoustic calibrator or typed sensitivity), carried into Post-Processing | Done |
+| Data Acquisition: live sound level meter (dB SPL or dB(A), Leq, Max, Peak) | Done |
+| Data Acquisition: exact fixed duration, silence stop and level trigger (counted in samples inside the AudioWorklet) | Done |
 
 ---
 

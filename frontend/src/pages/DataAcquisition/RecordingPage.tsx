@@ -16,7 +16,12 @@ import {
   CheckCircle, XCircle, AlertTriangle,
 } from 'lucide-react'
 import { useStore } from '../../store/useStore'
-import { uploadFiles } from '../../api/audioApi'
+import { uploadFiles, setCalibration as apiSetCalibration } from '../../api/audioApi'
+import { deviceKeys as micDeviceKeys, getCalibration, removeCalibration, sensitivityFromPa } from '../../api/micCalibration'
+import type { MicCalibration } from '../../api/micCalibration'
+import SplMeter, { levelBus } from './SplMeter'
+import CalibrationWizard from './CalibrationWizard'
+import { RECORDER_WORKLET_URL } from './worklet'
 import { toast } from '../../store/useToast'
 import { saveTake, deleteTake, loadTakes } from '../../api/recordingsStore'
 import { useNavigate } from 'react-router-dom'
@@ -27,6 +32,7 @@ interface DeviceInfo { deviceId: string; label: string }
 interface Recording  {
   id: string; name: string; blob: Blob; durationSec: number; url: string
   bitDepth: number; sr: number; device: string; capturedAt: string; mode: string
+  calibrationPa?: number | null      // Pa at full scale, when the microphone was calibrated
 }
 type CaptureMode = 'immediate' | 'triggered'
 type DurMode     = 'free' | 'fixed'
@@ -607,7 +613,7 @@ function WorkletBadge({ active }: { active: boolean }) {
 const MAX_SR = 96000
 
 export default function RecordingPage({ active = true }: { active?: boolean }) {
-  const { sessionId, addFiles } = useStore()
+  const { sessionId, addFiles, setCalibration: setFileCalibration } = useStore()
   const navigate = useNavigate()
 
   // Device / basic settings
@@ -665,6 +671,10 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
   const [deleteConfId, setDeleteConfId] = useState<string|null>(null)
   const [recName,      setRecName]      = useState('')
 
+  // Calibration of the selected microphone (kept in this browser) and its dialog
+  const [cal,          setCal]          = useState<MicCalibration | null>(null)
+  const [wizardOpen,   setWizardOpen]   = useState(false)
+
   // Audio refs
   const streamRef      = useRef<MediaStream|null>(null)
   const audioCtxRef    = useRef<AudioContext|null>(null)
@@ -701,6 +711,10 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
   const overloadDbRef  = useRef<number>(-6)
   const selectedDevRef = useRef<string>('default')
   const captureModeRef = useRef<CaptureMode>('immediate')
+  const calRef         = useRef<MicCalibration | null>(null)
+  const finalizedRef   = useRef<boolean>(false)                    // a take is turned into a recording once
+  const stopFallbackRef = useRef<ReturnType<typeof setTimeout>|null>(null)
+  const workletEvents  = useRef<{ stopped: (m: any) => void; triggered: (m: any) => void }>({ stopped: () => {}, triggered: () => {} })
 
   useEffect(() => { recNameRef.current   = recName },     [recName])
   useEffect(() => { recStateRef.current  = recState },    [recState])
@@ -708,6 +722,15 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
   useEffect(() => { overloadDbRef.current= overloadDb },  [overloadDb])
   useEffect(() => { selectedDevRef.current = selectedDev }, [selectedDev])
   useEffect(() => { captureModeRef.current = captureMode }, [captureMode])
+
+  // The calibration belongs to the selected microphone
+  const devKeys = micDeviceKeys(devices, selectedDev)
+  const devKeysText = devKeys.join('|')
+  useEffect(() => {
+    const c = getCalibration(devKeys)
+    setCal(c); calRef.current = c
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devKeysText])
 
   // ── Takes kept in this browser ──────────────────────────────────────────────
   // Accepted recordings are saved in IndexedDB, so leaving the page or reloading does not lose them.
@@ -871,7 +894,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
 
       let useWorklet = false
       try {
-        await ctx.audioWorklet.addModule('/recorder-processor.js')
+        await ctx.audioWorklet.addModule(RECORDER_WORKLET_URL)
         const wn = new AudioWorkletNode(ctx, 'recorder-processor', {
           processorOptions: { preRollSec: trigPreRoll },
           channelCount: 1, channelCountMode: 'explicit',
@@ -891,6 +914,11 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
               wavePosRef.current++
             }
           } else if (msg.type === 'level') {
+            levelBus.emit(msg)
+            // While recording the worklet says how many samples it has kept: the clock follows the audio, not a timer
+            if (msg.recording && recStateRef.current === 'recording') {
+              setElapsed(Math.floor(msg.recorded / (audioCtxRef.current?.sampleRate ?? sampleRate)))
+            }
             if (msg.peak >= 1.0) handleClip()
             if (overloadOnRef.current && recStateRef.current === 'recording') {
               const thresh = dbToLinear(overloadDbRef.current)
@@ -899,6 +927,10 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
                 discardCurrentRecording()
               }
             }
+          } else if (msg.type === 'stopped') {
+            workletEvents.current.stopped(msg)
+          } else if (msg.type === 'triggered') {
+            workletEvents.current.triggered(msg)
           }
         }
         useWorklet = true
@@ -912,13 +944,24 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
 
   // ── Start recording ───────────────────────────────────────────────────────────
 
+  // With the AudioWorklet the take is controlled where the samples are, so its length and its stops are
+  // exact. These are what it is told: the length in samples and the runs of quiet that end a take.
+  const maxSamplesFor = (sr: number) => (durMode === 'fixed' && durSeconds > 0 ? Math.round(durSeconds * sr) : 0)
+  const stopRules = (sr: number) => (
+    silenceStop ? [{ thresh: dbToLinear(-50), samples: Math.round(silenceDur * sr), reason: 'silence' }] : []
+  )
+
   const startRecording = () => {
     startTimeRef.current = Date.now()
     pcmChunksRef.current = []; mediaChunksRef.current = []
+    finalizedRef.current = false
     setElapsed(0); setRecState('recording')
 
     if (workletNodeRef.current) {
-      workletNodeRef.current.port.postMessage({ type: 'start' })
+      // Starts from this moment (no audio from before the button), for exactly the length asked
+      const sr = audioCtxRef.current?.sampleRate ?? sampleRate
+      workletNodeRef.current.port.postMessage({ type: 'start', preRoll: false, maxSamples: maxSamplesFor(sr), rules: stopRules(sr) })
+      return
     } else {
       const stream = streamRef.current!
       const mimeType = ['audio/webm;codecs=pcm','audio/webm','audio/ogg','audio/mp4']
@@ -950,8 +993,9 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
     if (silPollRef.current) { clearInterval(silPollRef.current); silPollRef.current = null }
     setRecState('busy')
     if (workletNodeRef.current) {
+      // The worklet answers 'stopped' right behind its last chunk; if it never does, use what has arrived
       workletNodeRef.current.port.postMessage({ type: 'stop' })
-      setTimeout(() => finalizeWorklet(), 120)
+      stopFallbackRef.current = setTimeout(() => { void finalizeWorklet() }, 1500)
     } else if (mediaRecRef.current?.state === 'recording') {
       mediaRecRef.current.stop()
     } else {
@@ -988,6 +1032,9 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
   // ── Finalize: Worklet path ────────────────────────────────────────────────────
 
   const finalizeWorklet = async () => {
+    if (stopFallbackRef.current) { clearTimeout(stopFallbackRef.current); stopFallbackRef.current = null }
+    if (finalizedRef.current) return
+    finalizedRef.current = true
     const chunks = pcmChunksRef.current
     const totalLen = chunks.reduce((s,c)=>s+c.length, 0)
     if (totalLen === 0) { stopStream(); setRecState('idle'); return }
@@ -1019,14 +1066,14 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
     const wavBuf  = bitDepth===32 ? encodeWAV32(pcm,sr) : encodeWAV16(pcm,sr)
     const wavBlob = new Blob([wavBuf], { type:'audio/wav' })
     const url     = URL.createObjectURL(wavBlob)
-    const durSec  = Math.floor((Date.now()-startTimeRef.current)/1000)
+    const durSec  = Math.round(pcm.length / sr)       // counted in samples, not by the clock
     const rawName = recNameRef.current.trim()
     const name    = rawName ? `${rawName}.wav` : `Recording_${new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')}.wav`
     const devLabel = devices.find(d=>d.deviceId===selectedDevRef.current)?.label ?? selectedDevRef.current
     const rec: Recording = {
       id: crypto.randomUUID(), name, blob: wavBlob, durationSec: durSec, url,
       bitDepth, sr, device: devLabel, capturedAt: new Date().toISOString(),
-      mode: captureModeRef.current,
+      mode: captureModeRef.current, calibrationPa: calRef.current?.calibrationPa ?? null,
     }
     setPendingRec(rec)
     stopStream()
@@ -1053,7 +1100,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
     const rec: Recording = {
       id: crypto.randomUUID(), name, blob: wavBlob, durationSec: durSec, url,
       bitDepth, sr, device: devLabel, capturedAt: new Date().toISOString(),
-      mode: `${takes.length}-take average`,
+      mode: `${takes.length}-take average`, calibrationPa: calRef.current?.calibrationPa ?? null,
     }
     setPendingRec(rec); pendingPcmRef.current = { pcm: avg, sr }
     stopStream(); setRecState('reviewing')
@@ -1064,7 +1111,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
     setRecordings(prev => [...prev, rec])
     saveTake({
       id: rec.id, name: rec.name, blob: rec.blob, durationSec: rec.durationSec, bitDepth: rec.bitDepth,
-      sr: rec.sr, device: rec.device, capturedAt: rec.capturedAt, mode: rec.mode,
+      sr: rec.sr, device: rec.device, capturedAt: rec.capturedAt, mode: rec.mode, calibrationPa: rec.calibrationPa ?? null,
     }).then(ok => {
       if (!ok) toast.info("Couldn't keep a copy of this recording in the browser: send it to Post-Processing or download it before leaving.")
     })
@@ -1150,7 +1197,20 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
   const startWaiting = () => {
     if (!analyser) return
     setRecState('waiting')
-    workletNodeRef.current?.port.postMessage({ type:'config', preRollSec: trigPreRoll })
+    const node = workletNodeRef.current
+    if (node) {
+      // The worklet watches the level itself and starts the take on the very block that crosses the threshold,
+      // with exactly the pre-roll asked for in front of it
+      const sr = audioCtxRef.current?.sampleRate ?? sampleRate
+      const thresh = dbToLinear(trigThresh)
+      pcmChunksRef.current = []; finalizedRef.current = false
+      node.port.postMessage({ type: 'config', preRollSec: trigPreRoll })
+      node.port.postMessage({
+        type: 'trigger', thresh, edge: trigEdge, maxSamples: maxSamplesFor(sr),
+        rules: [...stopRules(sr), { thresh, samples: Math.round(trigHold * sr), reason: 'hold' }],
+      })
+      return
+    }
     const threshLin = dbToLinear(trigThresh)
     let wasAbove = false; let holdSince = 0
 
@@ -1181,6 +1241,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
   }
 
   const cancelWaiting = () => {
+    workletNodeRef.current?.port.postMessage({ type: 'trigger-cancel' })
     if (trigPollRef.current){clearInterval(trigPollRef.current);trigPollRef.current=null}
     stopStream(); setRecState('idle')
   }
@@ -1204,6 +1265,9 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         `# Bit Depth: ${rec.bitDepth}`,
         `# Duration: ${rec.durationSec} s`,
         `# Samples: ${pcm.length}`,
+        rec.calibrationPa
+          ? `# Calibration: ${rec.calibrationPa.toPrecision(6)} Pa at full scale (${sensitivityFromPa(rec.calibrationPa).toFixed(3)} mV/Pa for 1 V); the amplitudes below are in full scale`
+          : '# Calibration: none (amplitude in full scale)',
         step>1 ? `# (decimated ${step}x for export, ${Math.ceil(pcm.length/step)} rows)` : '',
         'Time (s),Amplitude',
       ].filter(Boolean)
@@ -1238,7 +1302,18 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
     setSendingId(rec.id)
     try {
       const uploaded = await uploadFiles(sessionId, [new File([rec.blob], rec.name, {type:'audio/wav'})])
-      addFiles(uploaded); toast.success(`"${rec.name}" → Post-Processing`); navigate('/post-processing')
+      addFiles(uploaded)
+      // A take recorded with a calibrated microphone arrives calibrated
+      let note = ''
+      if (rec.calibrationPa && uploaded[0]) {
+        const sens = sensitivityFromPa(rec.calibrationPa)
+        try {
+          await apiSetCalibration(sessionId, uploaded[0].audio_id, sens)
+          setFileCalibration(uploaded[0].audio_id, sens)
+          note = ` (calibrated, ${sens.toFixed(1)} mV/Pa)`
+        } catch (e: any) { toast.error('Sent, but the calibration could not be applied: ' + e.message) }
+      }
+      toast.success(`"${rec.name}" → Post-Processing${note}`); navigate('/post-processing')
     } catch(e:any) { toast.error('Send failed: '+e.message) }
     finally { setSendingId(null) }
   }
@@ -1252,6 +1327,26 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
     setDeleteConfId(null)
     void deleteTake(id)
     if (playingId===id) { audioElRef.current?.pause(); setPlayingId(null) }
+  }
+
+  // What the worklet reports: a take that ended by itself (time, silence or hold), or a trigger that fired
+  workletEvents.current = {
+    stopped: (m) => {
+      if (finalizedRef.current) return                                        // this take is already being kept
+      if (!['recording', 'busy'].includes(recStateRef.current)) return       // discarded or cancelled meanwhile
+      if (m.reason === 'duration') toast.info(`Duration ${fmtTime(durSeconds)} reached`)
+      else if (m.reason === 'silence') toast.info(`Silence for ${silenceDur}s — stopping`)
+      else if (m.reason === 'hold') toast.info(`${trigHold}s of quiet — stopping`)
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
+      setRecState('busy')
+      void finalizeWorklet()
+    },
+    triggered: () => {
+      toast.info('Trigger fired — recording')
+      finalizedRef.current = false
+      startTimeRef.current = Date.now()
+      setElapsed(0); setRecState('recording')
+    },
   }
 
   // ── Derived state ─────────────────────────────────────────────────────────────
@@ -1355,6 +1450,9 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             <WorkletBadge active={workletActive}/>
           </div>
         </div>
+        {analyser && (
+          <SplMeter calibrationPa={cal?.calibrationPa ?? null} workletActive={workletActive} recording={isRecording} />
+        )}
         {isRecording && durMode==='fixed' && (
           <div className="h-1 bg-panel rounded overflow-hidden">
             <div className="h-full bg-orange transition-all" style={{width:`${Math.min(100,(elapsed/durSeconds)*100)}%`}}/>
@@ -1519,6 +1617,33 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
           )}
         </div>
 
+        {/* Microphone calibration */}
+        <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded border border-border/50">
+          <span className="text-xs font-semibold text-muted uppercase tracking-wider">Microphone calibration</span>
+          {cal ? (
+            <div className="flex items-center gap-2 flex-wrap text-xs">
+              <CheckCircle size={13} className="text-teal shrink-0"/>
+              <span className="text-white">
+                {cal.sensitivityMvPa.toFixed(2)} mV/Pa
+                <span className="text-muted">
+                  {cal.source === 'calibrator' ? ` · calibrator ${cal.levelDb} dB at ${cal.freqHz ? Math.round(cal.freqHz) : '?'} Hz` : ' · typed in'}
+                  {' · '}{new Date(cal.at).toLocaleDateString()}
+                </span>
+              </span>
+              <button onClick={()=>setWizardOpen(true)} disabled={isActive}
+                className="px-2 py-0.5 rounded border border-border text-muted hover:text-white disabled:opacity-50 transition-colors">Recalibrate</button>
+              <button onClick={()=>{ removeCalibration(devKeys); setCal(null); calRef.current = null }} disabled={isActive}
+                className="px-2 py-0.5 rounded text-muted hover:text-orange disabled:opacity-50 transition-colors">Remove</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap text-xs">
+              <span className="text-muted">Not calibrated: levels are in dBFS. Calibrate to read dB SPL, and to send recordings to Post-Processing already calibrated.</span>
+              <button onClick={()=>setWizardOpen(true)} disabled={isActive}
+                className="px-3 py-1 rounded bg-teal/20 text-teal font-medium hover:bg-teal/30 disabled:opacity-50 transition-colors">Calibrate…</button>
+            </div>
+          )}
+        </div>
+
         {/* Signal protection */}
         <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded border border-border/50">
           <span className="text-xs font-semibold text-muted uppercase tracking-wider">Signal Protection</span>
@@ -1623,7 +1748,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             <div className="flex flex-col flex-1 min-w-0">
               <span className="text-sm truncate">{pendingRec.name}</span>
               <span className="text-xs text-muted">
-                {fmtTime(pendingRec.durationSec)} · {pendingRec.bitDepth}-bit · {(pendingRec.sr/1000).toFixed(1)} kHz · {pendingRec.device}
+                {fmtTime(pendingRec.durationSec)} · {pendingRec.bitDepth}-bit · {(pendingRec.sr/1000).toFixed(1)} kHz · {pendingRec.device}{pendingRec.calibrationPa ? ' · calibrated' : ''}
               </span>
             </div>
           </div>
@@ -1685,7 +1810,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
                   onClick={()=>selectRecording(rec)} title="Click to view waveform & spectrum">
                   <span className="text-sm truncate">{rec.name}</span>
                   <span className="text-xs text-muted truncate">
-                    {fmtTime(rec.durationSec)} · {rec.bitDepth}-bit · {(rec.sr/1000).toFixed(1)} kHz · {rec.device}
+                    {fmtTime(rec.durationSec)} · {rec.bitDepth}-bit · {(rec.sr/1000).toFixed(1)} kHz · {rec.device}{rec.calibrationPa ? ' · calibrated' : ''}
                   </span>
                 </div>
 
@@ -1763,7 +1888,25 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         <br/><br/>
         <strong className="text-white">Trigger:</strong> ↑ Rising fires when the signal rises above the threshold;
         ↓ Falling fires when it drops below. Pre-roll captures audio before the trigger (via AudioWorklet).
+        <br/><br/>
+        <strong className="text-white">Calibration and level:</strong> calibrate the microphone in Settings, with an acoustic calibrator or
+        the sensitivity from its data sheet, and the meter reads dB SPL or dB(A). Recordings made afterwards carry the calibration into Post-Processing.
       </div>
+
+      {wizardOpen && (
+        <CalibrationWizard
+          deviceId={selectedDev}
+          deviceKeys={devKeys}
+          deviceLabel={devices.find(d=>d.deviceId===selectedDev)?.label ?? 'Default microphone'}
+          sampleRate={sampleRate}
+          onClose={()=>setWizardOpen(false)}
+          onSaved={(c)=>{
+            setCal(c); calRef.current = c; setWizardOpen(false)
+            listDevices().catch(()=>{})       // the microphone's real name can be read now
+            toast.success(`Microphone calibrated: ${c.sensitivityMvPa.toFixed(1)} mV/Pa`)
+          }}
+        />
+      )}
 
     </div>
   )
