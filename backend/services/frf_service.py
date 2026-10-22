@@ -5,7 +5,8 @@ Everything here is plain numpy/scipy so it can be tested without a server. Conve
 * Cross spectrum Sxy = E[conj(X) Y], with X the excitation (input) and Y the response (output).
 * H1 = Sxy / Sxx   (noise on the response)
   H2 = Syy / Syx   (noise on the excitation; Syx = conj(Sxy))
-  Hv = total least squares, from the larger eigenvector of [[Sxx, Syx], [Sxy, Syy]]
+  Hv = total least squares, from the larger eigenvector of [[Sxx, Syx], [Sxy, Syy]], with the output scaled
+       by the square root of the ratio of the mean powers so that the units of the two channels do not matter
 * Coherence = |Sxy|^2 / (Sxx Syy).
 * The DC bin is dropped from every result (it cannot be drawn on a log axis, and converting between
   acceleration, velocity and displacement divides by jw).
@@ -332,8 +333,16 @@ def estimate(Sxx: np.ndarray, Syy: np.ndarray, Sxy: np.ndarray, estimator: str) 
     if est == "H2":
         return Syy / np.where(np.abs(Sxy) < tiny, tiny, np.conj(Sxy))
     if est == "HV":
-        lam = 0.5 * (Sxx + Syy) + np.sqrt((0.5 * (Sxx - Syy)) ** 2 + np.abs(Sxy) ** 2)
-        return (lam - Sxx) / np.where(np.abs(Sxy) < tiny, tiny, np.conj(Sxy))
+        # Total least squares. The two channels have different units (N and m/s2), so they are first brought to the
+        # same scale: the output is divided by the square root of the ratio of the mean powers. Without this, the
+        # larger of the two simply wins and Hv collapses onto H2.
+        kappa = float(np.sum(Syy) / max(float(np.sum(Sxx)), tiny))
+        if kappa <= 0:
+            return Sxy / np.maximum(Sxx, tiny)
+        s = np.sqrt(kappa)
+        syy, sxy = Syy / kappa, Sxy / s
+        lam = 0.5 * (Sxx + syy) + np.sqrt((0.5 * (Sxx - syy)) ** 2 + np.abs(sxy) ** 2)
+        return s * (lam - Sxx) / np.where(np.abs(sxy) < tiny, tiny, np.conj(sxy))
     raise FrfError(f"Unknown estimator '{estimator}'.")
 
 

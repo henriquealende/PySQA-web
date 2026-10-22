@@ -95,6 +95,10 @@ tdb = 20 * np.log10(abs(truth(fd[pk])))
 check("input noise lowers H1 at a resonance", res["H1"][pk] < tdb - 0.05, f"H1 {res['H1'][pk]:.2f} truth {tdb:.2f}")
 check("H2 is above H1 with input noise", res["H2"][pk] > res["H1"][pk])
 check("Hv lies between H1 and H2", res["H1"][pk] - 1e-6 <= res["HV"][pk] <= res["H2"][pk] + 1e-6)
+# Hv must not depend on the units of the channels: a response in other units gives the same curve, scaled
+e5, rs5 = put("s6", xn, [y * 1000.0])
+hv_big = np.array(frf.analyse("s6", dict(body, excitation=e5, responses=rs5, estimator="HV", modes=None))["responses"][0]["mag_db"])
+check("Hv does not depend on the units of the response (x1000 gives +60 dB exactly)", np.max(np.abs((hv_big - 60.0) - res["HV"])) < 1e-6, f"{np.max(np.abs((hv_big - 60.0) - res['HV'])):.2e} dB")
 
 # unit conversion: show an acceleration FRF as receptance
 rd = frf.analyse("s1", dict(body, show_as="displacement", modes=None))
