@@ -13,7 +13,7 @@ from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 
 import numpy as np
 from scipy.io import wavfile
-from scipy.signal import spectrogram as scipy_spectrogram, hilbert
+from scipy.signal import spectrogram as scipy_spectrogram, hilbert, oaconvolve
 
 from services.session_store import AudioEntry, audio_ram_mb, new_audio_id, persist_session, usable_audio_id
 from utils import limits
@@ -420,7 +420,7 @@ def compute_envelope(
     if smoothing_ms > 0:
         win_samples = max(1, int(smoothing_ms * 1e-3 * sr))
         kernel = np.ones(win_samples) / win_samples
-        envelope = np.convolve(envelope, kernel, mode="same")
+        envelope = oaconvolve(envelope, kernel, mode="same")   # FFT-based, same result as np.convolve
 
     # Optional low-pass filter on the envelope
     if lpf_hz is not None and 0 < lpf_hz < sr / 2 * 0.98:
