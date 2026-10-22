@@ -1,0 +1,19 @@
+# dev-tests
+
+Checks used while developing PySQA-Web. They are not part of the app.
+
+Server checks (each starts its own server on a port 83xx with a temporary session folder, so
+`backend/tmp_sessions` is never touched). Run them from the `backend` folder with its virtualenv:
+
+```
+cd backend
+.venv\Scripts\python.exe ..\dev-tests\test_jobs.py
+```
+
+`test_jobs`, `test_fidelity`, `test_section`, `test_limits`, `test_ids`, `test_export`: 149 checks in total,
+all of them must end with `FAILS: 0 []`.
+
+Other files:
+- `test_aweight.js` (Node): the A-weighting filter of the recorder against IEC 61672.
+- `docker-test/`, `drive.py`, `stress.py`: reproduce the Render plan (512 MB, 0.5 CPU) in Docker and measure memory.
+- `edits.py`: exact-once text replacement; the Edit tool has truncated files on the OneDrive folder.
