@@ -18,7 +18,7 @@ function DaqDot({ state }: { state: 'idle' | 'monitoring' | 'recording' }) {
   if (state === 'idle') return null
   return (
     <span
-      className={clsx('w-1.5 h-1.5 rounded-full animate-pulse', state === 'recording' ? 'bg-orange' : 'bg-teal')}
+      className={clsx('w-1.5 h-1.5 rounded-full animate-pulse', state === 'recording' ? 'bg-orange' : 'bg-amber')}
       title={state === 'recording' ? 'Recording' : 'Microphone is open'}
     />
   )
@@ -42,31 +42,33 @@ export default function Layout() {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-dark">
       {/* ── Top bar ──────────────────────────────────────────────────── */}
-      <header className="flex items-center gap-3 px-4 h-12 bg-surface border-b border-border shrink-0">
-        {/* Logo */}
-        <img
-          src="/pysqa_logo.png"
-          alt="PySQA"
-          className="h-7 w-7 object-contain shrink-0"
-        />
-        <span className="font-bold text-teal tracking-wide text-sm hidden sm:block">PySQA</span>
+      <header className="flex items-center h-14 bg-surface border-b border-border shrink-0">
+        {/* Logo: this block is as wide as the settings column below it, so the tabs start where the results start */}
+        <div className="flex items-center gap-3 px-4 h-full lg:w-80 lg:shrink-0 lg:border-r lg:border-border">
+          <img
+            src="/pysqa_logo.png"
+            alt="PySQA"
+            className="h-8 w-8 object-contain shrink-0"
+          />
+          <span className="font-bold text-teal tracking-wide text-base hidden sm:block">PySQA</span>
+        </div>
 
         {/* Desktop nav */}
-        <nav className="hidden sm:flex gap-1 ml-2">
+        <nav className="hidden sm:flex gap-2 px-3" aria-label="Pages">
           {NAV.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
                 clsx(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors',
+                  'flex items-center gap-2 px-4 py-2 rounded-md border text-sm font-semibold transition-colors',
                   isActive
-                    ? 'bg-teal/20 text-teal'
-                    : 'text-muted hover:text-white hover:bg-panel'
+                    ? 'bg-teal border-teal text-dark'
+                    : 'bg-panel border-field text-white hover:border-teal hover:text-teal'
                 )
               }
             >
-              <Icon size={13} />
+              <Icon size={17} />
               {label}
               {to === '/data-acquisition' && <DaqDot state={daqState} />}
             </NavLink>
@@ -77,7 +79,7 @@ export default function Layout() {
 
         {/* Mobile hamburger */}
         <button
-          className="sm:hidden p-1.5 rounded text-muted hover:text-white hover:bg-panel transition-colors"
+          className="sm:hidden p-1.5 mr-3 rounded text-muted hover:text-white hover:bg-panel transition-colors"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
         >

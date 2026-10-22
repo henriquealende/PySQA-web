@@ -119,7 +119,7 @@ export default function PostProcessingPage() {
 
       <aside className={clsx(
         'flex flex-col gap-3 p-3 border-r border-border overflow-y-auto shrink-0 transition-transform',
-        'sm:relative sm:translate-x-0 sm:w-64',
+        'sm:relative sm:translate-x-0 sm:w-64 lg:w-80',
         'fixed top-0 left-0 h-full w-72 z-30 bg-surface sm:bg-transparent',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'
       )}>
