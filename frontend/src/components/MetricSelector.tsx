@@ -29,7 +29,7 @@ const GROUPS: Group[] = [
     label: 'Other metrics',
     items: [
       { key: 'sharpness_din',        label: 'Sharpness DIN 45692',     fullLabel: 'Sharpness DIN 45692' },
-      { key: 'fluctuation_strength', label: 'Fluctuation Strength DW', fullLabel: 'Fluctuation Strength DW' },
+      { key: 'fluctuation_strength', label: 'Fluctuation Strength', fullLabel: 'Fluctuation Strength' },
       { key: 'tonality_ecma',        label: 'Tonality ECMA-418-2',     fullLabel: 'Tonality ECMA-418-2' },
       { key: 'ipm',                  label: 'IPM',                     fullLabel: 'IPM' },
     ],

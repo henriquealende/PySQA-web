@@ -3,17 +3,21 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { BookOpen, Hammer } from 'lucide-react'
 import clsx from 'clsx'
 import { CiteContext } from './ui'
-import { POST_PROCESSING_TOC } from './tocs'
+import { DATA_ACQUISITION_TOC, POST_PROCESSING_TOC } from './tocs'
 
 const PostProcessingDoc = lazy(() => import('./PostProcessingDoc'))
+const DataAcquisitionDoc = lazy(() => import('./DataAcquisitionDoc'))
 
 const PAGES = [
-  { key: 'data-acquisition', label: 'Data Acquisition', ready: false },
+  { key: 'data-acquisition', label: 'Data Acquisition', ready: true },
   { key: 'post-processing',  label: 'Post-Processing',  ready: true },
   { key: 'system-analysis',  label: 'System Analysis',  ready: false },
 ] as const
 
-const TOCS: Record<string, { id: string; title: string }[]> = { 'post-processing': POST_PROCESSING_TOC }
+const TOCS: Record<string, { id: string; title: string }[]> = {
+  'post-processing': POST_PROCESSING_TOC,
+  'data-acquisition': DATA_ACQUISITION_TOC,
+}
 
 export default function DocsPage() {
   const { page = 'post-processing' } = useParams()
@@ -23,6 +27,8 @@ export default function DocsPage() {
   const scroller = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState('')
   const toc = TOCS[page] ?? []
+
+  useEffect(() => { scroller.current?.scrollTo({ top: 0 }) }, [page])
 
   // Highlight, in the table of contents, the section being read
   useEffect(() => {
@@ -106,7 +112,7 @@ export default function DocsPage() {
           {current.ready ? (
             <CiteContext.Provider value={used.current}>
               <Suspense fallback={<p className="text-xs text-teal animate-pulse">Carregando a documentação…</p>}>
-                <PostProcessingDoc />
+                {page === 'data-acquisition' ? <DataAcquisitionDoc /> : <PostProcessingDoc />}
               </Suspense>
             </CiteContext.Provider>
           ) : (
@@ -114,7 +120,7 @@ export default function DocsPage() {
               <Hammer size={28} className="text-amber" aria-hidden="true" />
               <h2 className="text-xl font-semibold">{current.label}: documentação em preparação</h2>
               <p className="text-sm text-slate-200 leading-relaxed">
-                Estamos documentando o PySQA página por página. A primeira é o Post-Processing; esta virá em seguida, com o mesmo formato:
+                Estamos documentando o PySQA página por página. As primeiras são o Post-Processing e a Data Acquisition; esta virá em seguida, com o mesmo formato:
                 explicação simples, demonstrações gráficas calculadas pelo próprio PySQA e referências em ABNT.
               </p>
               <Link to="/docs/post-processing" className="px-4 py-2 rounded-md bg-teal text-dark text-sm font-semibold hover:bg-teal/80 transition-colors">

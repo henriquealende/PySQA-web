@@ -11,6 +11,24 @@ export const POST_PROCESSING_TOC: { id: string; title: string }[] = [
   { id: 'lote', title: 'Análise em lote e incômodo' },
   { id: 'exportacao', title: 'Exportação' },
   { id: 'limites', title: 'Limites e boas práticas' },
+  { id: 'agradecimentos', title: 'Agradecimentos' },
   { id: 'referencias', title: 'Referências' },
 ]
 
+export const DATA_ACQUISITION_TOC: { id: string; title: string }[] = [
+  { id: 'visao-geral', title: 'Visão geral' },
+  { id: 'mapa', title: 'Mapa de recursos' },
+  { id: 'microfone', title: 'Microfone e permissão' },
+  { id: 'amostragem', title: 'Taxa, canais e bits' },
+  { id: 'duracao', title: 'Duração e parada exata' },
+  { id: 'disparo', title: 'Captura por nível (trigger)' },
+  { id: 'media', title: 'Média de vários takes' },
+  { id: 'calibracao', title: 'Calibração do microfone' },
+  { id: 'nivel', title: 'Medidores de nível' },
+  { id: 'protecao', title: 'Proteção do sinal' },
+  { id: 'ao-vivo', title: 'Gráficos ao vivo e revisão' },
+  { id: 'gravacoes', title: 'Gravações guardadas' },
+  { id: 'motor', title: 'Como a captura funciona' },
+  { id: 'limites', title: 'Limites e boas práticas' },
+  { id: 'referencias', title: 'Referências' },
+]

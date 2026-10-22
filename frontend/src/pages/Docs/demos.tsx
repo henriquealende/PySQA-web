@@ -3,7 +3,7 @@ import Plot from '../../components/Plot'
 import { DEMO } from './demoData'
 
 const AXIS = { gridcolor: '#1e2d3d', zerolinecolor: '#2b3c50', color: '#8ab4c9', linecolor: '#2b3c50' }
-const TEAL = '#50b89e', ORANGE = '#ed693b', AMBER = '#ffa94d', BLUE = '#60a5fa'
+export const TEAL = '#50b89e', ORANGE = '#ed693b', AMBER = '#ffa94d', BLUE = '#60a5fa'
 
 const BASE: any = {
   paper_bgcolor: 'transparent',
@@ -18,7 +18,7 @@ const BASE: any = {
 }
 const CONFIG = { displayModeBar: false, responsive: true }
 
-function Chart({ data, layout, height = 300 }: { data: any[]; layout?: any; height?: number }) {
+export function Chart({ data, layout, height = 300 }: { data: any[]; layout?: any; height?: number }) {
   return (
     <div style={{ height }}>
       <Plot data={data} layout={{ ...BASE, ...layout }} config={CONFIG} useResizeHandler
@@ -27,10 +27,10 @@ function Chart({ data, layout, height = 300 }: { data: any[]; layout?: any; heig
   )
 }
 
-const ax = (title: string, extra: any = {}) => ({ ...AXIS, title: { text: title }, ...extra })
-const line = (x: any[], y: any[], name: string, color = TEAL, extra: any = {}) =>
+export const ax = (title: string, extra: any = {}) => ({ ...AXIS, title: { text: title }, ...extra })
+export const line = (x: any[], y: any[], name: string, color = TEAL, extra: any = {}) =>
   ({ x, y, name, type: 'scatter', mode: 'lines', line: { color, width: 2 }, ...extra })
-const dots = (x: any[], y: any[], name: string, color = TEAL, extra: any = {}) =>
+export const dots = (x: any[], y: any[], name: string, color = TEAL, extra: any = {}) =>
   ({ x, y, name, type: 'scatter', mode: 'lines+markers', line: { color, width: 2 }, marker: { size: 7, color }, ...extra })
 
 /** One reference point of a psychoacoustic unit, drawn as a ring on the curve. */
@@ -117,10 +117,10 @@ export function WindowDemo() {
       </div>
       <dl className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[12px]">
         {[
-          ['Ganho coerente', stats.cg.toFixed(3), 'média dos pesos: quanto um tom perde de altura'],
-          ['Banda de ruído (ENBW)', `${stats.enbw.toFixed(2)} bins`, 'largura efetiva de cada linha'],
-          ['Lóbulo principal', `±${stats.nullBin.toFixed(1)} bins`, 'até o primeiro zero'],
-          ['Maior lóbulo lateral', `${stats.side.toFixed(0)} dB`, 'vazamento para linhas distantes'],
+          ['Ganho coerente', stats.cg.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }), 'média dos pesos: quanto um tom perde de altura'],
+          ['Banda de ruído (ENBW)', `${stats.enbw.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} bins`, 'largura efetiva de cada linha'],
+          ['Lóbulo principal', `±${stats.nullBin.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} bins`, 'até o primeiro zero'],
+          ['Maior lóbulo lateral', `${stats.side.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} dB`, 'vazamento para linhas distantes'],
         ].map(([t, v, d]) => (
           <div key={t} className="rounded-lg bg-panel/60 border border-border px-3 py-2">
             <dt className="text-muted">{t}</dt>
@@ -129,7 +129,7 @@ export function WindowDemo() {
           </div>
         ))}
       </dl>
-      <p className="text-[12px] text-muted">Perda por “scalloping” (tom entre duas linhas): {stats.scallop.toFixed(2)} dB. Valores calculados nesta página a partir das mesmas fórmulas usadas pelo PySQA.</p>
+      <p className="text-[12px] text-muted">Perda por “scalloping” (tom entre duas linhas): {stats.scallop.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} dB. Valores calculados nesta página a partir das mesmas fórmulas usadas pelo PySQA.</p>
     </div>
   )
 }

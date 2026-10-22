@@ -43,6 +43,11 @@ export const REFS: Record<string, Ref> = {
     entry: 'ECMA INTERNATIONAL. **ECMA-418-2**: psychoacoustic metrics for ITT equipment – Part 2: methods for describing human perception based on the Sottek Hearing Model. 4. ed. Geneva: Ecma International, 2025. Disponível em: https://ecma-international.org/wp-content/uploads/ECMA-418-2_4th_edition_june_2025.pdf. ' + ACCESS,
     url: 'https://ecma-international.org/wp-content/uploads/ECMA-418-2_4th_edition_june_2025.pdf',
   },
+  eomys: {
+    id: 'eomys', cite: 'EOMYS ENGINEERING, 2024', sort: 'EOMYS',
+    entry: 'EOMYS ENGINEERING. **MoSQITo**: modular sound quality integrated toolbox. [S. l.]: GitHub, 2024. Disponível em: https://github.com/Eomys/MoSQITo. ' + ACCESS,
+    url: 'https://github.com/Eomys/MoSQITo',
+  },
   fastl2007: {
     id: 'fastl2007', cite: 'FASTL; ZWICKER, 2007', sort: 'FASTL',
     entry: 'FASTL, H.; ZWICKER, E. **Psychoacoustics**: facts and models. 3. ed. Berlin: Springer, 2007. (Springer Series in Information Sciences, v. 22). DOI: 10.1007/978-3-540-68888-4.',
@@ -109,8 +114,12 @@ export const REFS: Record<string, Ref> = {
     id: 'sanmillan2021', cite: 'SAN MILLÁN-CASTILLO et al., 2021', sort: 'SAN MILLAN',
     entry: 'SAN MILLÁN-CASTILLO, R. *et al.* MOSQITO: an open-source and free toolbox for sound quality metrics in the industry and education. *In*: INTER-NOISE AND NOISE-CON CONGRESS AND CONFERENCE, 2021. **Proceedings** […]. [S. l.]: Institute of Noise Control Engineering, 2021.',
   },
+  silveira2024tese: {
+    id: 'silveira2024tese', cite: 'SILVEIRA, 2024', sort: 'SILVEIRA 2023',
+    entry: 'SILVEIRA, H. A. da. **Qualidade sonora aplicada na análise de sinais impulsivos de refrigeradores**. 2024. 258 f. Tese (Doutorado em Engenharia Mecânica) – Centro Tecnológico, Programa de Pós-Graduação em Engenharia Mecânica, Universidade Federal de Santa Catarina, Florianópolis, 2024.',
+  },
   silveira2024: {
-    id: 'silveira2024', cite: 'SILVEIRA et al., 2024', sort: 'SILVEIRA 2024',
+    id: 'silveira2024', cite: 'SILVEIRA et al., 2024', sort: 'SILVEIRA 2024 B',
     entry: 'SILVEIRA, H. A. da *et al.* Psychoacoustic model for detecting the sensation of impulsivity in acoustic signals from refrigerators. **Applied Acoustics**, [s. l.], v. 225, art. 110198, 2024.',
   },
   silveira2026: {
@@ -124,6 +133,24 @@ export const REFS: Record<string, Ref> = {
   traunmuller1990: {
     id: 'traunmuller1990', cite: 'TRAUNMÜLLER, 1990', sort: 'TRAUNMULLER',
     entry: 'TRAUNMÜLLER, H. Analytical expressions for the tonotopic sensory scale. **The Journal of the Acoustical Society of America**, [s. l.], v. 88, n. 1, p. 97-100, 1990.',
+  },
+  shannon1949: {
+    id: 'shannon1949', cite: 'SHANNON, 1949', sort: 'SHANNON',
+    entry: 'SHANNON, C. E. Communication in the presence of noise. **Proceedings of the IRE**, [s. l.], v. 37, n. 1, p. 10-21, jan. 1949.',
+  },
+  bendat2010: {
+    id: 'bendat2010', cite: 'BENDAT; PIERSOL, 2010', sort: 'BENDAT',
+    entry: 'BENDAT, J. S.; PIERSOL, A. G. **Random data**: analysis and measurement procedures. 4. ed. Hoboken: Wiley, 2010.',
+  },
+  w3cwebaudio: {
+    id: 'w3cwebaudio', cite: 'W3C, 2021', sort: 'WORLD WIDE WEB 2021 A',
+    entry: 'WORLD WIDE WEB CONSORTIUM. **Web Audio API**. W3C Recommendation. [S. l.]: W3C, 2021. Disponível em: https://www.w3.org/TR/webaudio/. ' + ACCESS,
+    url: 'https://www.w3.org/TR/webaudio/',
+  },
+  w3cmedia: {
+    id: 'w3cmedia', cite: 'W3C, [s. d.]', sort: 'WORLD WIDE WEB 2021 B',
+    entry: 'WORLD WIDE WEB CONSORTIUM. **Media Capture and Streams**. [S. l.]: W3C, [s. d.]. Disponível em: https://www.w3.org/TR/mediacapture-streams/. ' + ACCESS,
+    url: 'https://www.w3.org/TR/mediacapture-streams/',
   },
   virtanen2020: {
     id: 'virtanen2020', cite: 'VIRTANEN et al., 2020', sort: 'VIRTANEN',

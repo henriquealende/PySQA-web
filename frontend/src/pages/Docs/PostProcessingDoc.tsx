@@ -306,8 +306,9 @@ export default function PostProcessingDoc() {
           o círculo âmbar marca o ponto de referência, e a curva passa por ele. Esse é o primeiro teste de sanidade de qualquer implementação.
         </P>
         <P>
-          Os cálculos usam a biblioteca MoSQITo <Cite ids={['mosqito', 'sanmillan2021']} /> e, para a família ECMA-418-2, o Sottek Hearing
-          Model de Lotinga <Cite ids={['lotinga']} />, com NumPy e SciPy <Cite ids={['harris2020', 'virtanen2020']} />. Diversas métricas mostram
+          Os cálculos usam a biblioteca de código aberto MoSQITo <Cite ids={['mosqito', 'eomys', 'sanmillan2021']} />, que traz as métricas da ISO 532-1, da
+          DIN 45692, de Daniel e Weber e também as da ECMA-418-2 (modelo de Sottek). Para a família ECMA-418-2 o PySQA usa de preferência o Sottek Hearing
+          Model de Lotinga <Cite ids={['lotinga']} />, e recorre à MoSQITo quando ele não está disponível. NumPy e SciPy fazem o restante <Cite ids={['harris2020', 'virtanen2020']} />. Diversas métricas mostram
           também uma <strong>distribuição por banda crítica</strong>. A escala é a escala Bark:
         </P>
         <Figure n={8} title="Escala Bark e largura da banda crítica em função da frequência."
@@ -344,7 +345,8 @@ export default function PostProcessingDoc() {
           <P>
             Calcula a mesma sensação com o Modelo Auditivo de Sottek <Cite ids={['ecma418', 'sottek2016']} />, normalizado na ECMA-418-2. O resultado
             é dado em sone<sub>HMS</sub> e a escala de frequência é a <strong>Bark<sub>HMS</sub></strong>. O valor global é a média em potência no tempo. O PySQA
-            usa a implementação de Lotinga <Cite ids={['lotinga']} /> (ECMA-418-2:2025); se ela não estiver instalada no servidor, recorre à versão da MoSQITo.
+            usa de preferência a implementação de Lotinga <Cite ids={['lotinga']} /> (ECMA-418-2:2025); se ela não estiver disponível, recorre à implementação da
+            MoSQITo <Cite ids={['eomys']} />, que também traz o modelo.
           </P>
           <Callout kind="info">
             Os valores ISO 532-1 e ECMA-418-2 <em>não são intercambiáveis</em>: são modelos diferentes. Compare sempre dentro do mesmo método.
@@ -385,8 +387,8 @@ export default function PostProcessingDoc() {
               que não se deixa diluir por pausas. A curva por banda é a média dos instantes acima da mediana.
             </li>
             <li>
-              <strong>ECMA-418-2</strong> <Cite ids={['ecma418']} />: modelo baseado no mesmo Modelo Auditivo de Sottek; o global é o percentil 90 da curva no tempo
-              (asper<sub>HMS</sub>).
+              <strong>ECMA-418-2</strong> <Cite ids={['ecma418', 'eomys']} />: modelo baseado no mesmo Modelo Auditivo de Sottek, disponível na MoSQITo e no pacote de Lotinga; o
+              global é o percentil 90 da curva no tempo (asper<sub>HMS</sub>).
             </li>
           </UL>
         </Section>
@@ -406,7 +408,7 @@ export default function PostProcessingDoc() {
             <Cite ids={['fastl2007']} />: o sinal é dividido em 47 bandas de 0,5 Bark; em cada uma, extrai-se o envelope, mede-se o índice de
             modulação na frequência dominante (entre 0,5 e 20 Hz) e aplica-se o peso <em>1 / (f<sub>mod</sub>/4 + 4/f<sub>mod</sub>)</em>. As bandas
             são ponderadas pela energia, e uma constante calibra o ponto de referência (1 vacil). Use-a para <strong>comparar</strong> sons,
-            e não como valor absoluto normativo. O nome “DW” no seletor refere-se à família de modelos e não ao modelo de Daniel e Weber.
+            e não como valor absoluto normativo.
           </Callout>
         </Section>
 
@@ -465,7 +467,7 @@ export default function PostProcessingDoc() {
         <P>
           Duas colunas opcionais combinam métricas num único número de <strong>incômodo</strong>, e os dados necessários são adicionados automaticamente:
         </P>
-        <Eq n={4} where={<>N em sone (ISO 532-1), S em acum, R em asper (Daniel e Weber) e IPM em dB. Os coeficientes pertencem ao modelo de regressão usado pelo PySQA.</>}>
+        <Eq n={4} where={<>N em sone (ISO 532-1), S em acum, R em asper (Daniel e Weber) e IPM em dB. É uma regressão linear múltipla, ajustada a julgamentos subjetivos de incômodo, desenvolvida na tese de Silveira <Cite ids={['silveira2024tese']} />.</>}>
           Incômodo SIL = −25,95 + 10,24·N + 13,29·S + 7,75·R + 0,13·IPM
         </Eq>
         <Eq n={5} where={<>Modelo de incômodo psicoacústico de Zwicker e Fastl <Cite ids={['fastl2007']} />, com F em vacil. O PySQA usa a loudness estacionária no lugar de N<sub>5</sub> (a loudness excedida em 5 % do tempo); para sons estacionários os dois coincidem.</>}>
@@ -473,8 +475,12 @@ export default function PostProcessingDoc() {
           <span>w<sub>S</sub> = (S − 1,75) · 0,25 · log₁₀(N + 10), se S &gt; 1,75, senão 0</span><br />
           <span>w<sub>FR</sub> = 2,18 / N<sup>0,4</sup> · (0,4·F + 0,6·R)</span>
         </Eq>
-        <Callout kind="info" title="Origem dos coeficientes do SIL">
-          Os coeficientes da equação (4) vêm do modelo usado na versão desktop do PySQA. A referência primária será acrescentada aqui assim que for confirmada.
+        <Callout kind="info" title="Origem do modelo SIL">
+          O modelo vem da tese <Cite ids={['silveira2024tese']} text="(SILVEIRA, 2024)" />, em que a percepção de incômodo de ruídos de refrigeradores foi medida em testes
+          com ouvintes e relacionada às métricas Loudness, Sharpness, Roughness e MPI (o IPM deste PySQA). A tese apresenta um ajuste para sinais impulsivos
+          (R² ajustado de 0,933) e outro para sinais estacionários (R² ajustado de 0,890). Os coeficientes da equação (4) são os implementados no PySQA; para
+          reproduzir exatamente um dos ajustes publicados, consulte a Tabela 54 e a Tabela 57 da tese. O modelo foi calibrado com sons de refrigeradores: fora desse tipo
+          de fonte, trate-o como índice de comparação.
         </Callout>
       </Section>
 
@@ -500,6 +506,23 @@ export default function PostProcessingDoc() {
       </Section>
 
       {/* ── 12 ── */}
+      <Section id="agradecimentos" title="Agradecimentos">
+        <P>
+          Boa parte do que o PySQA calcula só existe porque outras pessoas decidiram compartilhar seu trabalho como código aberto. Agradecemos em especial:
+        </P>
+        <UL>
+          <li>
+            à equipe da <strong>MoSQITo</strong> (Eomys Engineering e Green Forge Coop) <Cite ids={['eomys', 'mosqito']} />, que reuniu em uma biblioteca livre as métricas
+            da ISO 532-1, DIN 45692, Daniel e Weber e ECMA-418-2 (modelo de Sottek), e a todos que contribuem com ela;
+          </li>
+          <li>
+            a <strong>Mike Lotinga</strong> <Cite ids={['lotinga']} />, pela implementação em Python do Modelo Auditivo de Sottek, e a <strong>Roland Sottek</strong> <Cite ids={['sottek2016']} />,
+            autor do modelo;
+          </li>
+          <li>às comunidades do <strong>NumPy</strong> e do <strong>SciPy</strong> <Cite ids={['harris2020', 'virtanen2020']} />.</li>
+        </UL>
+      </Section>
+
       <Section id="referencias" title="Referências">
         <Bibliography />
       </Section>
