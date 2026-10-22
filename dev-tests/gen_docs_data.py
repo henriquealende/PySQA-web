@@ -1,0 +1,131 @@
+"""Builds frontend/src/pages/Docs/demoData.ts: real results of the PySQA calculations on synthetic sounds,
+used by the charts of the documentation page.
+
+Run from the backend folder:  .venv\\Scripts\\python.exe ..\\dev-tests\\gen_docs_data.py
+Takes a few minutes (the psychoacoustic models are slow).
+"""
+import json
+import os
+import sys
+import warnings
+from pathlib import Path
+
+import numpy as np
+from scipy import signal as sps
+
+warnings.filterwarnings("ignore")
+sys.stdout.reconfigure(encoding="utf-8")
+sys.path.insert(0, os.getcwd())
+
+import services.audio_service as svc                 # noqa: E402
+from services.session_store import AudioEntry         # noqa: E402
+
+OUT = Path("../frontend/src/pages/Docs/demoData.ts")
+SR = 48000
+RNG = np.random.default_rng(7)
+
+
+def pa(spl):       # peak amplitude in Pa of a sine with this RMS level
+    return 20e-6 * 10 ** (spl / 20) * np.sqrt(2)
+
+
+def entry(x, sr, cal=None):
+    return AudioEntry(audio_id="d", name="d", sample_rate=sr, channels=1, duration_s=len(x) / sr,
+                      data=np.asarray(x, dtype="float32").reshape(-1, 1), raw_path=Path("d"), calibration_pa=cal)
+
+
+def tone(f, spl, dur, sr=SR):
+    t = np.arange(int(dur * sr)) / sr
+    return pa(spl) * np.sin(2 * np.pi * f * t)
+
+
+def am_tone(fc, fm, spl, dur, sr=SR, m=1.0):
+    t = np.arange(int(dur * sr)) / sr
+    x = (1 + m * np.sin(2 * np.pi * fm * t)) * np.sin(2 * np.pi * fc * t)
+    return x * 20e-6 * 10 ** (spl / 20) / np.sqrt(np.mean(x ** 2))      # RMS exactly at spl
+
+
+def band_noise(f_lo, f_hi, spl, dur, sr=SR):
+    x = RNG.standard_normal(int(dur * sr))
+    sos = sps.butter(8, [f_lo, f_hi], btype="band", fs=sr, output="sos")
+    y = sps.sosfilt(sos, x)
+    return y * 20e-6 * 10 ** (spl / 20) / np.sqrt(np.mean(y ** 2))
+
+
+def bark2hz(z):
+    return 1960.0 * (z + 0.53) / (26.28 - z)
+
+
+def r(v, n=3):
+    return [round(float(a), n) for a in v]
+
+
+data = {}
+print("loudness vs level")
+levels = list(range(10, 101, 10))
+data["loudnessVsLevel"] = {"spl": levels, "sone": [
+    round(svc._metric_loudness_zwk(tone(1000, s, 2.0), SR, diffuse=False, compute_time_varying=False)["global"], 3) for s in levels]}
+
+print("sharpness vs centre frequency (1 Bark wide noise, 60 dB)")
+zs = [2, 4, 6, 8.5, 11, 13, 15, 17, 19, 21]
+sharp = []
+for z in zs:
+    lo, hi = bark2hz(z - 0.5), bark2hz(z + 0.5)
+    sharp.append(round(svc._metric_sharpness(band_noise(lo, min(hi, 20000), 60, 2.0), SR)["global"], 3))
+data["sharpnessVsBark"] = {"bark": zs, "acum": sharp}
+
+print("roughness vs modulation frequency")
+fms = [10, 20, 30, 50, 70, 100, 150, 200, 300]
+data["roughnessVsFmod"] = {"fmod": fms, "asper": [
+    round(svc._metric_roughness_dw(am_tone(1000, f, 60, 1.0), SR)["global"], 4) for f in fms]}
+
+print("fluctuation strength vs modulation frequency")
+ffs = [0.5, 1, 2, 4, 8, 16, 32]
+data["fluctuationVsFmod"] = {"fmod": ffs, "vacil": [
+    round(svc._metric_fluctuation(am_tone(1000, f, 60, 8.0), SR)["global"], 4) for f in ffs]}
+
+print("tonality vs level (Sottek Hearing Model)")
+tl = [20, 40, 60, 80]
+tn = [round(svc._metric_tonality(tone(1000, s, 3.0), SR)["global"], 3) for s in tl]
+nz = [round(svc._metric_tonality(band_noise(200, 8000, s, 3.0), SR)["global"], 3) for s in tl]
+data["tonalityVsLevel"] = {"spl": tl, "tone": tn, "noise": nz}
+
+print("1/3-octave of white and pink noise")
+dur = 6.0
+white = RNG.standard_normal(int(dur * SR))
+spec = np.fft.rfft(white)
+f = np.fft.rfftfreq(len(white), 1 / SR)
+f[0] = 1
+pink = np.fft.irfft(spec / np.sqrt(f), n=len(white))
+bands = {}
+for name, x in (("white", white), ("pink", pink)):
+    x = x / np.sqrt(np.mean(x ** 2)) * 20e-6 * 10 ** (70 / 20)
+    o = svc.compute_octave_bands(entry(x, SR, cal=1.0), "Z")
+    bands[name] = [None if v is None else round(v, 2) for v in o["levels_db"]]
+data["thirdOctave"] = {"centres": [float(c) for c in o["centres_hz"]], **bands}
+
+print("envelope of an amplitude-modulated tone")
+sr2 = 8000
+t2 = np.arange(int(0.25 * sr2)) / sr2
+am = (1 + 0.8 * np.sin(2 * np.pi * 16 * t2)) * np.sin(2 * np.pi * 400 * t2)
+env = svc.compute_envelope(entry(am * 0.5, sr2), 0.0, None)
+data["envelope"] = {"t": r(env["t"], 4), "signal": r(env["signal"], 4), "envelope": r(env["envelope"], 4)}
+
+print("spectrum of two tones in noise (dB SPL)")
+t3 = np.arange(int(4 * SR)) / SR
+x3 = tone(1000, 94, 4.0) + tone(3000, 74, 4.0) + 0.002 * RNG.standard_normal(len(t3))
+sp = svc.compute_spectrum(entry(x3, SR, cal=1.0))
+data["spectrum"] = {"f": r(sp["freqs"], 1), "db": r(sp["magnitude_db"], 1)}
+
+print("spectrogram of a chirp")
+sr4 = 8000
+t4 = np.arange(int(3 * sr4)) / sr4
+chirp = 0.3 * sps.chirp(t4, 200, 3.0, 3800, method="linear")
+sg = svc.compute_spectrogram(entry(chirp, sr4), {"nfft": 256, "overlap": 50, "window": "hann", "fmax": 4000, "dyn_range": 60})
+data["spectrogram"] = {"t": r(sg["t"], 3), "f": r(sg["f"], 1), "z": [r(row, 1) for row in sg["power_db"]], "zmin": round(sg["z_min"], 1), "zmax": round(sg["z_max"], 1)}
+
+OUT.parent.mkdir(parents=True, exist_ok=True)
+OUT.write_text("// Generated by dev-tests/gen_docs_data.py: real PySQA results on synthetic sounds. Do not edit by hand.\n"
+               "export const DEMO = " + json.dumps(data, separators=(",", ":")) + " as const\n", encoding="utf-8")
+print("written", OUT, OUT.stat().st_size // 1024, "KB")
+print(json.dumps({k: data[k] for k in ("loudnessVsLevel", "sharpnessVsBark", "roughnessVsFmod", "fluctuationVsFmod", "tonalityVsLevel")}, indent=0)[:1800])

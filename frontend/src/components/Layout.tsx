@@ -6,7 +6,7 @@ import { useStore } from '../store/useStore'
 import { useFrfStore } from '../store/useFrfStore'
 import Logo from './Logo'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Activity, Mic, BarChart2, Menu, X } from 'lucide-react'
+import { Activity, Mic, BarChart2, BookOpen, Menu, X } from 'lucide-react'
 import clsx from 'clsx'
 
 const NAV = [
@@ -38,7 +38,7 @@ export default function Layout() {
   const pathname = useLocation().pathname
   const isDaq = pathname.startsWith('/data-acquisition')
   useEffect(() => {
-    const page = NAV.find((n) => pathname.startsWith(n.to))
+    const page = pathname.startsWith('/docs') ? { label: 'Documentação' } : NAV.find((n) => pathname.startsWith(n.to))
     document.title = page ? `${page.label} · PySQA` : 'PySQA'
   }, [pathname])
   const [daqVisited, setDaqVisited] = useState(isDaq)
@@ -78,6 +78,20 @@ export default function Layout() {
 
         <div className="flex-1" />
 
+        {/* Documentation */}
+        <NavLink
+          to="/docs"
+          className={({ isActive }) =>
+            clsx(
+              'hidden sm:flex items-center gap-2 px-4 py-2 mr-4 rounded-md border text-sm font-semibold transition-colors',
+              isActive ? 'bg-teal border-teal text-dark' : 'bg-panel border-field text-white hover:border-teal hover:text-teal'
+            )
+          }
+        >
+          <BookOpen size={17} />
+          Documentação
+        </NavLink>
+
         {/* Mobile hamburger */}
         <button
           className="sm:hidden p-1.5 mr-3 rounded text-muted hover:text-white hover:bg-panel transition-colors"
@@ -110,6 +124,19 @@ export default function Layout() {
               {to === '/data-acquisition' && <DaqDot state={daqState} />}
             </NavLink>
           ))}
+          <NavLink
+            to="/docs"
+            onClick={() => setMenuOpen(false)}
+            className={({ isActive }) =>
+              clsx(
+                'flex items-center gap-2 px-3 py-2 rounded text-sm font-medium transition-colors',
+                isActive ? 'bg-teal/20 text-teal' : 'text-muted hover:text-white hover:bg-panel'
+              )
+            }
+          >
+            <BookOpen size={15} />
+            Documentação
+          </NavLink>
         </div>
       )}
 
