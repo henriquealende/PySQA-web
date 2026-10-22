@@ -5,19 +5,27 @@ import clsx from 'clsx'
 interface Props {
   onFiles: (files: File[]) => void
   disabled?: boolean
+  /** Headline of the call to action */
+  title?: string
+  /** What can be dropped, as shown to the user, e.g. "WAV files" */
+  what?: string
+  /** File extensions accepted, lower case with the dot */
+  extensions?: string[]
 }
 
-/** Large, centred "start here" call to action shown while the session has no audio files. */
-export default function ImportCallout({ onFiles, disabled }: Props) {
+/** Large, centred "start here" call to action shown while a page has nothing loaded yet. */
+export default function ImportCallout({
+  onFiles, disabled, title = 'Start here: import your audio', what = 'WAV files', extensions = ['.wav'],
+}: Props) {
   const [dragging, setDragging] = useState(false)
 
   const handleFiles = useCallback(
     (list: FileList | null) => {
       if (!list) return
-      const wavs = Array.from(list).filter((f) => f.name.toLowerCase().endsWith('.wav'))
-      if (wavs.length) onFiles(wavs)
+      const ok = Array.from(list).filter((f) => extensions.some((ext) => f.name.toLowerCase().endsWith(ext)))
+      if (ok.length) onFiles(ok)
     },
-    [onFiles]
+    [onFiles, extensions]
   )
 
   return (
@@ -37,16 +45,16 @@ export default function ImportCallout({ onFiles, disabled }: Props) {
         <span className="flex h-16 w-16 items-center justify-center rounded-full bg-teal/15">
           <Upload size={30} className="text-teal animate-bob-up motion-reduce:animate-none" />
         </span>
-        <span className="text-white text-base font-semibold">Start here: import your audio</span>
+        <span className="text-white text-base font-semibold">{title}</span>
         <span className="text-muted text-xs">
-          Drop WAV files here or <span className="text-teal">click to browse</span>
+          Drop {what} here or <span className="text-teal">click to browse</span>
         </span>
-        <span className="hidden sm:flex items-center gap-1 text-[11px] text-muted/80">
+        <span className="hidden lg:flex items-center gap-1 text-[11px] text-muted/80">
           <ArrowLeft size={12} className="text-teal" /> or use the box in the left panel
         </span>
         <input
           type="file"
-          accept=".wav"
+          accept={extensions.join(',')}
           multiple
           className="hidden"
           onChange={(e) => { handleFiles(e.target.files); e.target.value = '' }}

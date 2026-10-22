@@ -8,8 +8,8 @@ import { Activity, Mic, BarChart2, Menu, X } from 'lucide-react'
 import clsx from 'clsx'
 
 const NAV = [
-  { to: '/post-processing',  label: 'Post-Processing',  Icon: Activity },
   { to: '/data-acquisition', label: 'Data Acquisition', Icon: Mic },
+  { to: '/post-processing',  label: 'Post-Processing',  Icon: Activity },
   { to: '/system-analysis',  label: 'System Analysis',  Icon: BarChart2 },
 ]
 

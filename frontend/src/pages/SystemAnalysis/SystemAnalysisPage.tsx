@@ -5,6 +5,9 @@ import { useFrfStore } from '../../store/useFrfStore'
 import { toast } from '../../store/useToast'
 import type { FrfResult, RespType } from '../../api/frfApi'
 import type { FrfView } from './FrfPlots'
+import ImportCallout from '../../components/ImportCallout'
+
+const FRF_EXTENSIONS = ['.uff', '.unv', '.wav', '.csv', '.txt', '.dat', '.tsv']
 
 const FrfPlots = lazy(() => import('./FrfPlots'))
 
@@ -373,15 +376,15 @@ export default function SystemAnalysisPage() {
         )}
 
         <div className="flex-1 min-h-0 p-2 flex flex-col gap-2 lg:overflow-y-auto">
-          {!result && !error && (
+          {!result && !error && channels.length === 0 && (
+            <ImportCallout onFiles={(l) => { void s.addFiles(l) }} disabled={loading}
+              title="Start here: load your measurement" what="UFF, WAV or CSV files" extensions={FRF_EXTENSIONS} />
+          )}
+          {!result && !error && channels.length > 0 && (
             <div className="flex flex-1 items-center justify-center text-center text-muted px-6">
               <div className="space-y-1">
-                <p className="text-sm">{channels.length === 0 ? 'Load a measurement to begin' : busy ? 'Calculating…' : 'Choose the input and output channels'}</p>
-                <p className="text-[11px] max-w-sm">
-                  {channels.length === 0
-                    ? 'Time records (UFF, WAV, CSV) give FRFs with coherence, Bode plots and modes. FRFs already stored in a UFF file are plotted as they are.'
-                    : 'Mark which record is the excitation (input) and which are the responses (output).'}
-                </p>
+                <p className="text-sm">{busy ? 'Calculating…' : 'Choose the input and output channels'}</p>
+                <p className="text-[11px] max-w-sm">Mark which record is the excitation (input) and which are the responses (output).</p>
               </div>
             </div>
           )}
