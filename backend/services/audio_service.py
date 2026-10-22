@@ -256,8 +256,11 @@ def compute_spectrum(entry: AudioEntry, t0: Optional[float] = None, t1: Optional
     freqs = np.fft.rfftfreq(n, d=1.0 / entry.sample_rate)
     mag = np.abs(fft)
 
-    # dB SPL re 20 µPa when calibrated (window amplitude correction: sum(window)/N), else dBFS
-    ref = 20e-6 * (n / 2) if calibrated else (n / 2)
+    # Window gain is divided out (sum(window)/2 is the line height of a unit-amplitude sine).
+    # Calibrated: dB SPL re 20 µPa, RMS per line, so a 94 dB tone peaks at ~94 dB.
+    # Uncalibrated: dBFS by peak amplitude, so a full-scale sine peaks at ~0 dBFS.
+    gain = float(np.sum(window)) / 2.0
+    ref = 20e-6 * gain * np.sqrt(2.0) if calibrated else gain
 
     def to_db(v):
         return np.round(20 * np.log10(v / ref + 1e-12), 2)
