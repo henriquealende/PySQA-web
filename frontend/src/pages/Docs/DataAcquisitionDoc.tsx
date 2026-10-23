@@ -25,12 +25,12 @@ export default function DataAcquisitionDoc() {
           <li><strong>Calibrar</strong> com um calibrador acústico (ou digitando a sensibilidade) para ler dB SPL.</li>
           <li><strong>Monitorar</strong> (<K>Monitorar</K>): abre o microfone e mostra nível, forma de onda e espectro ao vivo, sem gravar.</li>
           <li><strong>Gravar</strong> (<K>Gravar</K>, ou <K>Aguardar</K> no modo por nível) e parar (<K>Parar</K>).</li>
-          <li><strong>Revisar:</strong> ouça e veja o take; <K>Aceitar</K> guarda, <K>Descartar</K> descarta.</li>
+          <li><strong>Revisar:</strong> ouça e veja a gravação; <K>Aceitar</K> guarda, <K>Descartar</K> descarta.</li>
           <li><strong>Usar:</strong> baixar WAV ou CSV, ou enviar ao Post-Processing.</li>
         </ol>
         <Callout kind="info" title="Funciona em segundo plano">
           Se você trocar de página com o microfone aberto, ele continua aberto e a gravação segue. Um ponto pulsante na aba “Data Acquisition” avisa
-          (âmbar: monitorando; laranja: gravando). Ao fechar a aba com um take não salvo, o navegador pergunta antes.
+          (âmbar: monitorando; laranja: gravando). Ao fechar a aba com uma gravação não salva, o navegador pergunta antes.
         </Callout>
       </Section>
 
@@ -46,12 +46,12 @@ export default function DataAcquisitionDoc() {
             ['Duração', 'Gravar até apertar Parar, ou por tempo exato', 'Livre; Fixa (1 a 3 600 s)'],
             ['Modo de captura', 'Gravar já, ou esperar o som aparecer', 'Imediato; Disparo por nível'],
             ['Disparo', 'Parâmetros do disparo por nível', 'Limiar, Pré-gravação, Espera final, Borda'],
-            ['Média de takes', 'Média de vários takes', '2 a 99 takes; início automático'],
+            ['Médias', 'Média de várias gravações', '2 a 99 médias; início automático'],
             ['Calibração do microfone', 'Converte o nível digital em dB SPL', 'Calibrador (94, 114 dB ou outro); sensibilidade em mV/Pa'],
-            ['Proteção do sinal', 'Descarta takes saturados e para no silêncio', 'Abortar por sobrecarga; Parar no silêncio'],
+            ['Proteção do sinal', 'Descarta gravações saturadas e para no silêncio', 'Abortar por sobrecarga; Parar no silêncio'],
             ['Nível (VU) e medidor de SPL', 'Nível ao vivo; Fast, Leq, Máx. e Pico', 'Ponderação A ou Z; Zerar'],
             ['Forma de onda e espectro ao vivo', 'Últimos 3 s e espectro ao vivo', 'Média do espectro (Média)'],
-            ['Gravações', 'Lista de takes guardados no navegador', 'Ouvir, WAV, CSV, enviar, apagar'],
+            ['Gravações', 'Lista de gravações guardadas no navegador', 'Ouvir, WAV, CSV, enviar, apagar'],
           ]}
         />
       </Section>
@@ -117,7 +117,7 @@ export default function DataAcquisitionDoc() {
       <Section id="duracao" title="Duração e parada exata">
         <P>
           Em <K>Livre</K>, a gravação dura até você apertar <K>Parar</K>. Em <K>Fixa</K>, ela dura o tempo pedido, de 1 a 3 600 s. A contagem é feita
-          <strong> em amostras</strong>, na própria thread de áudio do navegador, e não por um cronômetro da página: um take de 5 s a 48 kHz tem exatamente 240 000 amostras.
+          <strong> em amostras</strong>, na própria thread de áudio do navegador, e não por um cronômetro da página: uma gravação de 5 s a 48 kHz tem exatamente 240 000 amostras.
           O relógio na tela segue as amostras gravadas, não o tempo do computador.
         </P>
         <Callout kind="info" title="Por que isso importa">
@@ -142,29 +142,29 @@ export default function DataAcquisitionDoc() {
         </UL>
         <Figure n={3} title="Disparo por nível sobre um registro simulado com dois eventos. A área verde é o que seria gravado."
           source="PySQA (simulação nesta página)."
-          note="Baixe o limiar até pegar o segundo evento, mais fraco; aumente a espera final para unir os dois em um só take.">
+          note="Baixe o limiar até pegar o segundo evento, mais fraco; aumente a espera final para unir os dois em uma só gravação.">
           <TriggerDemo />
         </Figure>
         <Callout kind="tip">A linha tracejada do limiar também aparece no espectro ao vivo enquanto você espera o disparo.</Callout>
       </Section>
 
-      <Section id="media" title="Média de vários takes">
+      <Section id="media" title="Média de várias gravações">
         <P>
-          Com <K>Média de takes</K> ligado, você grava de 2 a 99 takes (com <K>Iniciar o próximo take sozinho</K> ele recomeça sozinho) e o PySQA entrega um único arquivo, a
-          <strong> média no tempo</strong> de todos, amostra a amostra, cortados pelo menor deles. Cada take passa pela revisão (<K>Aceitar</K> ou <K>Descartar</K>) antes de
+          Com <K>Médias</K> ligado, você grava de 2 a 99 médias (com <K>Iniciar a próxima média sozinha</K> ele recomeça sozinho) e o PySQA entrega um único arquivo, a
+          <strong> média no tempo</strong> de todos, amostra a amostra, cortados pelo menor deles. Cada média passa pela revisão (<K>Aceitar</K> ou <K>Descartar</K>) antes de
           entrar na média; o resultado é salvo como <K>…_avgN</K>.
         </P>
         <P>
           Isso funciona para sinais que <strong>se repetem de forma idêntica e sincronizada</strong>, como a resposta a um impacto disparado sempre do mesmo jeito:
-          o sinal se soma e o ruído, que é diferente a cada take, se cancela em parte. O ruído cai com a raiz de N, ou seja, a relação sinal-ruído sobe 3 dB a cada vez
-          que o número de takes dobra <Cite ids={['bendat2010']} />.
+          o sinal se soma e o ruído, que é diferente a cada gravação, se cancela em parte. O ruído cai com a raiz de N, ou seja, a relação sinal-ruído sobe 3 dB a cada vez
+          que o número de médias dobra <Cite ids={['bendat2010']} />.
         </P>
-        <Figure n={4} title="Média de takes de uma resposta repetitiva com ruído. Aumente o número de takes e o ruído diminui." source="PySQA (simulação nesta página).">
+        <Figure n={4} title="Médias de uma resposta repetitiva com ruído. Aumente o número de médias e o ruído diminui." source="PySQA (simulação nesta página).">
           <AveragingDemo />
         </Figure>
         <Callout kind="warn" title="Não use para ruído aleatório">
-          Se o som é um ruído contínuo (um motor, um ventilador), os takes não coincidem no tempo e a média simplesmente <em>reduz</em> o sinal. Para esses sons,
-          grave um take mais longo e use o <em>Average</em> do espectro ao vivo ou as análises do Post-Processing.
+          Se o som é um ruído contínuo (um motor, um ventilador), as gravações não coincidem no tempo e a média simplesmente <em>reduz</em> o sinal. Para esses sons,
+          faça uma gravação mais longa e use o <em>Average</em> do espectro ao vivo ou as análises do Post-Processing.
         </Callout>
       </Section>
 
@@ -195,7 +195,7 @@ export default function DataAcquisitionDoc() {
         <UL>
           <li>A calibração fica guardada <strong>no seu navegador</strong>, para aquele microfone. Ela vale enquanto o ganho de entrada não mudar.</li>
           <li>O assistente avisa quando o tom está saturado, baixo demais, na frequência errada ou misturado com muito ruído; saturação e nível muito baixo impedem salvar.</li>
-          <li>Takes gravados com microfone calibrado carregam a calibração. Ao enviá-los ao Post-Processing, ela é aplicada ao arquivo automaticamente (“xx mV/Pa ✓”), e a lista marca <em>calibrated</em>.</li>
+          <li>Gravações feitas com microfone calibrado carregam a calibração. Ao enviá-las ao Post-Processing, ela é aplicada ao arquivo automaticamente (“xx mV/Pa ✓”), e a lista marca <em>calibrated</em>.</li>
           <li>O CSV exportado traz uma linha <K># Calibration:</K> com a pressão do fundo de escala.</li>
         </UL>
       </Section>
@@ -215,7 +215,7 @@ export default function DataAcquisitionDoc() {
           </P>
           <UL>
             <li><strong>Nível com ponderação temporal Fast:</strong> o nível “instantâneo”, suavizado com constante de tempo de 125 ms <Cite ids={['iec61672']} />.</li>
-            <li><strong>Leq:</strong> o nível equivalente, a média de energia desde que o monitoramento começou (ou desde o início do take).</li>
+            <li><strong>Leq:</strong> o nível equivalente, a média de energia desde que o monitoramento começou (ou desde o início da gravação).</li>
             <li><strong>Máx.:</strong> o maior valor Fast.</li>
             <li><strong>Pico:</strong> o maior valor de pico, sem suavização.</li>
           </UL>
@@ -239,7 +239,7 @@ export default function DataAcquisitionDoc() {
       <Section id="protecao" title="Proteção do sinal">
         <UL>
           <li>
-            <strong>Abortar por sobrecarga</strong> (padrão −6 dBFS, ajustável de −20 a 0): se o sinal ultrapassar esse nível durante a gravação, o take é descartado, porque
+            <strong>Abortar por sobrecarga</strong> (padrão −6 dBFS, ajustável de −20 a 0): se o sinal ultrapassar esse nível durante a gravação, a gravação é descartada, porque
             um sinal saturado dá medições erradas.
           </li>
           <li>
@@ -252,20 +252,20 @@ export default function DataAcquisitionDoc() {
         <UL>
           <li><strong>Forma de onda ao vivo:</strong> os últimos 3 segundos, mostrando o mínimo e o máximo de cada coluna de pixels, para que picos curtos e saturação (em laranja) apareçam. Ela preenche enquanto a gravação corre.</li>
           <li><strong>Espectro ao vivo:</strong> FFT de 4 096 pontos, de 20 Hz até a frequência de Nyquist, em escala logarítmica, de −90 a 0 dBFS. Com <K>Média</K> marcado, ele acumula a média de energia dos quadros: é o jeito de enxergar o piso de ruído de um som contínuo.</li>
-          <li><strong>Revisão:</strong> ao parar, o take aparece com a forma de onda completa, o espectro e um botão de reprodução com cursor. Só depois do <K>Aceitar</K> ele entra na lista.</li>
+          <li><strong>Revisão:</strong> ao parar, a gravação aparece com a forma de onda completa, o espectro e um botão de reprodução com cursor. Só depois do <K>Aceitar</K> ela entra na lista.</li>
         </UL>
       </Section>
 
       <Section id="gravacoes" title="Gravações guardadas">
         <P>
-          Os takes aceitos ficam na lista <K>Gravações</K>, <strong>guardados no próprio navegador</strong> (banco de dados local, IndexedDB). Eles sobrevivem a recarregar a página e a reiniciar o navegador, mas
-          não saem do seu computador e podem ser apagados se você limpar os dados do site. Para cada take:
+          As gravações aceitas ficam na lista <K>Gravações</K>, <strong>guardados no próprio navegador</strong> (banco de dados local, IndexedDB). Elas sobrevivem a recarregar a página e a reiniciar o navegador, mas
+          não saem do seu computador e podem ser apagadas se você limpar os dados do site. Para cada gravação:
         </P>
         <UL>
           <li><strong>Reproduzir</strong> e ver forma de onda e espectro (clique no nome).</li>
           <li><strong>WAV:</strong> baixa o arquivo gravado, sem perdas, no formato escolhido (16 bits ou 32 bits flutuante).</li>
           <li><strong>CSV:</strong> tabela tempo × amplitude, com um cabeçalho que registra dispositivo, data, modo, taxa, bits, duração e calibração. Acima de 500 mil amostras, a exportação reduz a densidade e avisa.</li>
-          <li><strong>Enviar ao Post-Processing:</strong> envia o WAV ao servidor para análise e, se o take é calibrado, já aplica a calibração.</li>
+          <li><strong>Enviar ao Post-Processing:</strong> envia o WAV ao servidor para análise e, se a gravação é calibrada, já aplica a calibração.</li>
           <li><strong>Apagar:</strong> pede confirmação.</li>
         </UL>
       </Section>
@@ -287,8 +287,8 @@ export default function DataAcquisitionDoc() {
           <li><strong>Calibre antes de medir</strong> e não mexa no ganho depois.</li>
           <li><strong>Deixe folga:</strong> prefira picos entre −20 e −6 dBFS. O 32 bits flutuante perdoa um nível baixo; o 16 bits não perdoa saturação.</li>
           <li><strong>Microfone de computador não é de medição.</strong> Os de notebook e celular têm resposta irregular e controles internos. Para medir, use um microfone de medição ligado a uma interface de áudio.</li>
-          <li><strong>Um canal por vez</strong> e uma taxa de amostragem por take.</li>
-          <li><strong>Seus takes ficam só no navegador</strong> até você enviá-los. Baixe os importantes.</li>
+          <li><strong>Um canal por vez</strong> e uma taxa de amostragem por gravação.</li>
+          <li><strong>Suas gravações ficam só no navegador</strong> até você enviá-las. Baixe as importantes.</li>
           <li><strong>Silêncio ao redor</strong> durante a calibração: ruído alto reduz a pureza do tom e o assistente avisa.</li>
         </UL>
       </Section>

@@ -42,7 +42,7 @@ export const DATA_ACQUISITION_TOC: Record<'pt' | 'en', Toc> = {
     { id: 'amostragem', title: 'Taxa, canais e bits' },
     { id: 'duracao', title: 'Duração e parada exata' },
     { id: 'disparo', title: 'Captura por nível (trigger)' },
-    { id: 'media', title: 'Média de vários takes' },
+    { id: 'media', title: 'Média de várias gravações' },
     { id: 'calibracao', title: 'Calibração do microfone' },
     { id: 'nivel', title: 'Medidores de nível' },
     { id: 'protecao', title: 'Proteção do sinal' },

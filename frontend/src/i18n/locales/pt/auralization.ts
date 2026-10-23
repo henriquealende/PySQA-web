@@ -1,6 +1,6 @@
 export default {
-  'nav.auralization': 'Auralização',
-  'aur.page.title': 'Auralização',
+  'nav.audioPrep': 'Preparação de áudios',
+  'aur.page.title': 'Preparação de áudios',
   'aur.page.intro': 'Prepare um estímulo para teste de escuta: posicione o som em torno da cabeça (HRTF) e ouça no fone. O resultado vira um arquivo estéreo que você pode analisar no Pós-processamento.',
   'aur.page.empty': 'Envie um arquivo WAV na coluna da esquerda para começar.',
   'aur.source.pick': 'Som de origem',

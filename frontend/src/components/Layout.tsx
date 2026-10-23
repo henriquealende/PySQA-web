@@ -15,7 +15,7 @@ const NAV = [
   { to: '/data-acquisition', label: 'nav.dataAcq',      Icon: Mic },
   { to: '/post-processing',  label: 'nav.postProc',     Icon: Activity },
   { to: '/system-analysis',  label: 'nav.sysAnalysis',  Icon: BarChart2 },
-  { to: '/auralization',     label: 'nav.auralization', Icon: Headphones },
+  { to: '/audio-preparation',  label: 'nav.audioPrep',    Icon: Headphones },
 ]
 
 /** Pulsing dot on the Data Acquisition tab while the microphone is open (also when you are on another page). */

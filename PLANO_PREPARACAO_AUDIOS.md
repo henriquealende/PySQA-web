@@ -1,6 +1,6 @@
-# Plano: página Auralização (preparação de estímulos)
+# Plano: página Preparação de áudios (EN: Audio Preparation)
 
-Rota `/auralization`. Cadeia: **Fonte → Ambiente (RIR/BRIR) → HRTF → Fone → Nível**, com prévia A/B, exportar WAV e "Enviar para análise" (cria um áudio estéreo na sessão, que aparece no Post-Processing).
+Rota `/audio-preparation` (o código interno e a API continuam com o nome `auralization`; o nome da página foi trocado para não conflitar com a Auralize). Cadeia: **Fonte → Ambiente (RIR/BRIR) → HRTF → Fone → Nível**, com prévia A/B, exportar WAV e "Enviar para análise" (cria um áudio estéreo na sessão, que aparece no Post-Processing).
 Design aprovado no chat (cenários rápidos, 4 blocos, mapa da fonte, resposta da cadeia, A/B).
 
 ## 1. Decisões de arquitetura (pelo que o código já faz)
@@ -165,3 +165,6 @@ Nada foi baixado nem embutido no repositório ainda. A fase 1 usa o modelo de ca
 - O preview e o render usam o corpo `{session_id, audio_id, blocks}` (sessão no corpo, como em `processing.py`), não a sessão no caminho.
 - Download de WAV usa a rota de stream existente (`/api/audio/{sessão}/{id}/stream`).
 - Arquivos gerados com SOFA enviado não são refeitos após reinício do servidor (o SOFA fica só na memória); os do modelo esférico são.
+
+### Renomeação
+A página passou a se chamar "Preparação de áudios" (EN: "Audio Preparation"): rota, menu, textos e documentação (`/docs/audio-preparation`). Nomes internos (pacote `backend/auralization`, rotas `/api/auralization/*`, arquivos e componentes do frontend) ficaram como estavam.

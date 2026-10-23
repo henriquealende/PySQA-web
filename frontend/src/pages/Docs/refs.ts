@@ -201,7 +201,7 @@ export const REFS: Record<string, Ref> = {
     id: 'majdak2013', cite: 'MAJDAK et al., 2013', sort: 'MAJDAK',
     entry: 'MAJDAK, P. *et al.* Spatially oriented format for acoustics: a data exchange format representing head-related transfer functions. *In*: AUDIO ENGINEERING SOCIETY CONVENTION, 134., 2013, Rome. **Proceedings** [...]. New York: AES, 2013.',
   },
-  // --- Auralização: bases abertas de HRTF, fones e respostas ao impulso (página planejada) ---
+  // --- Preparação de áudios: bases abertas de HRTF, fones e respostas ao impulso (página planejada) ---
   algazi2001: {
     id: 'algazi2001', cite: 'ALGAZI et al., 2001', sort: 'ALGAZI',
     entry: 'ALGAZI, V. R.; DUDA, R. O.; THOMPSON, D. M.; AVENDANO, C. The CIPIC HRTF database. *In*: IEEE WORKSHOP ON APPLICATIONS OF SIGNAL PROCESSING TO AUDIO AND ACOUSTICS, 2001, New Paltz. **Proceedings** [...]. Piscataway: IEEE, 2001. p. 99-102.',

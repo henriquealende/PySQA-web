@@ -1,6 +1,6 @@
 export default {
-  'nav.auralization': 'Auralization',
-  'aur.page.title': 'Auralization',
+  'nav.audioPrep': 'Audio Preparation',
+  'aur.page.title': 'Audio Preparation',
   'aur.page.intro': 'Prepare a listening-test stimulus: place the sound around the head (HRTF) and listen on headphones. The result is a stereo file you can analyse in Post-Processing.',
   'aur.page.empty': 'Upload a WAV file in the left column to start.',
   'aur.source.pick': 'Source sound',

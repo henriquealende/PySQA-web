@@ -1,4 +1,4 @@
-"""Auralization (phase 1: HRTF) checks. Run with the backend venv from the backend folder:
+"""Audio Preparation (phase 1: HRTF) checks. Run with the backend venv from the backend folder:
 
     cd backend
     .venv\\Scripts\\python.exe ..\\dev-tests\\test_aural.py

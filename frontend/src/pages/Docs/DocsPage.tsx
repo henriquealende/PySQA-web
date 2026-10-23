@@ -23,14 +23,14 @@ const PAGES = [
   { key: 'data-acquisition', label: 'nav.dataAcq',      ready: true },
   { key: 'post-processing',  label: 'nav.postProc',     ready: true },
   { key: 'system-analysis',  label: 'nav.sysAnalysis',  ready: true },
-  { key: 'auralization',     label: 'nav.auralization', ready: true },
+  { key: 'audio-preparation', label: 'nav.audioPrep',   ready: true },
 ] as const
 
 const TOCS: Record<string, Record<'pt' | 'en', { id: string; title: string }[]>> = {
   'post-processing': POST_PROCESSING_TOC,
   'data-acquisition': DATA_ACQUISITION_TOC,
   'system-analysis': SYSTEM_ANALYSIS_TOC,
-  'auralization': AURALIZATION_TOC,
+  'audio-preparation': AURALIZATION_TOC,
 }
 
 export default function DocsPage() {
@@ -88,7 +88,7 @@ export default function DocsPage() {
   const body = page === 'sobre' ? <AboutDoc />
     : page === 'data-acquisition' ? (en ? <DataAcquisitionDocEn /> : <DataAcquisitionDoc />)
     : page === 'system-analysis' ? (en ? <SystemAnalysisDocEn /> : <SystemAnalysisDoc />)
-    : page === 'auralization' ? (en ? <AuralizationDocEn /> : <AuralizationDoc />)
+    : page === 'audio-preparation' ? (en ? <AuralizationDocEn /> : <AuralizationDoc />)
     : (en ? <PostProcessingDocEn /> : <PostProcessingDoc />)
 
   return (

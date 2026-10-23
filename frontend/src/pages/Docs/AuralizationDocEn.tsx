@@ -4,9 +4,9 @@ export default function AuralizationDocEn() {
   return (
     <article className="flex flex-col gap-4">
       <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-white">Auralization</h1>
+        <h1 className="text-2xl font-semibold text-white">Audio Preparation</h1>
         <P>
-          Auralization prepares a sound for a listening test. You upload a recording, choose the direction it should seem to come from and listen to the
+          This page prepares a sound for a listening test. You upload a recording, choose the direction it should seem to come from and listen to the
           result on headphones. The final file is stereo and can be analysed in Post-Processing like any other.
         </P>
         <Callout kind="info" title="In this first version">
@@ -74,7 +74,7 @@ export default function AuralizationDocEn() {
             [<>CIPIC <Cite ids={['algazi2001']} /></>, 'Public domain (2001 announcement)', 'To be confirmed: the download page did not open when checked.'],
           ]}
         />
-        <P>The list at the bottom of the Auralization page shows the same status and the source links. Cite the set you use.</P>
+        <P>The list at the bottom of the Audio Preparation page shows the same status and the source links. Cite the set you use.</P>
       </Section>
 
       <Section id="distancia" title="Distance and level">

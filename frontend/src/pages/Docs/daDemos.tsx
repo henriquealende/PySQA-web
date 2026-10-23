@@ -148,7 +148,7 @@ export function TriggerDemo() {
       <dl className="grid grid-cols-2 md:grid-cols-3 gap-2">
         <Stat title="Disparo" value={trig >= 0 ? `${t[trig].toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s` : tr('não disparou')} hint="primeiro instante acima do limiar" />
         <Stat title="Gravação começa em" value={start != null ? `${start.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s` : '—'} hint="disparo menos a pré-gravação" />
-        <Stat title="Duração do take" value={start != null && end != null ? `${(end - start).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s` : '—'} hint="área verde do gráfico" />
+        <Stat title="Duração da gravação" value={start != null && end != null ? `${(end - start).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} s` : '—'} hint="área verde do gráfico" />
       </dl>
     </div>
   )
@@ -236,15 +236,15 @@ export function AveragingDemo() {
   const snr = 10 * Math.log10(psig / pnoise)
   return (
     <div className="flex flex-col gap-3">
-      <Slider label="Número de takes" value={takes} min={1} max={64} step={1} unit="takes" onChange={setTakes} />
+      <Slider label="Número de médias" value={takes} min={1} max={64} step={1} unit="médias" onChange={setTakes} />
       <Chart height={260} data={[
-        line(t, avg, (loc === 'en-US' ? `Average of ${takes} take${takes > 1 ? 's' : ''}` : `Média de ${takes} take${takes > 1 ? 's' : ''}`), TEAL, { line: { color: TEAL, width: 1.5 } }),
+        line(t, avg, (loc === 'en-US' ? `Average of ${takes} take${takes > 1 ? 's' : ''}` : `Resultado de ${takes} ${takes > 1 ? 'médias' : 'média'}`), TEAL, { line: { color: TEAL, width: 1.5 } }),
         line(t, clean, 'Sinal verdadeiro', AMBER, { line: { color: AMBER, width: 2, dash: 'dash' } }),
-      ]} layout={{ xaxis: ax('Tempo (fração do take)'), yaxis: ax('Amplitude', { range: [-2, 2] }) }} />
+      ]} layout={{ xaxis: ax('Tempo (fração da gravação)'), yaxis: ax('Amplitude', { range: [-2, 2] }) }} />
       <dl className="grid grid-cols-2 md:grid-cols-3 gap-2">
         <Stat title="Relação sinal-ruído obtida" value={`${snr.toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} dB`} hint="medida nesta simulação" />
         <Stat title="Ganho teórico" value={`${(10 * Math.log10(takes)).toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} dB`} hint="10·log₁₀(N): +3 dB cada vez que dobra" />
-        <Stat title="Ruído restante" value={`${(100 / Math.sqrt(takes)).toLocaleString(loc, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} %`} hint="da amplitude de um take sozinho" />
+        <Stat title="Ruído restante" value={`${(100 / Math.sqrt(takes)).toLocaleString(loc, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} %`} hint="da amplitude de uma gravação sozinha" />
       </dl>
     </div>
   )

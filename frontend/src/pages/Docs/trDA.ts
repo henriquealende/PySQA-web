@@ -18,7 +18,7 @@ export const TR_DA: Record<string, string> = {
   'Nível instantâneo': 'Instantaneous level',
   'Nível (dB SPL)': 'Level (dB SPL)',
   'Sinal verdadeiro': 'True signal',
-  'Tempo (fração do take)': 'Time (fraction of the take)',
+  'Tempo (fração da gravação)': 'Time (fraction of the take)',
   // sliders, selects, groups
   'Frequência do tom': 'Tone frequency',
   'Taxa de amostragem': 'Sample rate',
@@ -28,7 +28,7 @@ export const TR_DA: Record<string, string> = {
   'Espera final (hold)': 'Hold',
   'Nível do calibrador': 'Calibrator level',
   'Nível medido na gravação': 'Level measured in the recording',
-  'Número de takes': 'Number of takes',
+  'Número de médias': 'Number of takes',
   // stat titles, values and hints
   'Frequência de Nyquist': 'Nyquist frequency',
   'metade da taxa de amostragem': 'half the sample rate',
@@ -51,7 +51,7 @@ export const TR_DA: Record<string, string> = {
   'primeiro instante acima do limiar': 'first instant above the threshold',
   'Gravação começa em': 'Recording starts at',
   'disparo menos a pré-gravação': 'trigger minus the pre-roll',
-  'Duração do take': 'Take duration',
+  'Duração da gravação': 'Take duration',
   'área verde do gráfico': 'green area of the chart',
   'Pressão do calibrador': 'Calibrator pressure',
   'valor eficaz (RMS)': 'RMS value',
@@ -66,5 +66,5 @@ export const TR_DA: Record<string, string> = {
   'Ganho teórico': 'Theoretical gain',
   '10·log₁₀(N): +3 dB cada vez que dobra': '10·log₁₀(N): +3 dB each time N doubles',
   'Ruído restante': 'Remaining noise',
-  'da amplitude de um take sozinho': 'of the amplitude of a single take',
+  'da amplitude de uma gravação sozinha': 'of the amplitude of a single take',
 }

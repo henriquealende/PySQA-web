@@ -4,9 +4,9 @@ export default function AuralizationDoc() {
   return (
     <article className="flex flex-col gap-4">
       <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-white">Auralização</h1>
+        <h1 className="text-2xl font-semibold text-white">Preparação de áudios</h1>
         <P>
-          A Auralização prepara um som para um teste de escuta. Você envia uma gravação, escolhe de que direção ela deve parecer vir e ouve o resultado no
+          Esta página prepara um som para um teste de escuta. Você envia uma gravação, escolhe de que direção ela deve parecer vir e ouve o resultado no
           fone de ouvido. O arquivo final é estéreo e pode ser analisado no Pós-processamento como qualquer outro.
         </P>
         <Callout kind="info" title="Nesta primeira versão">
@@ -74,7 +74,7 @@ export default function AuralizationDoc() {
             [<>CIPIC <Cite ids={['algazi2001']} /></>, 'Domínio público (anúncio de 2001)', 'A confirmar: a página de download não abriu na conferência.'],
           ]}
         />
-        <P>A lista no fim da página da Auralização mostra o mesmo estado e os links de origem. Cite o conjunto que você usar.</P>
+        <P>A lista no fim da página Preparação de áudios mostra o mesmo estado e os links de origem. Cite o conjunto que você usar.</P>
       </Section>
 
       <Section id="distancia" title="Distância e nível">
