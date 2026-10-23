@@ -10,16 +10,17 @@ import AbPlayer from './AbPlayer'
 /**
  * Card of Auralize Salas, a product of the same team. Colours and tone follow the brand manual of Auralize
  * (Noite, Ciano, Petróleo, Grafite; a provocative question plus a fact; no promise of results).
- * The video and its poster are optional files in /public/ads: when they are not there the card shows no video.
+ * The video is a YouTube embed (privacy-enhanced domain) that is only loaded after a click.
  */
 
 const SALAS_URL = 'https://auralize.com.br/salas'
 const link = (content: string) =>
   `${SALAS_URL}?utm_source=pysqa&utm_medium=app&utm_campaign=audio-preparation&utm_content=${content}`
 
-const VIDEO = '/ads/auralize-salas.mp4'
-const POSTER = '/ads/auralize-salas-poster.jpg'
-const CAPTIONS = '/ads/auralize-salas.pt.vtt'
+// Auralize Salas #1: criando um projeto. The YouTube player is only loaded when the user clicks (no request to YouTube before that).
+const YOUTUBE_ID = 'cP-ZDtmdS1w'
+const EMBED = `https://www.youtube-nocookie.com/embed/${YOUTUBE_ID}?autoplay=1&rel=0&modestbranding=1&hl=pt-BR`
+const WATCH = `https://www.youtube.com/watch?v=${YOUTUBE_ID}`
 
 const BANDS = ['125', '250', '500', '1000', '2000', '4000']
 const room = (volume: number, rt: number[]): SynthParams => ({ volume_m3: volume, distance_m: 2.5, rt60: Object.fromEntries(BANDS.map((b, i) => [b, rt[i]])) })
@@ -28,23 +29,6 @@ const TREATED = room(60, [0.7, 0.55, 0.4, 0.35, 0.3, 0.28])     // the same room
 
 const NOITE = '#00161C'
 const CIANO = '#00BFC8'
-
-/** Is there a file at this address? The dev and production servers answer a missing file with the app's page. */
-function useFile(url: string, kind: 'video' | 'image' | 'vtt'): boolean {
-  const [ok, setOk] = useState(false)
-  useEffect(() => {
-    let alive = true
-    fetch(url, { method: 'HEAD' })
-      .then((r) => {
-        const type = r.headers.get('content-type') ?? ''
-        const good = kind === 'video' ? type.startsWith('video') : kind === 'image' ? type.startsWith('image') : r.ok && !type.startsWith('text/html')
-        if (alive) setOk(r.ok && good)
-      })
-      .catch(() => { if (alive) setOk(false) })
-    return () => { alive = false }
-  }, [url, kind])
-  return ok
-}
 
 function Bars({ playing }: { playing: boolean }) {
   const heights = [14, 26, 20, 32]
@@ -60,42 +44,49 @@ function Bars({ playing }: { playing: boolean }) {
   )
 }
 
-function VideoThumb({ hasPoster, hasCaptions }: { hasPoster: boolean; hasCaptions: boolean }) {
+function VideoThumb() {
   const t = useT()
   const dialog = useRef<HTMLDialogElement>(null)
-  const video = useRef<HTMLVideoElement>(null)
-  const open = () => { dialog.current?.showModal(); void video.current?.play().catch(() => undefined) }
-  const close = () => { video.current?.pause(); dialog.current?.close() }
+  const [open, setOpen] = useState(false)       // the iframe exists only while the dialog is open
+  const show = () => { setOpen(true); dialog.current?.showModal() }
+  const close = () => { dialog.current?.close() }
   return (
     <>
       <button
-        onClick={open} aria-label={t('aur.ad.video.play')}
-        className="group relative block w-full aspect-video overflow-hidden rounded-lg border border-[#035D66] bg-[#1E2B2F] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00BFC8]"
+        onClick={show} aria-label={t('aur.ad.video.play')}
+        className="group relative block w-full aspect-video overflow-hidden rounded-lg border border-[#035D66] bg-[#1E2B2F] text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00BFC8]"
       >
-        {hasPoster
-          ? <img src={POSTER} alt="" className="absolute inset-0 w-full h-full object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-105" />
-          : <video src={`${VIDEO}#t=0.8`} preload="metadata" muted playsInline aria-hidden="true" tabIndex={-1} className="absolute inset-0 w-full h-full object-cover" />}
-        <span className="absolute inset-0 bg-[#00161C]/35 group-hover:bg-[#00161C]/15 motion-safe:transition-colors" />
+        <span className="absolute inset-0 flex items-end justify-center gap-2 pb-6 opacity-30" aria-hidden="true">
+          {[22, 40, 30, 52, 36, 60, 28, 44, 24].map((h, i) => (
+            <span key={i} className="w-3 rounded-sm" style={{ height: h, background: CIANO }} />
+          ))}
+        </span>
         <span className="absolute inset-0 flex items-center justify-center">
           <span className="w-14 h-14 rounded-full flex items-center justify-center motion-safe:transition-transform motion-safe:group-hover:scale-110" style={{ background: CIANO, color: NOITE }}>
             <Play size={22} className="ml-0.5" aria-hidden="true" />
           </span>
         </span>
-        <span className="absolute left-3 bottom-2 text-[11px] font-semibold uppercase tracking-wider text-white drop-shadow">{t('aur.ad.video.title')}</span>
+        <span className="absolute left-3 right-3 top-3 text-[11px] font-semibold uppercase tracking-wider text-[#EEF3F4]">{t('aur.ad.video.title')}</span>
+        <span className="absolute left-3 right-3 bottom-2 text-[10px] text-[#9fb0b3]">{t('aur.ad.video.privacy')}</span>
       </button>
       <dialog
         ref={dialog} aria-label={t('aur.ad.video.title')}
         onClick={(e) => { if (e.target === dialog.current) close() }}
-        onClose={() => video.current?.pause()}
+        onClose={() => setOpen(false)}
         className="m-auto p-0 bg-transparent backdrop:bg-black/80 max-w-[min(960px,94vw)] w-full"
       >
         <div className="relative rounded-xl overflow-hidden border border-[#035D66]" style={{ background: NOITE }}>
           <button onClick={close} aria-label={t('aur.ad.video.close')} className="absolute right-2 top-2 z-10 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80">
             <X size={16} />
           </button>
-          <video ref={video} src={VIDEO} controls playsInline preload="none" poster={hasPoster ? POSTER : undefined} className="w-full aspect-video bg-black">
-            {hasCaptions && <track kind="captions" srcLang="pt" label="Português" src={CAPTIONS} default />}
-          </video>
+          {open && (
+            <iframe
+              src={EMBED} title={t('aur.ad.video.title')} className="w-full aspect-video bg-black"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          )}
+          <a href={WATCH} target="_blank" rel="noopener noreferrer" className="block px-3 py-2 text-[11px] text-[#9fb0b3] hover:text-[#00BFC8]">{t('aur.ad.video.youtube')}</a>
         </div>
       </dialog>
     </>
@@ -158,9 +149,6 @@ function RoomsDemo() {
 export default function AuralizeSalasCard() {
   const t = useT()
   const { adDismissed, setAdDismissed } = useAuralStore()
-  const hasVideo = useFile(VIDEO, 'video')
-  const hasPoster = useFile(POSTER, 'image')
-  const hasCaptions = useFile(CAPTIONS, 'vtt')
   if (adDismissed) return null
 
   const steps = [t('aur.ad.step1'), t('aur.ad.step2'), t('aur.ad.step3')]
@@ -183,7 +171,7 @@ export default function AuralizeSalasCard() {
         </button>
       </div>
 
-      <div className={`grid gap-6 ${hasVideo ? 'md:grid-cols-2' : 'md:grid-cols-[1.2fr_1fr]'} items-start`}>
+      <div className={`grid gap-6 md:grid-cols-2 items-start`}>
         <div className="space-y-4">
           <h3 id="aur-ad-title" className="text-2xl md:text-[28px] font-bold leading-tight text-white" style={{ letterSpacing: '-0.025em' }}>
             <mark className="px-1.5 rounded-sm" style={{ background: CIANO, color: NOITE }}>{t('aur.ad.title.mark')}</mark>{t('aur.ad.title.rest')}
@@ -216,7 +204,7 @@ export default function AuralizeSalasCard() {
         </div>
 
         <div className="space-y-3">
-          {hasVideo && <VideoThumb hasPoster={hasPoster} hasCaptions={hasCaptions} />}
+          <VideoThumb />
           <RoomsDemo />
         </div>
       </div>

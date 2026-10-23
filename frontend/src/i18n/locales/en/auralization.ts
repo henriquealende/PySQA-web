@@ -120,7 +120,7 @@ export default {
   'aur.ad.cta': 'Get to know Auralize Salas',
   'aur.ad.contact': 'Request contact',
   'aur.ad.noCommit': 'No commitment. The team gets in touch to understand your project.',
-  'aur.ad.video.title': 'Auralize Salas',
+  'aur.ad.video.title': 'Auralize Salas #1 · Creating a project',
   'aur.ad.video.play': 'Watch the Auralize Salas video',
   'aur.ad.video.close': 'Close the video',
   'aur.ad.demo.title': 'Hear the difference',
@@ -130,4 +130,6 @@ export default {
   'aur.ad.demo.noSource': 'Upload or pick an audio file to hear the difference.',
   'aur.ad.demo.untreated': 'Untreated',
   'aur.ad.demo.treated': 'Treated',
+  'aur.ad.video.privacy': 'The video is loaded from YouTube only when you click.',
+  'aur.ad.video.youtube': 'Watch on YouTube',
 }

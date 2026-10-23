@@ -120,7 +120,7 @@ export default {
   'aur.ad.cta': 'Conhecer o Auralize Salas',
   'aur.ad.contact': 'Solicitar contato',
   'aur.ad.noCommit': 'Sem compromisso. A equipe entra em contato para entender o seu projeto.',
-  'aur.ad.video.title': 'Auralize Salas',
+  'aur.ad.video.title': 'Auralize Salas #1 · Criando um projeto',
   'aur.ad.video.play': 'Assistir ao vídeo do Auralize Salas',
   'aur.ad.video.close': 'Fechar o vídeo',
   'aur.ad.demo.title': 'Ouça a diferença',
@@ -130,4 +130,6 @@ export default {
   'aur.ad.demo.noSource': 'Envie ou escolha um áudio para ouvir a diferença.',
   'aur.ad.demo.untreated': 'Sem tratamento',
   'aur.ad.demo.treated': 'Com tratamento',
+  'aur.ad.video.privacy': 'O vídeo é carregado do YouTube só quando você clica.',
+  'aur.ad.video.youtube': 'Assistir no YouTube',
 }
