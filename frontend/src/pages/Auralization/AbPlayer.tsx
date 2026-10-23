@@ -7,16 +7,21 @@ import { useT } from '../../i18n'
  * One audio element that switches between the original and the processed version at the same instant, so the two
  * can be compared. `processedUrl` is null while the preview is being made.
  */
-export default function AbPlayer({ originalUrl, processedUrl, busy }: {
+export default function AbPlayer({ originalUrl, processedUrl, busy, labels, order, initial = 'processed', onPlayingChange }: {
   originalUrl: string | null; processedUrl: string | null; busy: boolean
+  labels?: { processed: string; original: string }       // other names for the two versions
+  order?: ('processed' | 'original')[]                    // the order of the two buttons
+  initial?: 'processed' | 'original'
+  onPlayingChange?: (playing: boolean) => void
 }) {
   const t = useT()
   const audio = useRef<HTMLAudioElement>(null)
-  const [which, setWhich] = useState<'processed' | 'original'>('processed')
+  const [which, setWhich] = useState<'processed' | 'original'>(initial)
   const [playing, setPlaying] = useState(false)
   const [pos, setPos] = useState(0)
   const [dur, setDur] = useState(0)
   const url = which === 'processed' ? processedUrl : originalUrl
+  useEffect(() => { onPlayingChange?.(playing) }, [playing, onPlayingChange])
 
   // Changing the source keeps the time and the play state, so the switch is heard as an A/B.
   const resume = useRef({ time: 0, play: false })
@@ -72,12 +77,12 @@ export default function AbPlayer({ originalUrl, processedUrl, busy }: {
       />
       <span className="text-[11px] text-muted tabular-nums w-20 text-right">{pos.toFixed(1)} / {dur.toFixed(1)} s</span>
       <div className="flex rounded overflow-hidden border border-border" role="group" aria-label={t('aur.ab.version')}>
-        {(['processed', 'original'] as const).map((w) => (
+        {(order ?? ['processed', 'original']).map((w) => (
           <button
             key={w} onClick={() => swap(w)} aria-pressed={which === w}
             className={clsx('px-3 py-1 text-xs', which === w ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white')}
           >
-            {t(w === 'processed' ? 'aur.ab.processed' : 'aur.ab.original')}
+            {labels ? labels[w] : t(w === 'processed' ? 'aur.ab.processed' : 'aur.ab.original')}
           </button>
         ))}
       </div>

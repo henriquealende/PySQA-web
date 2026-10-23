@@ -27,6 +27,7 @@ router = APIRouter()
 
 _CATALOG = json.loads((Path(__file__).parent.parent / "auralization" / "catalog.json").read_text(encoding="utf-8"))
 _PREVIEW_MAX_S = 12.0
+_INLINE_ID = "inline:synth"
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
@@ -39,10 +40,18 @@ class HrtfBlock(BaseModel):
     distance_m: float = Field(1.0, ge=0.1, le=100)
 
 
+class InlineSynth(BaseModel):
+    """A synthetic room used for one call only (not stored): the comparison demo in the Auralize Salas card."""
+    volume_m3: float = Field(30.0, ge=0.5, le=5000)
+    distance_m: float = Field(2.0, ge=0.1, le=50)
+    rt60: Dict[str, float]
+
+
 class EnvironmentBlock(BaseModel):
     type: Literal["none", "rir", "brir"] = "none"
     asset: Optional[str] = None
     reverb_gain_db: float = Field(0.0, ge=-40, le=20)
+    synth: Optional[InlineSynth] = None             # when given, it replaces `asset` (type is taken as "rir")
 
 
 class NoiseBlock(BaseModel):
@@ -105,22 +114,42 @@ def _entry(session_id: str, audio_id: str):
     return e
 
 
+def _parse_rt60(raw: Dict[str, float]) -> Dict[int, float]:
+    times: Dict[int, float] = {}
+    for k, v in raw.items():
+        try:
+            band = int(k)
+        except ValueError:
+            raise HTTPException(400, msg("As bandas do tempo de reverberação são números (125, 250, ... 4000).", "The reverberation-time bands are numbers (125, 250, ... 4000)."))
+        if band not in rir_mod.BANDS_HZ or not (0.02 <= v <= 6.0):
+            raise HTTPException(400, msg("Use as bandas 125 a 4000 Hz e tempos entre 0,02 e 6 s.", "Use the bands 125 to 4000 Hz and times between 0.02 and 6 s."))
+        times[band] = float(v)
+    if not times:
+        raise HTTPException(400, msg("Informe ao menos um tempo de reverberação.", "Give at least one reverberation time."))
+    return times
+
+
 def _chain(blocks: Blocks) -> chain_mod.Chain:
     h, e, nz = blocks.hrtf, blocks.environment, blocks.noise
+    inline = e.synth is not None
     return chain_mod.Chain(
         hrtf=chain_mod.HrtfStep(enabled=h.enabled, asset=h.asset, azimuth=h.azimuth, elevation=h.elevation, distance_m=h.distance_m),
-        environment=chain_mod.EnvironmentStep(type=e.type, asset=e.asset, reverb_gain_db=e.reverb_gain_db),
+        environment=chain_mod.EnvironmentStep(type="rir" if inline else e.type, asset=_INLINE_ID if inline else e.asset, reverb_gain_db=e.reverb_gain_db),
         noise=chain_mod.NoiseStep(type=nz.type, snr_db=nz.snr_db),
     )
 
 
 def _run(session_id: str, mono: np.ndarray, fs: int, blocks: Blocks, kind: str) -> chain_mod.RenderResult:
+    inline = None
+    if blocks.environment.synth is not None:
+        s = blocks.environment.synth
+        inline = rir_synth.synth_rirset("inline", fs, _parse_rt60(s.rt60), s.volume_m3, s.distance_m)
     try:
         with limits.heavy_slot(kind=kind):
             return chain_mod.render(
                 mono, fs, _chain(blocks),
                 lambda aid: assets.get_hrtf(session_id, aid, fs),
-                lambda aid: assets.get_rir(session_id, aid),
+                lambda aid: inline if (inline is not None and aid == _INLINE_ID) else assets.get_rir(session_id, aid),
             )
     except chain_mod.ChainError as exc:
         raise HTTPException(400, str(exc))
@@ -182,17 +211,7 @@ async def upload_asset(session_id: str = Form(...), kind: str = Form("hrtf"), fi
 def synthesize_room(body: SynthRequest):
     """A synthetic room response from reverberation times per octave band, room volume and source distance."""
     check_session_id(body.session_id)
-    times = {}
-    for k, v in body.rt60.items():
-        try:
-            band = int(k)
-        except ValueError:
-            raise HTTPException(400, msg("As bandas do tempo de reverberação são números (125, 250, ... 4000).", "The reverberation-time bands are numbers (125, 250, ... 4000)."))
-        if band not in rir_mod.BANDS_HZ or not (0.02 <= v <= 6.0):
-            raise HTTPException(400, msg("Use as bandas 125 a 4000 Hz e tempos entre 0,02 e 6 s.", "Use the bands 125 to 4000 Hz and times between 0.02 and 6 s."))
-        times[band] = float(v)
-    if not times:
-        raise HTTPException(400, msg("Informe ao menos um tempo de reverberação.", "Give at least one reverberation time."))
+    times = _parse_rt60(body.rt60)
     with limits.heavy_slot(kind="auralization"):
         asset = rir_synth.synth_rirset(body.name, body.fs, times, body.volume_m3, body.distance_m, body.seed)
     return _meta(assets.add(body.session_id, asset), asset)

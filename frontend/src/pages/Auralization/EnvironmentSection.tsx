@@ -8,6 +8,7 @@ import { useLocale, useT } from '../../i18n'
 import { deleteAsset, EnvType, fetchRirInfo, RirInfo, uploadRir } from '../../api/auralizationApi'
 import DecayPlot from './DecayPlot'
 import SyntheticRoomForm from './SyntheticRoomForm'
+import AuralizeSalasCard from './AuralizeSalasCard'
 
 const TYPES: EnvType[] = ['none', 'rir', 'brir']
 
@@ -149,6 +150,7 @@ export default function EnvironmentSection() {
         </>
       )}
       <SyntheticRoomForm />
+      <AuralizeSalasCard />
     </section>
   )
 }

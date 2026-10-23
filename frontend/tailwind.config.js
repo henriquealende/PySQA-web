@@ -24,10 +24,15 @@ export default {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%':      { transform: 'translateY(-5px)' },
         },
+        'eq': {
+          '0%, 100%': { transform: 'scaleY(0.35)' },
+          '50%':      { transform: 'scaleY(1)' },
+        },
       },
       animation: {
         'glow-ring': 'glow-ring 2s ease-in-out infinite',
         'bob-up':    'bob-up 1.6s ease-in-out infinite',
+        'eq':        'eq 0.9s ease-in-out infinite',
       },
     },
   },

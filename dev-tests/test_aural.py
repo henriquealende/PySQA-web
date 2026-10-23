@@ -459,6 +459,22 @@ try:
     check("api: an unknown noise colour answers 422", st == 422)
     st, b6 = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"noise": {"type": "pink", "snr_db": 99}}})
     check("api: an SNR out of range answers 422", st == 422)
+
+    # ── Inline synthetic rooms (the comparison demo of the Auralize Salas card) ──
+    def preview_len(rt):
+        blocks = {"hrtf": {"azimuth": 20}, "environment": {"synth": {"volume_m3": 60, "distance_m": 2, "rt60": {str(b): rt for b in (125, 250, 500, 1000, 2000, 4000)}}}}
+        st_, raw_, _ = srv.req("POST", "/api/auralization/preview", json.dumps({"session_id": S, "audio_id": aid, "blocks": blocks}), {"Content-Type": "application/json"})
+        return st_, sf.info(io.BytesIO(raw_)) if st_ == 200 else raw_
+    st, long_i = preview_len(1.2)
+    st2, short_i = preview_len(0.3)
+    check("api: inline room previews are stereo and the longer room has the longer tail",
+          st == 200 and st2 == 200 and long_i.channels == 2 and long_i.frames > short_i.frames + 0.5 * 48000, (st, st2))
+    st, listed = srv.json("GET", f"/api/auralization/{S}/assets")
+    check("api: inline rooms are not kept as files (the 4-file limit is untouched)", st == 200 and all(a["name"] != "inline" for a in listed))
+    st, badi = srv.json("POST", "/api/auralization/preview", {"session_id": S, "audio_id": aid, "blocks": {"environment": {"synth": {"rt60": {}}}}})
+    check("api: an inline room with no reverberation time answers 400", st == 400, badi)
+    st, badj = srv.json("POST", "/api/auralization/preview", {"session_id": S, "audio_id": aid, "blocks": {"environment": {"synth": {"rt60": {"1000": 0.5}, "volume_m3": 0}}}})
+    check("api: an inline room with volume 0 answers 422", st == 422)
 finally:
     srv.stop()
 

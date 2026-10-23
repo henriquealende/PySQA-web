@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChefHat, Car, Plane, Sofa, SlidersHorizontal } from 'lucide-react'
+import { ChefHat, Car, Plane, Sofa, SlidersHorizontal, Building2 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import clsx from 'clsx'
 import { useStore } from '../../store/useStore'
@@ -17,7 +17,7 @@ export default function ScenesBar() {
   const lang = useLang((s) => s.lang)
   const sessionId = useStore((s) => s.sessionId)
   const files = useStore((s) => s.files)
-  const { sourceId, scene, setSynth, setHrtf, setNoise, setScene, setEnv } = useAuralStore()
+  const { sourceId, scene, setSynth, setHrtf, setNoise, setScene, setEnv, setAdDismissed } = useAuralStore()
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const fs = files.find((f) => f.audio_id === sourceId)?.sample_rate ?? 48000
@@ -49,6 +49,15 @@ export default function ScenesBar() {
     setScene(null)
   }
 
+  const goToCard = () => {
+    setAdDismissed(false)
+    window.setTimeout(() => {
+      const el = document.getElementById('auralize-salas')
+      el?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' })
+      el?.focus({ preventScroll: true })
+    }, 50)
+  }
+
   const active = catalog.scenes.find((s) => s.id === scene)
   return (
     <section className="rounded-lg border border-border bg-panel p-4 space-y-3" aria-labelledby="aur-scenes">
@@ -71,6 +80,12 @@ export default function ScenesBar() {
           className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border text-xs text-muted hover:text-white hover:border-field disabled:opacity-50"
         >
           <SlidersHorizontal size={14} aria-hidden="true" /> {t('aur.scene.none')}
+        </button>
+        <button
+          onClick={goToCard}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-dashed border-[#00BFC8]/60 text-xs text-[#00BFC8] hover:bg-[#00BFC8]/10"
+        >
+          <Building2 size={14} aria-hidden="true" /> {t('aur.scene.mine')}
         </button>
       </div>
       <p className="text-[11px] text-muted">{active ? active.description[lang] : t('aur.scene.hint')}</p>

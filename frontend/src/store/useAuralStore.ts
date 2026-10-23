@@ -9,6 +9,7 @@ interface AuralState {
   synth: SynthParams
   synthAssetId: string | null    // the synthetic room made last: replaced by the next one, so the 4-file limit is not hit
   scene: string | null
+  adDismissed: boolean           // the Auralize Salas card, closed by the user (kept in this browser)
   assets: Asset[]
   lastRender: RenderResult | null
 
@@ -19,9 +20,14 @@ interface AuralState {
   setSynth: (p: Partial<SynthParams>) => void
   setSynthAsset: (id: string | null) => void
   setScene: (id: string | null) => void
+  setAdDismissed: (v: boolean) => void
   setAssets: (a: Asset[]) => void
   setLastRender: (r: RenderResult | null) => void
 }
+
+const AD_KEY = 'pysqa-ad-salas-dismissed'
+const readDismissed = () => { try { return localStorage.getItem(AD_KEY) === '1' } catch { return false } }
+const writeDismissed = (v: boolean) => { try { if (v) localStorage.setItem(AD_KEY, '1'); else localStorage.removeItem(AD_KEY) } catch { /* not remembered */ } }
 
 /** State of the Audio Preparation page; kept here so it survives a visit to another page. */
 export const useAuralStore = create<AuralState>((set) => ({
@@ -32,6 +38,7 @@ export const useAuralStore = create<AuralState>((set) => ({
   synth: { volume_m3: 30, distance_m: 2, rt60: { '125': 0.6, '250': 0.55, '500': 0.5, '1000': 0.5, '2000': 0.45, '4000': 0.4 } },
   synthAssetId: null,
   scene: null,
+  adDismissed: readDismissed(),
   assets: [],
   lastRender: null,
 
@@ -42,6 +49,7 @@ export const useAuralStore = create<AuralState>((set) => ({
   setSynth: (p) => set((s) => ({ synth: { ...s.synth, ...p } })),
   setSynthAsset: (synthAssetId) => set({ synthAssetId }),
   setScene: (scene) => set({ scene }),
+  setAdDismissed: (adDismissed) => { writeDismissed(adDismissed); set({ adDismissed }) },
   setAssets: (assets) => set({ assets }),
   setLastRender: (lastRender) => set({ lastRender }),
 }))

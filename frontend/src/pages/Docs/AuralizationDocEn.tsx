@@ -233,6 +233,15 @@ export default function AuralizationDocEn() {
         </P>
       </Section>
 
+      <Section id="sala-propria" title="Want a room of your own?">
+        <P>
+          If the room you need is not among the scenes, <strong>Auralize Salas</strong> (<a href="https://auralize.com.br/salas?utm_source=pysqa&utm_medium=app&utm_campaign=docs" target="_blank" rel="noopener noreferrer" className="text-teal underline">auralize.com.br/salas</a>),
+          a product of the same team, lets you model the geometry, apply materials and read RT, C80, STI and the Schroeder frequency. The impulse response exported as WAV (1 or 2 channels, up to 30 s)
+          enters PySQA through the Environment block, with <K>Upload WAV</K>. The “From the Auralize team” card, in the Environment section, has an example comparison and can be closed; the
+          <K>Build my room</K> chip in the Quick scenes brings it back.
+        </P>
+      </Section>
+
       <Section id="limites" title="Limits and good practices">
         <UL>
           <li><strong>Use headphones.</strong> On loudspeakers the sense of direction is lost.</li>
