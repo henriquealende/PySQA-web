@@ -152,7 +152,7 @@ export default function PostProcessingPage() {
                 onChange={(k) => { setMetricKey(k); if (k !== 'none') setViewMode('normal') }}
                 disabled={!selectedId}
               />
-              {(selectedFile?.channels ?? 1) > 1 && (metricKey !== 'none' || viewMode !== 'normal') && <ChannelNotice />}
+              {(selectedFile?.channels ?? 1) > 1 && metricKey !== 'none' && <ChannelNotice />}
             </div>
 
             <div className="border-t border-border pt-3 space-y-2">

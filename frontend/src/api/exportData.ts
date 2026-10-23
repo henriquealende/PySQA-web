@@ -38,13 +38,26 @@ function splitMinMax(t: number[], y: number[]) {
   return { time, lo, hi }
 }
 
+/** A file with two channels exports one set of columns per channel, tagged (L) and (R). */
+const tagged = (name: string, stereo: boolean, i: number) => (stereo ? `${name} (${i === 0 ? 'L' : 'R'})` : name)
+
 function waveformSheet(wf: WaveformData): Sheet {
   const unit = wf.calibrated ? 'Pa' : tr('pp.export.fullScale')
-  if (wf.reduced) {
-    const m = splitMinMax(wf.t, wf.amplitude)
-    return { id: 'waveform', name: tr('pp.export.sheetWaveform'), columns: { [tr('pp.export.colTime')]: m.time, [tr('pp.export.colMinimum', { unit })]: m.lo, [tr('pp.export.colMaximum', { unit })]: m.hi } }
-  }
-  return { id: 'waveform', name: tr('pp.export.sheetWaveform'), columns: { [tr('pp.export.colTime')]: wf.t, [tr('pp.export.colAmplitude', { unit })]: wf.amplitude } }
+  const chans = wf.channels && wf.channels.length > 1 ? wf.channels : [{ amplitude: wf.amplitude }]
+  const stereo = chans.length > 1
+  const columns: Record<string, Column> = {}
+  chans.forEach((c, i) => {
+    if (wf.reduced) {
+      const m = splitMinMax(wf.t, c.amplitude)
+      if (i === 0) columns[tr('pp.export.colTime')] = m.time
+      columns[tagged(tr('pp.export.colMinimum', { unit }), stereo, i)] = m.lo
+      columns[tagged(tr('pp.export.colMaximum', { unit }), stereo, i)] = m.hi
+    } else {
+      if (i === 0) columns[tr('pp.export.colTime')] = wf.t
+      columns[tagged(tr('pp.export.colAmplitude', { unit }), stereo, i)] = c.amplitude
+    }
+  })
+  return { id: 'waveform', name: tr('pp.export.sheetWaveform'), columns }
 }
 
 function spectrumSheet(sp: SpectrumData): Sheet {
@@ -97,25 +110,42 @@ async function buildSheets(req: ExportRequest): Promise<ExportData> {
     const unit = d.calibrated
       ? (w === 'A' ? 'dB(A) SPL' : w === 'C' ? 'dB(C) SPL' : 'dB SPL re 20 µPa')
       : (w === 'A' ? 'dB(A)' : w === 'C' ? 'dB(C)' : 'dBFS')
+    const chans = d.channels && d.channels.length > 1 ? d.channels : [{ levels_db: d.levels_db }]
+    const columns: Record<string, Column> = { [tr('pp.export.colBandCentre')]: d.centres_hz }
+    chans.forEach((c, i) => { columns[tagged(tr('pp.export.colRms', { unit }), chans.length > 1, i)] = c.levels_db })
     return {
       label: tr('pp.export.labelOctave'),
-      sheets: [{ id: 'octave', name: tr('pp.export.sheetThirdOctave'), columns: { [tr('pp.export.colBandCentre')]: d.centres_hz, [tr('pp.export.colRms', { unit })]: d.levels_db } }],
+      sheets: [{ id: 'octave', name: tr('pp.export.sheetThirdOctave'), columns }],
     }
   }
 
   if (req.viewMode === 'envelope') {
     const d = await fetchEnvelope(sid, aid, req.envelopeParams, section)
-    const env = d.reduced ? d.envelope.filter((_, i) => i % 2 === 0) : d.envelope   // the reduced envelope repeats each value twice
-    let signal: Sheet
-    if (d.reduced) {
-      const m = splitMinMax(d.t, d.signal)
-      signal = { id: 'envelope', name: tr('pp.export.sheetEnvelope'), columns: { [tr('pp.export.colTime')]: m.time, [tr('pp.export.colSignalMin')]: m.lo, [tr('pp.export.colSignalMax')]: m.hi, [tr('pp.export.colEnvelope')]: env } }
-    } else {
-      signal = { id: 'envelope', name: tr('pp.export.sheetEnvelope'), columns: { [tr('pp.export.colTime')]: d.t, [tr('pp.export.colSignal')]: d.signal, [tr('pp.export.colEnvelope')]: env } }
-    }
+    const chans = d.channels && d.channels.length > 1 ? d.channels : [{ signal: d.signal, envelope: d.envelope, f_env: d.f_env, env_spec_db: d.env_spec_db }]
+    const stereo = chans.length > 1
+    const sigCols: Record<string, Column> = {}
+    const specCols: Record<string, Column> = {}
+    chans.forEach((c, i) => {
+      const env = d.reduced ? c.envelope.filter((_, k) => k % 2 === 0) : c.envelope   // the reduced envelope repeats each value twice
+      if (d.reduced) {
+        const m = splitMinMax(d.t, c.signal)
+        if (i === 0) sigCols[tr('pp.export.colTime')] = m.time
+        sigCols[tagged(tr('pp.export.colSignalMin'), stereo, i)] = m.lo
+        sigCols[tagged(tr('pp.export.colSignalMax'), stereo, i)] = m.hi
+      } else {
+        if (i === 0) sigCols[tr('pp.export.colTime')] = d.t
+        sigCols[tagged(tr('pp.export.colSignal'), stereo, i)] = c.signal
+      }
+      sigCols[tagged(tr('pp.export.colEnvelope'), stereo, i)] = env
+      if (i === 0) specCols[tr('pp.export.colFrequency')] = c.f_env
+      specCols[tagged(tr('pp.export.colMagnitudeDb'), stereo, i)] = c.env_spec_db
+    })
     return {
       label: tr('pp.export.labelEnvelope'),
-      sheets: [signal, { id: 'envspectrum', name: tr('pp.export.sheetEnvSpectrum'), columns: { [tr('pp.export.colFrequency')]: d.f_env, [tr('pp.export.colMagnitudeDb')]: d.env_spec_db } }],
+      sheets: [
+        { id: 'envelope', name: tr('pp.export.sheetEnvelope'), columns: sigCols },
+        { id: 'envspectrum', name: tr('pp.export.sheetEnvSpectrum'), columns: specCols },
+      ],
     }
   }
 

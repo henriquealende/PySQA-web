@@ -87,6 +87,7 @@ export function fetchSpectrogram(
   if (params?.freq_scale!= null) q.set('freq_scale', params.freq_scale)
   if (params?.fmax      != null) q.set('fmax',       String(params.fmax))
   if (params?.dyn_range != null) q.set('dyn_range',  String(params.dyn_range))
+  if (params?.channel   != null) q.set('channel',    String(params.channel))
   const qs = withSection(q, section).toString()
   return cachedFetch(audioId, cacheKey(sessionId, audioId, 'spectrogram', qs),
     (s) => getJson<SpectrogramData>(sessionId, `${BASE}/${sessionId}/${audioId}/spectrogram${qs ? '?' + qs : ''}`, s), signal)

@@ -52,6 +52,18 @@ peaks = [fl[int(np.argmax(c["magnitude_db"]))] for c in chs]
 check("stereo spectrum has L and R", [c["name"] for c in chs] == ["L", "R"] and abs(peaks[0] - 3217.3) < 25 and abs(peaks[1] - 1000.0) < 25, f"peaks at {peaks} Hz")
 check("stereo magnitude_db is the left channel", sps["magnitude_db"] == chs[0]["magnitude_db"], "same curve")
 
+# 1c) the other charts also list both channels of a stereo file
+stw = svc.compute_waveform(st2)
+sto = svc.compute_octave_bands(st2)
+ste = svc.compute_envelope(st2, 0.0, None)
+check("stereo waveform/octave/envelope have L and R",
+      all([c["name"] for c in r["channels"]] == ["L", "R"] for r in (stw, sto, ste)) and len(stw["channels"][1]["amplitude"]) == len(stw["t"]),
+      "channels present")
+check("mono waveform has no channels list", "channels" not in svc.compute_waveform(entry(tone)), "single curve")
+sg1 = svc.compute_spectrogram(st2, {"channel": 1})
+fg = np.array(sg1["f"]); pg = np.array(sg1["power_db"]).mean(axis=1)
+check("spectrogram channel 1 is the right channel", abs(fg[int(np.argmax(pg))] - 1000.0) < 80, f"peak at {fg[int(np.argmax(pg))]:.0f} Hz")
+
 # 2) click and clipping in the waveform
 sig = 0.01 * rng.standard_normal(10 * SR)
 sig[123457] = 0.95

@@ -33,6 +33,7 @@ export interface SpectrogramParams {
   freq_scale: string
   fmax: number | null
   dyn_range: number
+  channel?: number        // 0 = left (default), 1 = right
 }
 
 export interface EnvelopeParams {
@@ -62,6 +63,7 @@ export interface WaveformData {
   peak?: number          // highest absolute sample of the whole file (full scale = 1)
   reduced?: boolean      // true: min and max of each bucket, interleaved (long signals)
   calibrated?: boolean   // amplitude is in Pa instead of full scale
+  channels?: { name: string; amplitude: number[]; peak: number }[]   // left and right of a file with two channels
   duration_s: number
   sample_rate: number
 }
@@ -77,6 +79,7 @@ export interface SpectrumData {
 export interface OctaveData {
   centres_hz: number[]
   levels_db: (number | null)[]
+  channels?: { name: string; levels_db: (number | null)[] }[]
   calibrated?: boolean
   section?: Section | null
 }
@@ -99,6 +102,7 @@ export interface EnvelopeData {
   envelope: number[]
   f_env: number[]
   env_spec_db: number[]
+  channels?: { name: string; signal: number[]; envelope: number[]; f_env: number[]; env_spec_db: number[] }[]
   section?: Section | null
 }
 

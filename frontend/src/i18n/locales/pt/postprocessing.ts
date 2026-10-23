@@ -27,7 +27,7 @@ export default {
   'pp.page.title': 'Pós-processamento',
   'pp.page.uploading': 'Enviando…',
   'pp.page.metric': 'Métrica',
-  'pp.channels.notice': 'Este arquivo tem dois canais. As métricas e os gráficos desta vista usam só o canal esquerdo (canal 1): calcular os dois dobraria o tempo de processamento. Só o espectro na vista Normal mostra esquerdo e direito.',
+  'pp.channels.notice': 'Este arquivo tem dois canais. As métricas usam só o canal esquerdo (canal 1): calcular os dois dobraria o tempo de processamento. Os gráficos mostram esquerdo e direito.',
   'pp.page.fieldType': 'Tipo de campo',
   'pp.page.freeField': 'Campo livre',
   'pp.page.diffuse': 'Campo difuso',

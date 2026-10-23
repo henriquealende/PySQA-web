@@ -59,6 +59,7 @@ export default {
   'plot.axis.octCentre': 'Centro da banda de 1/3 de oitava (Hz)',
 
   'plot.trace.waveform': 'Forma de onda',
+  'plot.channel.aria': 'Canal do espectrograma',
   'plot.trace.left': 'Esquerdo (L)',
   'plot.trace.right': 'Direito (R)',
   'plot.trace.spectrum': 'Espectro',

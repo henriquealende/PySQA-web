@@ -23,7 +23,9 @@ import { serverLabel } from '../i18n/serverLabels'
 const C_TEAL   = '#50b89e'   // primary time
 const C_ORANGE = '#ed693b'   // primary freq
 const C_AMBER  = '#ffa94d'   // envelope
-const C_RIGHT  = '#4cc9f0'   // right channel of the spectrum (the left one is C_ORANGE)
+const C_RIGHT  = '#4cc9f0'   // right channel in the frequency charts (the left one is C_ORANGE)
+const C_VIOLET = '#c084fc'   // right channel in the time charts (the left one is C_TEAL)
+const C_PINK   = '#f472b6'   // right-channel envelope (the left one is C_AMBER)
 const C_BLUE   = '#60a5fa'   // compare time
 const C_YELLOW = '#fbbf24'   // compare freq
 
@@ -407,10 +409,17 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   if (err) return <ErrorMsg msg={err} />
   if (!wf || !sp) return <Spinner />
 
+  // A file with two channels draws both (left teal, right violet)
+  const wfStereo = !!wf.channels && wf.channels.length > 1
+  const wfCurves = wfStereo
+    ? wf.channels!.map((c, i) => ({ y: c.amplitude, color: i === 0 ? C_TEAL : C_VIOLET, name: t(i === 0 ? 'plot.trace.left' : 'plot.trace.right') }))
+    : [{ y: wf.amplitude, color: C_TEAL, name: t('plot.trace.waveform') }]
   const wfData: Plotly.Data[] = [
-    { x: wf.t, y: wf.amplitude, type: 'scatter', mode: 'lines',
-      line: { color: C_TEAL, width: 1 }, name: t('plot.trace.waveform'),
-      hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>' },
+    ...wfCurves.map(c => ({
+      x: wf.t, y: c.y, type: 'scatter' as const, mode: 'lines' as const,
+      line: { color: c.color, width: 1 }, name: c.name,
+      hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>',
+    })),
     ...(wfCmp ? [{
       x: wfCmp.t, y: wfCmp.amplitude, type: 'scatter' as const, mode: 'lines' as const,
       line: { color: C_BLUE, width: 1, dash: 'dot' as const }, name: `${t('plot.trace.waveform')} (${compareName})`,
@@ -475,7 +484,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
           dragmode: wfDrag, selectdirection: 'h',
           newselection: { mode: 'gradual' },
           activeselection: { fillcolor: 'rgba(80,184,158,0.10)', opacity: 0.3 },
-          showlegend: showLegend, legend: { font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' } } as any}
+          showlegend: showLegend || wfStereo, legend: { x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top', font: { size: 10, color: '#8ab4c9' }, bgcolor: 'rgba(17,28,40,0.7)' } } as any}
         config={PLOT_CONFIG} className="w-full h-full" useResizeHandler
         onClick={(evt: any) => { const pt = evt.points?.[0]; if (!pt) return; setWfPins(p => [...p, {x: pt.x, y: pt.y}]) }}
         onSelected={dragSection}
@@ -736,6 +745,21 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
   )
 }
 
+/** Left / right switch for the charts that show one channel at a time (the spectrogram). */
+function ChannelToggle({ channel, onChange }: { channel: number; onChange: (c: number) => void }) {
+  const t = useT()
+  return (
+    <div className="absolute top-1 left-14 z-10 flex rounded border border-border overflow-hidden text-[11px]" role="group" aria-label={t('plot.channel.aria')}>
+      {[0, 1].map(c => (
+        <button key={c} onClick={() => onChange(c)} aria-pressed={channel === c}
+          className={`px-2 py-0.5 transition-colors ${channel === c ? 'bg-teal/20 text-teal' : 'bg-panel/80 text-muted hover:text-white'}`}>
+          {c === 0 ? 'L' : 'R'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function SpectrogramView({ sessionId, audioId, section }: { sessionId: string; audioId: string; section: Section|null }) {
   const t = useT()
   const { spectrogramParams, setSpectrogramParams } = useStore()
@@ -757,6 +781,9 @@ function SpectrogramView({ sessionId, audioId, section }: { sessionId: string; a
   }, [sessionId, audioId, applied, secKey])
 
   const handleApply = () => { setSpectrogramParams(pending); setApplied({...pending}); setShowSettings(false) }
+  const chooseChannel = (channel: number) => { setSpectrogramParams({ channel }); setApplied(a => ({ ...a, channel })) }
+  const stereo = (useStore.getState().files.find(f => f.audio_id === audioId)?.channels ?? 1) > 1
+  const channel = applied.channel ?? 0
 
   if (err === '__session_expired__') return <SessionExpiredMsg />
   if (err) return <ErrorMsg msg={err} />
@@ -768,6 +795,7 @@ function SpectrogramView({ sessionId, audioId, section }: { sessionId: string; a
   return (
     <div className="relative w-full h-full">
       <GearButton onClick={() => { setPending({...applied}); setShowSettings(!showSettings) }} />
+      {stereo && <ChannelToggle channel={channel} onChange={chooseChannel} />}
       {showSettings && (
         <SettingsOverlay onClose={() => setShowSettings(false)}>
           <SpectrogramSettings params={pending} onChange={p => setPending(prev => ({...prev,...p}))} />
@@ -821,7 +849,10 @@ function OctaveView({ sessionId, audioId, section }: { sessionId: string; audioI
   // Bars grow up from the bottom of the axis, so a louder band is a taller bar.
   // (Plotly draws negative values from 0 dB downwards, which inverted the chart.)
   const levels   = data?.levels_db ?? []
-  const valid    = levels.filter((v): v is number => v != null)
+  const octCurves = data?.channels && data.channels.length > 1
+    ? data.channels.map((c, i) => ({ levels: c.levels_db, color: i === 0 ? C_ORANGE : C_RIGHT, name: t(i === 0 ? 'plot.trace.left' : 'plot.trace.right') }))
+    : [{ levels, color: C_ORANGE, name: t('plot.trace.rms') }]
+  const valid    = octCurves.flatMap(c => c.levels).filter((v): v is number => v != null)
   const floorDb  = valid.length ? Math.max(-160, Math.floor((Math.min(...valid) - 6) / 10) * 10) : -120
   const topDb    = valid.length ? Math.ceil((Math.max(...valid) + 4) / 10) * 10 : 0
 
@@ -835,11 +866,12 @@ function OctaveView({ sessionId, audioId, section }: { sessionId: string; audioI
         </SettingsOverlay>
       )}
       {!data ? <Spinner /> : (
-        <Plot data={[{ x: data.centres_hz.map(String), y: levels.map(v => v == null ? null : v - floorDb),
-          base: floorDb, customdata: levels,
-          type: 'bar', marker: { color: C_ORANGE, opacity: 0.85 }, name: t('plot.trace.rms'),
-          hovertemplate: `%{x} Hz — %{customdata:.1f} ${octUnit}<extra></extra>` } as any]}
-          layout={{ ...BASE_LAYOUT,
+        <Plot data={octCurves.map(c => ({ x: data.centres_hz.map(String), y: c.levels.map(v => v == null ? null : v - floorDb),
+          base: floorDb, customdata: c.levels,
+          type: 'bar', marker: { color: c.color, opacity: 0.85 }, name: c.name,
+          hovertemplate: `%{x} Hz — %{customdata:.1f} ${octUnit}<extra></extra>` }) as any)}
+          layout={{ ...BASE_LAYOUT, barmode: 'group', showlegend: octCurves.length > 1,
+            legend: { x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top', font: { size: 10, color: '#8ab4c9' }, bgcolor: 'rgba(17,28,40,0.7)' },
             xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.octCentre'), type: 'category', tickangle: -45, tickfont: { size: 9 } },
             yaxis: { ...BASE_LAYOUT.yaxis, title: yLabel, range: [floorDb, topDb] }, bargap: 0.15 }}
           config={PLOT_CONFIG} className="w-full h-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
@@ -872,6 +904,16 @@ function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audi
   if (err === '__session_expired__') return <SessionExpiredMsg />
   if (err) return <ErrorMsg msg={err} />
 
+  // Two channels: left in teal / amber / orange, right in violet / pink / blue
+  const envStereo = !!data?.channels && data.channels.length > 1
+  const envCurves = data
+    ? (envStereo
+        ? data.channels!.map((c, i) => ({ ...c, tag: i === 0 ? ' L' : ' R',
+            sigColor: i === 0 ? C_TEAL : C_VIOLET, envColor: i === 0 ? C_AMBER : C_PINK, specColor: i === 0 ? C_ORANGE : C_RIGHT }))
+        : [{ signal: data.signal, envelope: data.envelope, f_env: data.f_env, env_spec_db: data.env_spec_db, tag: '',
+            sigColor: C_TEAL, envColor: C_AMBER, specColor: C_ORANGE }])
+    : []
+
   return (
     <div className="relative flex flex-col h-full gap-1">
       <GearButton onClick={() => { setPending({...applied}); setShowSettings(!showSettings) }} />
@@ -883,19 +925,20 @@ function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audi
       )}
       {!data ? <Spinner /> : (
         <>
-          <Plot data={[
-            { x: data.t, y: data.signal,   type: 'scatter', mode: 'lines', line: { color: C_TEAL,  width: 0.8 }, name: t('plot.trace.signal'),   hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>' },
-            { x: data.t, y: data.envelope, type: 'scatter', mode: 'lines', line: { color: C_AMBER, width: 1.5 }, name: t('plot.trace.envelope'), hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>' },
-          ]}
+          <Plot data={envCurves.flatMap(c => [
+            { x: data.t, y: c.signal,   type: 'scatter' as const, mode: 'lines' as const, line: { color: c.sigColor, width: 0.8 }, name: `${t('plot.trace.signal')}${c.tag}`,   hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>' },
+            { x: data.t, y: c.envelope, type: 'scatter' as const, mode: 'lines' as const, line: { color: c.envColor, width: 1.5 }, name: `${t('plot.trace.envelope')}${c.tag}`, hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>' },
+          ])}
             layout={{ ...BASE_LAYOUT,
               xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time') },
               yaxis: { ...BASE_LAYOUT.yaxis, title: t('plot.axis.amplitude') },
               legend: { font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' } }}
             config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
-          <Plot data={[{ x: data.f_env, y: data.env_spec_db, type: 'scatter', mode: 'lines',
-            line: { color: C_ORANGE, width: 1 }, name: t('plot.trace.envSpectrum'),
-            hovertemplate: '%{x:.1f} Hz — %{y:.1f} dB<extra></extra>' }]}
-            layout={{ ...BASE_LAYOUT,
+          <Plot data={envCurves.map(c => ({ x: c.f_env, y: c.env_spec_db, type: 'scatter' as const, mode: 'lines' as const,
+            line: { color: c.specColor, width: 1 }, name: `${t('plot.trace.envSpectrum')}${c.tag}`,
+            hovertemplate: '%{x:.1f} Hz — %{y:.1f} dB<extra></extra>' }))}
+            layout={{ ...BASE_LAYOUT, showlegend: envCurves.length > 1,
+              legend: { x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top', font: { size: 10, color: '#8ab4c9' }, bgcolor: 'rgba(17,28,40,0.7)' },
               xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.frequency'), type: 'log' },
               yaxis: { ...BASE_LAYOUT.yaxis, title: t('plot.axis.magnitudeDb') } }}
             config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler style={{ width:'100%', height:'100%' }} />

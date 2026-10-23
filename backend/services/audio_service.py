@@ -174,6 +174,31 @@ def _shift_time(result: Dict[str, Any], offset_s: float) -> Dict[str, Any]:
     return result
 
 
+# ── Two channels ──────────────────────────────────────────────────────────────
+# The charts show the left and the right channel of a stereo file. Each calculation below is written for
+# one channel; `_both_channels` runs it on the first two channels and lists the per-channel arrays in
+# `channels` (the top-level arrays stay the left channel, which is what a mono file returns).
+# Psychoacoustic metrics are not doubled: they use the left channel only (see compute_metric).
+
+def _channel_view(entry: AudioEntry, ch: int) -> AudioEntry:
+    """The entry seen as a mono file made of channel *ch* (the entry itself when it is mono)."""
+    if entry.data.ndim == 1 or entry.data.shape[1] < 2:
+        return entry
+    view = copy.copy(entry)
+    view.data = entry.data[:, min(max(ch, 0), entry.data.shape[1] - 1)]
+    view._cache = {}
+    return view
+
+
+def _both_channels(entry: AudioEntry, fn, keys: Tuple[str, ...], *args, **kwargs) -> Dict[str, Any]:
+    left = fn(_channel_view(entry, 0), *args, **kwargs)
+    if entry.data.ndim == 1 or entry.data.shape[1] < 2:
+        return left
+    right = fn(_channel_view(entry, 1), *args, **kwargs)
+    left["channels"] = [{"name": nm, **{k: r[k] for k in keys}} for nm, r in (("L", left), ("R", right))]
+    return left
+
+
 # ── Waveform ──────────────────────────────────────────────────────────────────
 
 _SPECTRUM_MAX_POINTS = 2_400
@@ -220,7 +245,7 @@ def _log_reduce(freqs: np.ndarray, mag: np.ndarray, max_points: int):
     return centre, peak, rms
 
 
-def compute_waveform(entry: AudioEntry) -> Dict[str, Any]:
+def _compute_waveform(entry: AudioEntry) -> Dict[str, Any]:
     mono = _mono(entry.data)
     n = len(mono)
     if n > _WAVEFORM_MAX_POINTS:
@@ -240,6 +265,13 @@ def compute_waveform(entry: AudioEntry) -> Dict[str, Any]:
         "duration_s": entry.duration_s,
         "sample_rate": entry.sample_rate,
     }
+
+
+def compute_waveform(entry: AudioEntry) -> Dict[str, Any]:
+    out = _both_channels(entry, _compute_waveform, ("amplitude", "peak"))
+    if "channels" in out:
+        out["peak"] = max(c["peak"] for c in out["channels"])      # the clipping warning looks at both
+    return out
 
 
 # ── Spectrum (FFT) ────────────────────────────────────────────────────────────
@@ -294,6 +326,8 @@ def compute_spectrum(entry: AudioEntry, t0: Optional[float] = None, t1: Optional
 
 def compute_spectrogram(entry: AudioEntry, params: dict | None = None,
                         t0: Optional[float] = None, t1: Optional[float] = None) -> Dict[str, Any]:
+    """Spectrogram of one channel: params["channel"] is 0 (left, the default) or 1 (right)."""
+    entry = _channel_view(entry, int((params or {}).get("channel", 0)))
     sec = _section(entry, t0, t1)
     entry = sec.entry
     limits.check_budget("spectrogram", entry.duration_s, entry.sample_rate, audio_ram_mb())
@@ -355,8 +389,8 @@ def compute_spectrogram(entry: AudioEntry, params: dict | None = None,
 
 # ── 1/3-Octave bands ─────────────────────────────────────────────────────────
 
-def compute_octave_bands(entry: AudioEntry, weighting: str = "Z",
-                         t0: Optional[float] = None, t1: Optional[float] = None) -> Dict[str, Any]:
+def _compute_octave_bands(entry: AudioEntry, weighting: str = "Z",
+                          t0: Optional[float] = None, t1: Optional[float] = None) -> Dict[str, Any]:
     sec = _section(entry, t0, t1)
     entry = sec.entry
     limits.check_budget("octave", entry.duration_s, entry.sample_rate, audio_ram_mb())
@@ -407,9 +441,14 @@ def compute_octave_bands(entry: AudioEntry, weighting: str = "Z",
     }
 
 
+def compute_octave_bands(entry: AudioEntry, weighting: str = "Z",
+                        t0: Optional[float] = None, t1: Optional[float] = None) -> Dict[str, Any]:
+    return _both_channels(entry, _compute_octave_bands, ("levels_db",), weighting, t0, t1)
+
+
 # ── Envelope ──────────────────────────────────────────────────────────────────
 
-def compute_envelope(
+def _compute_envelope(
     entry: AudioEntry,
     smoothing_ms: float = 0.0,
     lpf_hz: float | None = None,
@@ -468,6 +507,12 @@ def compute_envelope(
         "f_env": np.round(f_env, 3).tolist(),
         "env_spec_db": np.round(env_spec_db, 2).tolist(),
     }
+
+
+def compute_envelope(entry: AudioEntry, smoothing_ms: float = 0.0, lpf_hz: float | None = None,
+                     t0: Optional[float] = None, t1: Optional[float] = None) -> Dict[str, Any]:
+    return _both_channels(entry, _compute_envelope, ("signal", "envelope", "f_env", "env_spec_db"),
+                          smoothing_ms, lpf_hz, t0, t1)
 
 
 # ── Psychoacoustic metrics ────────────────────────────────────────────────────

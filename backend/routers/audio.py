@@ -164,11 +164,12 @@ def spectrogram(
     freq_scale: str   = Query("log"),
     fmax:       Optional[float] = Query(None),
     dyn_range:  float = Query(90.0, ge=20, le=160),
+    channel:    int   = Query(0, ge=0, le=1),            # 0 = left (or mono), 1 = right
     t0:         Optional[float] = Query(None, ge=0),
     t1:         Optional[float] = Query(None, ge=0),
 ):
     params = dict(nfft=nfft, overlap=overlap, window=window, kaiser_beta=kaiser_beta,
-                  cmap=cmap, freq_scale=freq_scale, fmax=fmax, dyn_range=dyn_range)
+                  cmap=cmap, freq_scale=freq_scale, fmax=fmax, dyn_range=dyn_range, channel=channel)
     return svc.compute_spectrogram(_get(session_id, audio_id), params=params, t0=t0, t1=t1)
 
 

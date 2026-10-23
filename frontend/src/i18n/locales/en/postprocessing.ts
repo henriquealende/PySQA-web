@@ -27,7 +27,7 @@ export default {
   'pp.page.title': 'Post-Processing',
   'pp.page.uploading': 'Uploading…',
   'pp.page.metric': 'Metric',
-  'pp.channels.notice': 'This file has two channels. Metrics and the charts in this view use only the left channel (channel 1): computing both would double the processing time. Only the spectrum in the Normal view shows left and right.',
+  'pp.channels.notice': 'This file has two channels. Metrics use only the left channel (channel 1): computing both would double the processing time. The charts show left and right.',
   'pp.page.fieldType': 'Field Type',
   'pp.page.freeField': 'Free-field',
   'pp.page.diffuse': 'Diffuse',
