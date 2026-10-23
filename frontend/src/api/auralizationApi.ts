@@ -42,6 +42,17 @@ export interface HeadphoneParams {
 
 export const NO_HEADPHONE: HeadphoneParams = { mode: 'off', asset: null, max_boost_db: 12 }
 
+export type LevelMode = 'off' | 'spl' | 'source'
+
+export interface LevelParams {
+  mode: LevelMode
+  target_db_spl: number
+  fs_db_spl: number          // SPL at the ear of a full-scale sine on the user's equipment
+  weighting: 'A' | 'Z'
+}
+
+export const NO_LEVEL: LevelParams = { mode: 'off', target_db_spl: 60, fs_db_spl: 100, weighting: 'A' }
+
 export interface HeadphoneResponse {
   freq: number[]
   measured_db: number[]
@@ -127,17 +138,20 @@ export interface HrtfResponse {
 
 export interface RenderResult extends AudioFile {
   peak_dbfs: number
+  gain_db: number | null
+  level_db_spl: number | null
   azimuth: number
   elevation: number
   notes: string[]
 }
 
 const json = { 'Content-Type': 'application/json' }
-const blocks = (h: HrtfParams, env: EnvParams, noise: NoiseParams, hp: HeadphoneParams) => ({
+const blocks = (h: HrtfParams, env: EnvParams, noise: NoiseParams, hp: HeadphoneParams, lv: LevelParams) => ({
   hrtf: { enabled: env.type !== 'brir', ...h },
   environment: env,
   noise,
   headphone: hp,
+  level: lv,
 })
 
 export async function fetchCatalog(): Promise<Catalog> {
@@ -223,16 +237,18 @@ export async function fetchHrtfResponse(sessionId: string, h: HrtfParams, fs: nu
 
 /** A short stretch of the result, ready to play. The caller owns the object URL (revoke it when done). */
 export async function fetchPreview(
-  sessionId: string, audioId: string, h: HrtfParams, env: EnvParams, noise: NoiseParams, hp: HeadphoneParams, t0: number, signal?: AbortSignal,
-): Promise<{ url: string; peakDbfs: number }> {
+  sessionId: string, audioId: string, h: HrtfParams, env: EnvParams, noise: NoiseParams, hp: HeadphoneParams, lv: LevelParams, t0: number, signal?: AbortSignal,
+): Promise<{ url: string; peakDbfs: number; gainDb: number | null }> {
   const res = await apiFetch(sessionId, `${BASE}/preview`, {
     method: 'POST', headers: json, signal,
-    body: JSON.stringify({ session_id: sessionId, audio_id: audioId, blocks: blocks(h, env, noise, hp), t0 }),
+    body: JSON.stringify({ session_id: sessionId, audio_id: audioId, blocks: blocks(h, env, noise, hp, lv), t0 }),
   })
   await checkResponse(res)
   const peak = Number(res.headers.get('X-Peak-Dbfs'))
   const blob = await res.blob()
-  return { url: URL.createObjectURL(blob), peakDbfs: Number.isFinite(peak) ? peak : -200 }
+  const gainHeader = res.headers.get('X-Gain-Db')
+  const gain = gainHeader === null ? null : Number(gainHeader)
+  return { url: URL.createObjectURL(blob), peakDbfs: Number.isFinite(peak) ? peak : -200, gainDb: gain !== null && Number.isFinite(gain) ? gain : null }
 }
 
 /**
@@ -241,8 +257,8 @@ export async function fetchPreview(
  * be rebuilt after a server restart. Uploaded SOFA and room files live only in the server's memory, so results made
  * with them cannot be rebuilt.
  */
-export async function renderToSession(sessionId: string, audioId: string, h: HrtfParams, env: EnvParams, noise: NoiseParams, hp: HeadphoneParams): Promise<RenderResult> {
-  const body = { audio_id: audioId, blocks: blocks(h, env, noise, hp) }
+export async function renderToSession(sessionId: string, audioId: string, h: HrtfParams, env: EnvParams, noise: NoiseParams, hp: HeadphoneParams, lv: LevelParams): Promise<RenderResult> {
+  const body = { audio_id: audioId, blocks: blocks(h, env, noise, hp, lv) }
   const res = await apiFetch(sessionId, `${BASE}/render`, {
     method: 'POST', headers: json,
     body: JSON.stringify({ ...body, session_id: sessionId, new_audio_id: newClientId() }),

@@ -208,3 +208,14 @@ A página passou a se chamar "Preparação de áudios" (EN: "Audio Preparation")
 
 ### Ainda não feito
 - Nível absoluto (dB SPL alvo); medições de fone embutidas (dependem da licença de cada fonte); correção por orelha (CSV com canais esquerdo e direito); ruído de cabine gravado.
+
+### Nível em dB SPL: feito (2026-10-23)
+- Backend: `level.py` (nível digital = 10·log10(⟨x²⟩/½), em dB re o RMS de um seno em escala máxima; as duas orelhas somadas em energia; ponderação A pela resposta exata da IEC 61672-1, já existente em `processing/filtering.py`, ou Z; SPL de uma gravação calibrada a partir de `calibration_pa`). Passo `LevelStep` na cadeia, aplicado por último: ganho = alvo − L_FS − nível digital, em que L_FS é o nível, no ouvido, de um seno em escala máxima no equipamento do usuário (informado por ele). Modos: sem ajuste, nível-alvo e "manter o nível da gravação" (exige a calibração mV/Pa do áudio de origem). `render` devolve `gain_db` e `level_db_spl`; `preview` devolve o ganho no cabeçalho `X-Gain-Db`.
+- Frontend: `LevelSection` (modo, L_FS, ponderação, alvo de 20 a 110 dB, ganho da prévia, avisos); bloco 6 da cadeia.
+- Documentação: seção "Nível de reprodução (dB SPL)" (PT e EN), equações 9 e 10, aviso de que L_FS é uma suposição do usuário se não for medido.
+- Testes: `test_aural.py` com 171 verificações (seno em escala máxima = 0 dB, A em 1 kHz, 100 Hz (−19,1) e 10 kHz (−2,5), média de energia das orelhas, fórmula do ganho, SPL calibrado = 97 dB, cadeia, pico acima de 0 dBFS, erros e API com calibração).
+- Verificado no navegador: tom calibrado de 103 dB SPL (50 mV/Pa) em equipamento de 100 dB: ganho de +17,1 dB e aviso de pico acima de 0 dBFS.
+- A prévia calcula o ganho só sobre os primeiros 12 s; o arquivo gerado usa o arquivo inteiro.
+
+### Ainda não feito
+- Correção por orelha (CSV esquerdo e direito); constantes de tempo (Fast/Slow); medições embutidas de fone e de salas (dependem de licença); ruído gravado de cabine.

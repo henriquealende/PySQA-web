@@ -16,7 +16,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 import services.audio_service as svc
-from auralization import assets, chain as chain_mod, headphone as hp_mod, hrtf as hrtf_mod, rir as rir_mod, rir_synth
+from auralization import assets, chain as chain_mod, headphone as hp_mod, hrtf as hrtf_mod, level as level_mod, rir as rir_mod, rir_synth
 from auralization.rir import RirError, read_rir
 from auralization.sofa_io import HrtfSet, SofaError, read_sofa
 from services.session_store import add_entry, check_session_id, get_entry
@@ -65,11 +65,19 @@ class HeadphoneBlock(BaseModel):
     max_boost_db: float = Field(12.0, ge=0, le=24)
 
 
+class LevelBlock(BaseModel):
+    mode: Literal["off", "spl", "source"] = "off"
+    target_db_spl: float = Field(60.0, ge=0, le=140)
+    fs_db_spl: float = Field(100.0, ge=40, le=160)       # SPL at the ear of a full-scale sine on the user's equipment
+    weighting: Literal["A", "Z"] = "A"
+
+
 class Blocks(BaseModel):
     hrtf: HrtfBlock = HrtfBlock()
     environment: EnvironmentBlock = EnvironmentBlock()
     noise: NoiseBlock = NoiseBlock()
     headphone: HeadphoneBlock = HeadphoneBlock()
+    level: LevelBlock = LevelBlock()
 
 
 class RenderRequest(BaseModel):
@@ -148,21 +156,26 @@ def _chain(blocks: Blocks) -> chain_mod.Chain:
         environment=chain_mod.EnvironmentStep(type="rir" if inline else e.type, asset=_INLINE_ID if inline else e.asset, reverb_gain_db=e.reverb_gain_db),
         noise=chain_mod.NoiseStep(type=nz.type, snr_db=nz.snr_db),
         headphone=chain_mod.HeadphoneStep(mode=blocks.headphone.mode, asset=blocks.headphone.asset, max_boost_db=blocks.headphone.max_boost_db),
+        level=chain_mod.LevelStep(mode=blocks.level.mode, target_db_spl=blocks.level.target_db_spl, fs_db_spl=blocks.level.fs_db_spl, weighting=blocks.level.weighting),
     )
 
 
-def _run(session_id: str, mono: np.ndarray, fs: int, blocks: Blocks, kind: str) -> chain_mod.RenderResult:
+def _run(session_id: str, mono: np.ndarray, fs: int, blocks: Blocks, kind: str, calibration_pa: Optional[float] = None) -> chain_mod.RenderResult:
     inline = None
     if blocks.environment.synth is not None:
         s = blocks.environment.synth
         inline = rir_synth.synth_rirset("inline", fs, _parse_rt60(s.rt60), s.volume_m3, s.distance_m)
     try:
         with limits.heavy_slot(kind=kind):
+            source_spl = None
+            if blocks.level.mode == "source" and calibration_pa:
+                source_spl = level_mod.calibrated_spl_db(mono, fs, calibration_pa, blocks.level.weighting)
             return chain_mod.render(
                 mono, fs, _chain(blocks),
                 lambda aid: assets.get_hrtf(session_id, aid, fs),
                 lambda aid: inline if (inline is not None and aid == _INLINE_ID) else assets.get_rir(session_id, aid),
                 lambda aid: assets.get_headphone(session_id, aid),
+                source_spl,
             )
     except chain_mod.ChainError as exc:
         raise HTTPException(400, str(exc))
@@ -277,11 +290,13 @@ def preview(body: RenderRequest):
     stop = min(entry.data.shape[0], start + int(_PREVIEW_MAX_S * fs))
     if stop <= start:
         raise HTTPException(400, msg("O início da prévia está depois do fim do áudio.", "The preview start is past the end of the audio."))
-    res = _run(body.session_id, chain_mod.downmix(entry.data[start:stop]), fs, body.blocks, "auralization")
+    res = _run(body.session_id, chain_mod.downmix(entry.data[start:stop]), fs, body.blocks, "auralization", entry.calibration_pa)
     buf = io.BytesIO()
     sf.write(buf, res.data.astype(np.float32), fs, format="WAV", subtype="FLOAT")
-    return Response(buf.getvalue(), media_type="audio/wav",
-                    headers={"X-Peak-Dbfs": f"{res.peak_dbfs:.2f}", "Access-Control-Expose-Headers": "X-Peak-Dbfs"})
+    headers = {"X-Peak-Dbfs": f"{res.peak_dbfs:.2f}", "Access-Control-Expose-Headers": "X-Peak-Dbfs, X-Gain-Db"}
+    if res.gain_db is not None:
+        headers["X-Gain-Db"] = f"{res.gain_db:.2f}"
+    return Response(buf.getvalue(), media_type="audio/wav", headers=headers)
 
 
 def _tag(blocks: Blocks, res: chain_mod.RenderResult) -> str:
@@ -300,7 +315,7 @@ def _tag(blocks: Blocks, res: chain_mod.RenderResult) -> str:
 def render(body: RenderRequest):
     """Render the whole file; the result is a new stereo audio of the session, ready for Post-Processing."""
     entry = _entry(body.session_id, body.audio_id)
-    res = _run(body.session_id, chain_mod.downmix(entry.data), entry.sample_rate, body.blocks, "auralization")
+    res = _run(body.session_id, chain_mod.downmix(entry.data), entry.sample_rate, body.blocks, "auralization", entry.calibration_pa)
     new_entry = svc._derive(entry, res.data, _tag(body.blocks, res), body.new_audio_id)
     new_entry.channels = 2
     new_entry.calibration_pa = None         # the pressure scale of the original recording does not carry over
@@ -312,6 +327,8 @@ def render(body: RenderRequest):
         "channels": new_entry.channels,
         "duration_s": new_entry.duration_s,
         "peak_dbfs": round(res.peak_dbfs, 2),
+        "gain_db": None if res.gain_db is None else round(res.gain_db, 2),
+        "level_db_spl": None if res.level_db_spl is None else round(res.level_db_spl, 1),
         "azimuth": res.azimuth,
         "elevation": res.elevation,
         "notes": res.notes,

@@ -10,13 +10,14 @@ import { useLang, useLocale, useT } from '../../i18n'
 import { getStreamUrl, uploadFiles, isAbort } from '../../api/audioApi'
 import {
   Catalog, deleteAsset, fetchCatalog, fetchHrtfResponse, fetchPreview, HrtfResponse, listAssets, renderToSession,
-  NO_ENV, NO_HEADPHONE, SPHERE_ID, uploadHrtf,
+  NO_ENV, NO_HEADPHONE, NO_LEVEL, SPHERE_ID, uploadHrtf,
 } from '../../api/auralizationApi'
 import HrtfMap from './HrtfMap'
 import ResponsePlot from './ResponsePlot'
 import AbPlayer from './AbPlayer'
 import EnvironmentSection from './EnvironmentSection'
 import HeadphoneSection from './HeadphoneSection'
+import LevelSection from './LevelSection'
 import NoiseSection from './NoiseSection'
 import ScenesBar from './ScenesBar'
 
@@ -35,8 +36,11 @@ export default function AuralizationPage() {
   const locale = useLocale()
   const fmt = (n: number, d = 1) => n.toLocaleString(locale, { minimumFractionDigits: d, maximumFractionDigits: d })
   const navigate = useNavigate()
-  const { sessionId, files, addFiles, selectFile } = useStore()
-  const { sourceId, hrtf, env, noise, headphone, assets, lastRender, setSource, setHrtf, setEnv, setHeadphone, setAssets, setLastRender } = useAuralStore()
+  const { sessionId, files, addFiles, selectFile, calibrations } = useStore()
+  const { sourceId, hrtf, env, noise, headphone, level, assets, lastRender, setSource, setHrtf, setEnv, setHeadphone, setAssets, setLastRender } = useAuralStore()
+  // keeping the level of a recording needs the calibration of the microphone; without it there is nothing to keep
+  const calibrated = sourceId != null && calibrations[sourceId] != null
+  const lvEff = useMemo(() => (level.mode === 'source' && !calibrated ? NO_LEVEL : level), [level, calibrated])
   const hpEff = useMemo(() => (headphone.mode !== 'off' && !headphone.asset ? NO_HEADPHONE : headphone), [headphone])
   // a room type without a file chosen yet means no room
   const envEff = useMemo(() => (env.type !== 'none' && !env.asset ? NO_ENV : env), [env])
@@ -45,7 +49,7 @@ export default function AuralizationPage() {
   const [uploadError, setUploadError] = useState('')
   const [sofaBusy, setSofaBusy] = useState(false)
   const [response, setResponse] = useState<HrtfResponse | null>(null)
-  const [preview, setPreview] = useState<{ url: string; peakDbfs: number } | null>(null)
+  const [preview, setPreview] = useState<{ url: string; peakDbfs: number; gainDb: number | null } | null>(null)
   const [previewBusy, setPreviewBusy] = useState(false)
   const [previewError, setPreviewError] = useState('')
   const [rendering, setRendering] = useState(false)
@@ -91,13 +95,13 @@ export default function AuralizationPage() {
     setPreviewBusy(true)
     setPreviewError('')
     const id = window.setTimeout(() => {
-      fetchPreview(sessionId, sourceId, hrtf, envEff, noise, hpEff, 0, ctrl.signal)
+      fetchPreview(sessionId, sourceId, hrtf, envEff, noise, hpEff, lvEff, 0, ctrl.signal)
         .then((p) => { made = p.url; setPreview((old) => { if (old) URL.revokeObjectURL(old.url); return p }) })
         .catch((e) => { if (!isAbort(e)) setPreviewError(e.message) })
         .finally(() => { if (!ctrl.signal.aborted) setPreviewBusy(false) })
     }, 600)
     return () => { window.clearTimeout(id); ctrl.abort(); if (made && !ctrl.signal.aborted) URL.revokeObjectURL(made) }
-  }, [sessionId, sourceId, hrtf, envEff, noise, hpEff])
+  }, [sessionId, sourceId, hrtf, envEff, noise, hpEff, lvEff])
   useEffect(() => () => { setPreview((old) => { if (old) URL.revokeObjectURL(old.url); return null }) }, [])
 
   const handleFiles = async (list: File[]) => {
@@ -134,7 +138,7 @@ export default function AuralizationPage() {
     if (!sourceId) return
     setRendering(true)
     try {
-      const r = await renderToSession(sessionId, sourceId, hrtf, envEff, noise, hpEff)
+      const r = await renderToSession(sessionId, sourceId, hrtf, envEff, noise, hpEff, lvEff)
       addFiles([r])
       setLastRender(r)
       toast.success(t('aur.render.done', { name: r.name }))
@@ -213,6 +217,10 @@ export default function AuralizationPage() {
             <span className="font-semibold block truncate">{hpEff.mode === 'off' ? t('aur.hp.mode.off') : assets.find((a) => a.asset_id === hpEff.asset)?.name ?? '—'}</span>
             {hpEff.mode !== 'off' && <span className="text-muted">{t(`aur.hp.mode.${hpEff.mode}`)}</span>}
           </Block>
+          <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
+          <Block n={6} title={t('aur.chain.level')} active={lvEff.mode !== 'off'}>
+            <span className="font-semibold block truncate">{lvEff.mode === 'off' ? t('aur.lv.mode.off') : lvEff.mode === 'spl' ? `${lvEff.target_db_spl} dB SPL` : t('aur.lv.mode.source')}</span>
+          </Block>
         </div>
 
         {!source && (
@@ -278,6 +286,8 @@ export default function AuralizationPage() {
 
         <HeadphoneSection />
 
+        <LevelSection gainDb={lvEff.mode === 'off' ? null : preview?.gainDb ?? null} calibrated={calibrated} />
+
         {/* ── A/B preview ─────────────────────────────────────────────── */}
         <section className="rounded-lg border border-border bg-panel p-4 space-y-2" aria-labelledby="aur-ab">
           <h2 id="aur-ab" className="text-sm font-semibold">{t('aur.ab.title')}</h2>
@@ -311,6 +321,9 @@ export default function AuralizationPage() {
             <div className="rounded border border-teal/40 bg-teal/10 p-3 space-y-2 text-xs" role="status">
               <p><span className="font-semibold">{lastRender.name}</span> · {fmt(lastRender.duration_s)} s · {lastRender.sample_rate / 1000} kHz · {t('pp.list.stereo')}</p>
               <p className="text-muted">{t('aur.render.peak', { db: fmt(lastRender.peak_dbfs) })}</p>
+              {lastRender.level_db_spl != null && lastRender.gain_db != null && (
+                <p className="text-muted">{t('aur.lv.rendered', { spl: fmt(lastRender.level_db_spl), gain: fmt(lastRender.gain_db) })}</p>
+              )}
               {lastRender.notes.map((n) => <p key={n} className="text-amber">{n}</p>)}
               <div className="flex gap-2 flex-wrap">
                 <button

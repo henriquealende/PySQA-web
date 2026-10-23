@@ -10,8 +10,8 @@ export default function AuralizationDoc() {
           fone de ouvido. O arquivo final é estéreo e pode ser analisado no Pós-processamento como qualquer outro.
         </P>
         <Callout kind="info" title="Nesta primeira versão">
-          A cadeia tem cinco blocos: Fonte, Ambiente, HRTF, Ruído e Fone. Funcionam agora <strong>Fonte</strong>, <strong>Ambiente</strong> (você envia a resposta ao impulso da
-          sala, do carro ou do avião) <strong>HRTF</strong> e <strong>Ruído</strong> de fundo. Os <strong>Cenários rápidos</strong> montam tudo isso de uma vez. O bloco <strong>Fone</strong> (compensar ou simular um fone medido) é o último passo da cadeia.
+          A cadeia tem seis blocos: Fonte, Ambiente, HRTF, Ruído, Fone e Nível. Funcionam agora <strong>Fonte</strong>, <strong>Ambiente</strong> (você envia a resposta ao impulso da
+          sala, do carro ou do avião) <strong>HRTF</strong> e <strong>Ruído</strong> de fundo. Os <strong>Cenários rápidos</strong> montam tudo isso de uma vez. O bloco <strong>Fone</strong> (compensar ou simular um fone medido) age sobre o resultado final; o bloco <strong>Nível</strong> fecha a cadeia.
         </Callout>
       </header>
 
@@ -235,7 +235,7 @@ export default function AuralizationDoc() {
 
       <Section id="fone" title="Fone de ouvido">
         <P>
-          O bloco <strong>Fone</strong> é o último passo da cadeia: ele age sobre o resultado final (sala, posição e ruído). Você envia a medição de um fone, um CSV com a
+          O bloco <strong>Fone</strong> age sobre o resultado (sala, posição e ruído). Você envia a medição de um fone, um CSV com a
           frequência em Hz e o nível em dB, e escolhe o que fazer com ela:
         </P>
         <Table
@@ -272,6 +272,41 @@ export default function AuralizationDoc() {
           ]}
         />
         <P>Confira a licença de cada medição que usar e cite a fonte no seu trabalho.</P>
+      </Section>
+
+      <Section id="nivel" title="Nível de reprodução (dB SPL)">
+        <P>
+          Um arquivo de áudio guarda números entre −1 e 1, não pressão sonora. Para dizer que um estímulo toca a 60 dB SPL é preciso saber <strong>o quanto o seu
+          equipamento amplifica</strong>, e o PySQA não tem como medir isso: você informa. O bloco <strong>Nível</strong> é o último passo e ajusta o ganho do arquivo
+          para que ele chegue ao <strong>nível-alvo</strong> no seu equipamento.
+        </P>
+        <Eq n={9} where={<>onde ⟨x²⟩ é o valor quadrático médio do sinal (todas as amostras e as duas orelhas somadas em energia). Um seno em escala máxima lê 0 dB; um seno de amplitude 0,1 lê −20 dB.</>}>
+          L<sub>d</sub> = 10 · log₁₀( ⟨x²⟩ / ½ )   [dB re seno em escala máxima]
+        </Eq>
+        <Eq n={10} where={<>onde L<sub>alvo</sub> é o nível-alvo em dB SPL e L<sub>FS</sub> é o nível, no seu ouvido, de um seno em escala máxima (0 dBFS) no seu fone e na sua placa de som. O nível resultante é L<sub>FS</sub> + L<sub>d</sub>.</>}>
+          G = L<sub>alvo</sub> − L<sub>FS</sub> − L<sub>d</sub>   [dB]
+        </Eq>
+        <Table
+          head={['Modo', 'O que define o nível-alvo']}
+          widths={['30%', '70%']}
+          rows={[
+            ['Sem ajuste', 'Nada: o arquivo sai com o nível que tem.'],
+            ['Nível-alvo', 'O valor que você escolhe (20 a 110 dB SPL).'],
+            ['Manter o nível da gravação', 'O nível calibrado da gravação original, calculado a partir da calibração do microfone (mV/Pa, feita no Pós-processamento). Sem calibração, o modo fica bloqueado.'],
+          ]}
+        />
+        <P>
+          A ponderação <strong>A</strong> segue a IEC 61672-1 <Cite ids={['iec61672']} />, e <strong>Z</strong> é sem ponderação. O nível é um Leq do <strong>arquivo todo</strong>:
+          inclui os trechos de silêncio, a cauda da sala e o ruído de fundo, e não é um nível com constante de tempo (Fast ou Slow).
+        </P>
+        <Callout kind="warn" title="É uma conta a partir do que você informa">
+          O valor L<sub>FS</sub> é uma suposição sua, a menos que você o tenha medido com um ouvido artificial ou um acoplador. Sem essa medição, o nível real no ouvido pode ser outro, e
+          comparar dois estímulos entre si continua valendo mais do que o número absoluto. Uma compensação de fone mantém o nível médio entre 200 Hz e 4 kHz, então ela não desfaz esse ajuste.
+        </Callout>
+        <P>
+          Se o ganho levar o pico acima de 0 dBFS, o arquivo guarda o valor exato (32 bits em ponto flutuante), mas a reprodução satura: o resultado avisa. Reduza o nível-alvo ou use um
+          equipamento mais sensível. A prévia calcula o ganho com os primeiros 12 s; o arquivo gerado usa o arquivo inteiro, então os dois podem diferir um pouco.
+        </P>
       </Section>
 
       <Section id="sala-propria" title="Quer uma sala própria?">

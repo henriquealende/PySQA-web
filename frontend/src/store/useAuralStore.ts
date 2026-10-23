@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Asset, EnvParams, HeadphoneParams, HrtfParams, NO_ENV, NO_HEADPHONE, NO_NOISE, NoiseParams, RenderResult, SPHERE_ID, SynthParams } from '../api/auralizationApi'
+import { Asset, EnvParams, HeadphoneParams, HrtfParams, LevelParams, NO_ENV, NO_HEADPHONE, NO_LEVEL, NO_NOISE, NoiseParams, RenderResult, SPHERE_ID, SynthParams } from '../api/auralizationApi'
 
 interface AuralState {
   sourceId: string | null
@@ -7,6 +7,7 @@ interface AuralState {
   env: EnvParams
   noise: NoiseParams
   headphone: HeadphoneParams
+  level: LevelParams
   synth: SynthParams
   synthAssetId: string | null    // the synthetic room made last: replaced by the next one, so the 4-file limit is not hit
   scene: string | null
@@ -19,6 +20,7 @@ interface AuralState {
   setEnv: (p: Partial<EnvParams>) => void
   setNoise: (p: Partial<NoiseParams>) => void
   setHeadphone: (p: Partial<HeadphoneParams>) => void
+  setLevel: (p: Partial<LevelParams>) => void
   setSynth: (p: Partial<SynthParams>) => void
   setSynthAsset: (id: string | null) => void
   setScene: (id: string | null) => void
@@ -38,6 +40,7 @@ export const useAuralStore = create<AuralState>((set) => ({
   env: NO_ENV,
   noise: NO_NOISE,
   headphone: NO_HEADPHONE,
+  level: NO_LEVEL,
   synth: { volume_m3: 30, distance_m: 2, rt60: { '125': 0.6, '250': 0.55, '500': 0.5, '1000': 0.5, '2000': 0.45, '4000': 0.4 } },
   synthAssetId: null,
   scene: null,
@@ -50,6 +53,7 @@ export const useAuralStore = create<AuralState>((set) => ({
   setEnv: (p) => set((s) => ({ env: { ...s.env, ...p } })),
   setNoise: (p) => set((s) => ({ noise: { ...s.noise, ...p } })),
   setHeadphone: (p) => set((s) => ({ headphone: { ...s.headphone, ...p } })),
+  setLevel: (p) => set((s) => ({ level: { ...s.level, ...p } })),
   setSynth: (p) => set((s) => ({ synth: { ...s.synth, ...p } })),
   setSynthAsset: (synthAssetId) => set({ synthAssetId }),
   setScene: (scene) => set({ scene }),

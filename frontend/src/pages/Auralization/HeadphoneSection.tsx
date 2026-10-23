@@ -11,7 +11,7 @@ import HeadphonePlot from './HeadphonePlot'
 
 const MODES: HeadphoneMode[] = ['off', 'compensate', 'simulate']
 
-/** Headphone block: compensate a measured headphone (so it sounds flat) or simulate it. Last step of the chain. */
+/** Headphone block: compensate a measured headphone (so it sounds flat) or simulate it. Applied after the room, the head and the noise. */
 export default function HeadphoneSection() {
   const t = useT()
   const sessionId = useStore((s) => s.sessionId)

@@ -1,4 +1,4 @@
-"""Audio Preparation (phases 1 to 3: HRTF, room responses, quick scenes, headphone) checks. Run with the backend venv from the backend folder:
+"""Audio Preparation (phases 1 to 3: HRTF, room responses, quick scenes, headphone, level) checks. Run with the backend venv from the backend folder:
 
     cd backend
     .venv\\Scripts\\python.exe ..\\dev-tests\\test_aural.py
@@ -376,6 +376,58 @@ try:
 except C.ChainError:
     check("chain headphone: a missing response raises", True)
 
+# ── Absolute level ───────────────────────────────────────────────────────────
+from auralization import level as LV
+
+_t = np.arange(48000 * 2) / 48000
+
+
+def _sine(freq, amp=1.0):
+    return amp * np.sin(2 * np.pi * freq * _t)
+
+
+check("level: a full-scale sine reads 0 dB, amplitude 0.1 reads -20 dB (unweighted)",
+      abs(LV.digital_level_db(_sine(1000), 48000, "Z")) < 0.01 and abs(LV.digital_level_db(_sine(1000, 0.1), 48000, "Z") + 20) < 0.01)
+check("level: A weighting leaves 1 kHz alone", abs(LV.digital_level_db(_sine(1000), 48000, "A")) < 0.1, LV.digital_level_db(_sine(1000), 48000, "A"))
+check("level: A weighting takes 19.1 dB off a 100 Hz tone (IEC 61672)", abs(LV.digital_level_db(_sine(100), 48000, "A") + 19.1) < 0.4, LV.digital_level_db(_sine(100), 48000, "A"))
+check("level: A weighting takes 2.5 dB off a 10 kHz tone (IEC 61672)", abs(LV.digital_level_db(_sine(10000), 48000, "A") + 2.5) < 0.4, LV.digital_level_db(_sine(10000), 48000, "A"))
+one_ear = np.stack([np.zeros_like(_t), _sine(1000)], axis=1)
+check("level: the two ears are averaged in energy (one silent ear = -3 dB)", abs(LV.digital_level_db(one_ear, 48000, "Z") + 3.01) < 0.02)
+try:
+    LV.digital_level_db(np.zeros(4800), 48000, "A")
+    check("level: a silent signal is refused", False)
+except LV.LevelError:
+    check("level: a silent signal is refused", True)
+check("level: gain formula (target - equipment level - current level)", LV.gain_db(-20.0, 70.0, 100.0) == -10.0)
+check("level: SPL of a calibrated recording (0.1 amplitude, 20 Pa full scale = 97 dB)", abs(LV.calibrated_spl_db(_sine(1000, 0.1), 48000, 20.0, "Z") - 97.0) < 0.05, LV.calibrated_spl_db(_sine(1000, 0.1), 48000, 20.0, "Z"))
+
+tone = _sine(1000, 0.1)
+r_off = C.render(tone, 48000, C.Chain(hrtf=C.HrtfStep(enabled=False)), lambda a: None)
+check("chain level: off applies no gain", r_off.gain_db is None and r_off.level_db_spl is None)
+r70 = C.render(tone, 48000, C.Chain(hrtf=C.HrtfStep(enabled=False), level=C.LevelStep(mode="spl", target_db_spl=70.0, fs_db_spl=100.0, weighting="Z")), lambda a: None)
+check("chain level: 70 dB SPL on a 100 dB equipment takes a -20 dB tone down by 10 dB", abs(r70.gain_db + 10.0) < 0.01 and abs(float(np.std(r70.data[:, 0])) - 0.1 / np.sqrt(2) * 10 ** (-10 / 20)) < 1e-4, r70.gain_db)
+r70a = C.render(tone, 48000, C.Chain(hrtf=C.HrtfStep(enabled=False), level=C.LevelStep(mode="spl", target_db_spl=70.0, fs_db_spl=100.0, weighting="A")), lambda a: None)
+check("chain level: at 1 kHz A weighting gives the same gain as no weighting", abs(r70a.gain_db - r70.gain_db) < 0.1)
+rsrc = C.render(tone, 48000, C.Chain(hrtf=C.HrtfStep(enabled=False), level=C.LevelStep(mode="source", fs_db_spl=100.0, weighting="Z")), lambda a: None, None, None, 97.0)
+check("chain level: keeping the level of a 97 dB recording on a 100 dB equipment gives a tone of RMS 0.5", abs(float(np.sqrt(np.mean(rsrc.data[:, 0] ** 2))) - 0.5) < 1e-3 and abs(rsrc.level_db_spl - 97.0) < 1e-9)
+try:
+    C.render(tone, 48000, C.Chain(hrtf=C.HrtfStep(enabled=False), level=C.LevelStep(mode="source")), lambda a: None)
+    check("chain level: 'keep the recording level' without calibration is refused", False)
+except C.ChainError:
+    check("chain level: 'keep the recording level' without calibration is refused", True)
+rclip = C.render(_sine(1000, 0.5), 48000, C.Chain(hrtf=C.HrtfStep(enabled=False), level=C.LevelStep(mode="spl", target_db_spl=105.0, fs_db_spl=100.0, weighting="Z")), lambda a: None)
+check("chain level: a level that pushes the peak above 0 dBFS is reported", rclip.peak_dbfs > 0 and any("0 dBFS" in n for n in rclip.notes))
+try:
+    C.render(np.zeros(4800), 48000, C.Chain(hrtf=C.HrtfStep(enabled=False), level=C.LevelStep(mode="spl")), lambda a: None)
+    check("chain level: a silent signal is refused", False)
+except C.ChainError:
+    check("chain level: a silent signal is refused", True)
+try:
+    C.render(tone, 48000, C.Chain(hrtf=C.HrtfStep(enabled=False), level=C.LevelStep(mode="spl", weighting="C")), lambda a: None)
+    check("chain level: an unknown weighting is refused", False)
+except C.ChainError:
+    check("chain level: an unknown weighting is refused", True)
+
 # ── API (a real server, like the other dev-tests) ─────────────────────────────
 import http.client
 import json
@@ -586,6 +638,23 @@ try:
     check("api: a removed headphone response answers 400 with a message", st == 400 and "headphone" in goneh["detail"], goneh)
     st, oobh = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"headphone": {"mode": "compensate", "asset": "x", "max_boost_db": 99}}})
     check("api: a boost limit out of range answers 422", st == 422)
+
+    # ── Absolute level over the API ──
+    lblocks = {"level": {"mode": "spl", "target_db_spl": 60, "fs_db_spl": 100, "weighting": "A"}}
+    st, rl = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": lblocks})
+    check("api: render with a target level reports the gain and the level", st == 200 and rl["level_db_spl"] == 60.0 and isinstance(rl["gain_db"], float), rl)
+    st, raw, hdr = srv.req("POST", "/api/auralization/preview", json.dumps({"session_id": S, "audio_id": aid, "blocks": lblocks}), {"Content-Type": "application/json"})
+    check("api: preview carries the gain in a header", st == 200 and "x-gain-db" in hdr and abs(float(hdr["x-gain-db"]) - rl["gain_db"]) < 3.0, hdr.get("x-gain-db"))
+    st, rn_ = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"level": {"mode": "source", "fs_db_spl": 100, "weighting": "Z"}}})
+    check("api: 'keep the recording level' without calibration answers 400 with a message", st == 400 and "calibrat" in rn_["detail"], rn_)
+    st, cal = srv.json("POST", f"/api/audio/{S}/{aid}/calibrate", {"sensitivity_mv_pa": 50, "fs_voltage": 1})
+    st, rs_ = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"level": {"mode": "source", "fs_db_spl": 100, "weighting": "Z"}}})
+    # the tone has amplitude 0.2 (RMS 0.1414 = -14 dB re a full-scale sine); 50 mV/Pa and 1 V give 20 Pa at full scale = 117.0 dB: 103.0 dB SPL
+    check("api: with the calibration the level of the recording is kept (103 dB SPL)", st == 200 and abs(rs_["level_db_spl"] - 103.0) < 0.3, rs_)
+    st, ob1 = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"level": {"mode": "spl", "target_db_spl": 300}}})
+    check("api: a target level out of range answers 422", st == 422)
+    st, ob2 = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"level": {"mode": "spl", "weighting": "C"}}})
+    check("api: a weighting other than A or Z answers 422", st == 422)
 finally:
     srv.stop()
 

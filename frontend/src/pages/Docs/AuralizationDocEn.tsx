@@ -10,8 +10,8 @@ export default function AuralizationDocEn() {
           result on headphones. The final file is stereo and can be analysed in Post-Processing like any other.
         </P>
         <Callout kind="info" title="In this first version">
-          The chain has five blocks: Source, Environment, HRTF, Noise and Headphone. <strong>Source</strong>, <strong>Environment</strong> (you upload the impulse response of
-          the room, car or aircraft) <strong>HRTF</strong> and background <strong>Noise</strong> work now. The <strong>Quick scenes</strong> set all of this up at once. The <strong>Headphone</strong> block (compensate or simulate a measured headphone) is the last step of the chain.
+          The chain has six blocks: Source, Environment, HRTF, Noise, Headphone and Level. <strong>Source</strong>, <strong>Environment</strong> (you upload the impulse response of
+          the room, car or aircraft) <strong>HRTF</strong> and background <strong>Noise</strong> work now. The <strong>Quick scenes</strong> set all of this up at once. The <strong>Headphone</strong> block (compensate or simulate a measured headphone) acts on the final result; the <strong>Level</strong> block closes the chain.
         </Callout>
       </header>
 
@@ -235,7 +235,7 @@ export default function AuralizationDocEn() {
 
       <Section id="fone" title="Headphone">
         <P>
-          The <strong>Headphone</strong> block is the last step of the chain: it acts on the final result (room, position and noise). You upload the measurement of a headphone,
+          The <strong>Headphone</strong> block acts on the result (room, position and noise). You upload the measurement of a headphone,
           a CSV with frequency in Hz and level in dB, and choose what to do with it:
         </P>
         <Table
@@ -272,6 +272,41 @@ export default function AuralizationDocEn() {
           ]}
         />
         <P>Check the licence of each measurement you use and cite the source in your work.</P>
+      </Section>
+
+      <Section id="nivel" title="Playback level (dB SPL)">
+        <P>
+          An audio file holds numbers between −1 and 1, not sound pressure. To say a stimulus plays at 60 dB SPL you need to know <strong>how much your equipment
+          amplifies</strong>, and PySQA cannot measure that: you enter it. The <strong>Level</strong> block is the last step and sets the gain of the file so it reaches the
+          <strong>target level</strong> on your equipment.
+        </P>
+        <Eq n={9} where={<>where ⟨x²⟩ is the mean square of the signal (all samples, the two ears summed in energy). A full-scale sine reads 0 dB; a sine of amplitude 0.1 reads −20 dB.</>}>
+          L<sub>d</sub> = 10 · log₁₀( ⟨x²⟩ / ½ )   [dB re full-scale sine]
+        </Eq>
+        <Eq n={10} where={<>where L<sub>target</sub> is the target level in dB SPL and L<sub>FS</sub> is the level, at your ear, of a full-scale sine (0 dBFS) on your headphones and sound card. The resulting level is L<sub>FS</sub> + L<sub>d</sub>.</>}>
+          G = L<sub>target</sub> − L<sub>FS</sub> − L<sub>d</sub>   [dB]
+        </Eq>
+        <Table
+          head={['Mode', 'What sets the target level']}
+          widths={['30%', '70%']}
+          rows={[
+            ['No adjustment', 'Nothing: the file keeps the level it has.'],
+            ['Target level', 'The value you choose (20 to 110 dB SPL).'],
+            ['Keep the recording level', 'The calibrated level of the original recording, computed from the microphone calibration (mV/Pa, done in Post-Processing). Without calibration the mode is blocked.'],
+          ]}
+        />
+        <P>
+          <strong>A</strong> weighting follows IEC 61672-1 <Cite ids={['iec61672']} />, and <strong>Z</strong> is unweighted. The level is a Leq of the <strong>whole file</strong>:
+          it includes silent stretches, the room tail and the background noise, and it is not a level with a time constant (Fast or Slow).
+        </P>
+        <Callout kind="warn" title="It is a calculation from what you enter">
+          The L<sub>FS</sub> value is your own assumption unless you measured it with an artificial ear or a coupler. Without that measurement the real level at the ear may be different, and
+          comparing two stimuli with each other still counts for more than the absolute number. A headphone compensation keeps the mean level between 200 Hz and 4 kHz, so it does not undo this setting.
+        </Callout>
+        <P>
+          If the gain takes the peak above 0 dBFS, the file keeps the exact value (32-bit float), but playback will clip: the result warns you. Lower the target level or use more sensitive
+          equipment. The preview computes the gain on the first 12 s; the generated file uses the whole file, so the two may differ slightly.
+        </P>
       </Section>
 
       <Section id="sala-propria" title="Want a room of your own?">

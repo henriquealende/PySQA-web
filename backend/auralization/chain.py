@@ -1,7 +1,8 @@
 """Runs the auralization chain on a mono signal.
 
 Blocks: Environment (room response, optional), HRTF (binaural positioning), background noise (optional, at a given
-signal-to-noise ratio) and Headphone (compensation or simulation of a measured response, applied last). Each ear ends up with one filter that
+signal-to-noise ratio), Headphone (compensation or simulation of a measured response) and Level (a target in dB SPL,
+applied last, so it counts everything that is played). Each ear ends up with one filter that
 holds everything, so the signal is convolved once per ear. The structure is a list of steps so the next blocks
 (headphone, level) are added without touching the callers.
 
@@ -25,6 +26,7 @@ from scipy.signal import oaconvolve, resample_poly
 from utils.lang import msg
 
 from . import headphone as headphone_mod
+from . import level as level_mod
 from . import hrtf as hrtf_mod
 from .headphone import HeadphoneSet
 from .noise import COLORS, mix_snr
@@ -74,11 +76,20 @@ class HeadphoneStep:
 
 
 @dataclass
+class LevelStep:
+    mode: str = "off"                   # off | spl (a target in dB SPL) | source (keep the SPL of a calibrated recording)
+    target_db_spl: float = 60.0
+    fs_db_spl: float = 100.0            # SPL at the ear of a full-scale sine on the user's equipment
+    weighting: str = "A"                # A | Z
+
+
+@dataclass
 class Chain:
     hrtf: HrtfStep = field(default_factory=HrtfStep)
     environment: EnvironmentStep = field(default_factory=EnvironmentStep)
     noise: NoiseStep = field(default_factory=NoiseStep)
     headphone: HeadphoneStep = field(default_factory=HeadphoneStep)
+    level: LevelStep = field(default_factory=LevelStep)
 
 
 @dataclass
@@ -89,6 +100,8 @@ class RenderResult:
     elevation: float
     peak_dbfs: float
     notes: List[str] = field(default_factory=list)
+    gain_db: Optional[float] = None        # gain applied by the level step
+    level_db_spl: Optional[float] = None   # level the result should have at the user's equipment
 
 
 def downmix(x: np.ndarray) -> np.ndarray:
@@ -154,7 +167,8 @@ def _environment_filters(env: EnvironmentStep, fs: int, rir: RirSet, hrir: Optio
 
 
 def render(mono: np.ndarray, fs: int, chain: Chain, resolve_hrtf: HrtfResolver,
-           resolve_rir: Optional[RirResolver] = None, resolve_headphone: Optional[HeadphoneResolver] = None) -> RenderResult:
+           resolve_rir: Optional[RirResolver] = None, resolve_headphone: Optional[HeadphoneResolver] = None,
+           source_spl: Optional[float] = None) -> RenderResult:
     notes: List[str] = []
     x = np.asarray(mono, dtype=np.float32)
     step, env = chain.hrtf, chain.environment
@@ -217,9 +231,29 @@ def render(mono: np.ndarray, fs: int, chain: Chain, resolve_hrtf: HrtfResolver,
         except headphone_mod.HeadphoneError as exc:
             raise ChainError(str(exc))
         out = np.stack([oaconvolve(out[:, c], fir) for c in range(out.shape[1])], axis=1)
+    gain_applied: Optional[float] = None
+    spl_set: Optional[float] = None
+    lv = chain.level
+    if lv.mode != "off":
+        if lv.weighting not in level_mod.WEIGHTINGS:
+            raise ChainError(msg("Ponderação desconhecida (use A ou Z).", "Unknown weighting (use A or Z)."))
+        if lv.mode == "source":
+            if source_spl is None:
+                raise ChainError(msg("Este áudio não tem calibração. Calibre o microfone no Pós-processamento ou escolha um nível-alvo.",
+                                     "This audio has no calibration. Calibrate the microphone in Post-Processing or choose a target level."))
+            spl_set = float(source_spl)
+        else:
+            spl_set = float(lv.target_db_spl)
+        try:
+            current = level_mod.digital_level_db(out, fs, lv.weighting)
+        except level_mod.LevelError as exc:
+            raise ChainError(str(exc))
+        gain_applied = level_mod.gain_db(current, spl_set, lv.fs_db_spl)
+        out = out * 10 ** (gain_applied / 20.0)
     peak = float(np.max(np.abs(out))) if out.size else 0.0
     peak_db = 20 * np.log10(peak) if peak > 0 else -200.0
     if peak > 1.0:
         notes.append(msg(f"O pico passa de 0 dBFS ({peak_db:+.1f} dBFS): o arquivo guarda o valor exato, mas a reprodução satura. Reduza o nível da fonte.",
                          f"The peak exceeds 0 dBFS ({peak_db:+.1f} dBFS): the file keeps the exact value, but playback will clip. Lower the source level."))
-    return RenderResult(data=out, fs=fs, azimuth=az, elevation=el, peak_dbfs=peak_db, notes=notes)
+    return RenderResult(data=out, fs=fs, azimuth=az, elevation=el, peak_dbfs=peak_db, notes=notes,
+                        gain_db=gain_applied, level_db_spl=spl_set)
