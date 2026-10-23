@@ -91,11 +91,11 @@ npm run dev
 
 ---
 
-## Optional: `sottek_hearing_model` (ECMA-418-2 metrics)
+## ECMA-418-2 metrics (`sottek-hearing-model`)
 
-Loudness ECMA-418-2, Roughness ECMA-418-2 and Tonality ECMA-418-2 require the
-`sottek_hearing_model` Python package (commercial licence, not included).
-Without it, those three metrics are disabled; all other features work normally.
+Loudness, Roughness and Tonality ECMA-418-2 use the `sottek-hearing-model` package, which is pinned in
+`backend/requirements.txt` and installed with the other dependencies. If the import fails in some environment,
+those three metrics are disabled and all other features keep working.
 
 ---
 
@@ -163,30 +163,37 @@ creates, so a restored file comes back under the same id and nothing on screen c
 ```
 PySQA web/
 +-- backend/
-|   +-- main.py                  # FastAPI entry point
+|   +-- main.py                  # FastAPI entry point; also serves frontend/dist
 |   +-- requirements.txt
 |   +-- routers/
 |   |   +-- audio.py             # Upload, visualisation, psychoacoustic metrics
 |   |   +-- processing.py        # Filter, window, weighting, loudness adj.
 |   |   +-- export.py            # WAV / XLSX / CSV download
+|   |   +-- frf.py               # System Analysis (FRF) endpoints
 |   +-- services/
 |   |   +-- session_store.py     # In-memory session management
 |   |   +-- audio_service.py     # Signal processing & metrics logic
+|   |   +-- frf_service.py       # FRF estimators, coherence, modes, damping, UFF/WAV/CSV readers
 |   +-- psychoacoustics/         # Psychoacoustic metric implementations
 |   +-- processing/              # DSP helpers (filtering, windowing)
+|   +-- utils/                   # lang (PT/EN server messages), limits (memory guard), samples
 |
 +-- frontend/
+|   +-- public/                  # Logo and the recorder AudioWorklet
 |   +-- src/
-|       +-- pages/PostProcessing/
-|       |   +-- PostProcessingPage.tsx
-|       |   +-- BatchPanel.tsx
-|       +-- components/
-|       |   +-- PlotPanel.tsx        # All Plotly.js plots
-|       |   +-- ProcessingModal.tsx  # DSP processing panel
-|       +-- store/useStore.ts        # Zustand global state
-|       +-- api/                     # Typed fetch wrappers
+|       +-- pages/PostProcessing/    # Post-Processing and Batch
+|       +-- pages/SystemAnalysis/    # FRF page and plots
+|       +-- pages/DataAcquisition/   # Recording, calibration wizard, SPL meter
+|       +-- pages/Docs/              # Documentation pages (PT/EN) and demo data
+|       +-- components/              # Plot panel, processing modal, layout, shared UI
+|       +-- i18n/                    # PT (default) / EN dictionaries in locales/<lang>/
+|       +-- store/                   # Zustand stores
+|       +-- api/                     # Typed fetch wrappers, session recovery, caches
 |       +-- types/index.ts
 |
++-- dev-tests/                   # Development checks (see its README); archive/ holds one-off scripts
++-- render.yaml                  # Render deployment (single web service)
++-- PROJECT_MAP.md               # Map of the repository and cleanup notes
 +-- start_backend.ps1 / start_backend.sh
 +-- start_frontend.ps1 / start_frontend.sh
 +-- README.md
@@ -229,7 +236,14 @@ PySQA web/
 
 ---
 
-## Roadmap
+## Modules
 
-- **Phase 2** -- Data Acquisition (live microphone recording via WebSocket)
-- **Phase 3** -- System Analysis (FRF / Nyquist / coherence via UFF files)
+- **Post-Processing** -- the features listed above.
+- **Data Acquisition** -- live recording, calibration wizard, level meter (done; see the Documentation page).
+- **System Analysis** -- FRF (H1 / H2 / HT), coherence, impact testing, modes and damping, UFF/WAV/CSV input (done).
+
+## Deployment
+
+Hosted on Render (`render.yaml`): one web service, Standard plan (2 GiB, 1 CPU). The build installs the backend,
+builds the frontend and FastAPI serves it; `/api/health` is the health check and `main` deploys automatically.
+The disk is ephemeral, so the browser keeps a copy of the uploaded files and restores them after a restart.
