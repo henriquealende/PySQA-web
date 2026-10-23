@@ -245,19 +245,21 @@ def compute_waveform(entry: AudioEntry) -> Dict[str, Any]:
 # ── Spectrum (FFT) ────────────────────────────────────────────────────────────
 
 def compute_spectrum(entry: AudioEntry, t0: Optional[float] = None, t1: Optional[float] = None) -> Dict[str, Any]:
+    """Magnitude spectrum of the file, one curve per channel (at most two: left and right).
+
+    `magnitude_db` is the first channel (what a mono file returns); a stereo file also lists both curves
+    in `channels`. When the spectrum is reduced for plotting each point is the peak of its bucket, so a
+    tone never disappears.
+    """
     sec = _section(entry, t0, t1)
     entry = sec.entry
     limits.check_budget("spectrum", entry.duration_s, entry.sample_rate, audio_ram_mb())
-    mono = _mono(entry.data)
     calibrated = entry.calibration_pa is not None
-    if calibrated:
-        mono = mono * entry.calibration_pa  # scale to Pa
+    n_ch = 1 if entry.data.ndim == 1 else min(entry.data.shape[1], 2)
 
-    n = len(mono)
+    n = entry.data.shape[0]
     window = np.hanning(n)
-    fft = np.fft.rfft(mono * window)
     freqs = np.fft.rfftfreq(n, d=1.0 / entry.sample_rate)
-    mag = np.abs(fft)
 
     # Window gain is divided out (sum(window)/2 is the line height of a unit-amplitude sine).
     # Calibrated: dB SPL re 20 µPa, RMS per line, so a 94 dB tone peaks at ~94 dB.
@@ -268,17 +270,23 @@ def compute_spectrum(entry: AudioEntry, t0: Optional[float] = None, t1: Optional
     def to_db(v):
         return np.round(20 * np.log10(v / ref + 1e-12), 2)
 
-    out: Dict[str, Any] = {"calibrated": calibrated, "section": sec.span}
-    if len(freqs) > _SPECTRUM_MAX_POINTS:
-        # magnitude_db is the per-bucket peak (tones never disappear);
-        # average_db is the per-bucket power mean (the noise floor).
-        centre, peak, rms = _log_reduce(freqs, mag, _SPECTRUM_MAX_POINTS)
-        out["freqs"] = np.round(centre, 3).tolist()
-        out["magnitude_db"] = to_db(peak).tolist()
-        out["average_db"] = to_db(rms).tolist()
-    else:
-        out["freqs"] = np.round(freqs, 3).tolist()
-        out["magnitude_db"] = to_db(mag).tolist()
+    reduced = len(freqs) > _SPECTRUM_MAX_POINTS
+    curves: List[np.ndarray] = []
+    out_freqs = freqs
+    for ch in range(n_ch):
+        x = entry.data if entry.data.ndim == 1 else entry.data[:, ch]
+        if calibrated:
+            x = x * entry.calibration_pa  # scale to Pa
+        mag = np.abs(np.fft.rfft(x * window))
+        if reduced:
+            out_freqs, mag, _ = _log_reduce(freqs, mag, _SPECTRUM_MAX_POINTS)
+        curves.append(to_db(mag))
+
+    out: Dict[str, Any] = {"calibrated": calibrated, "section": sec.span,
+                           "freqs": np.round(out_freqs, 3).tolist(),
+                           "magnitude_db": curves[0].tolist()}
+    if n_ch > 1:
+        out["channels"] = [{"name": nm, "magnitude_db": c.tolist()} for nm, c in zip(("L", "R"), curves)]
     return out
 
 

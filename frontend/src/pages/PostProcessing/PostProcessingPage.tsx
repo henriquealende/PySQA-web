@@ -8,6 +8,8 @@ import { restoreSession } from '../../api/http'
 import { AudioFile, ViewMode, MetricKey, FieldType } from '../../types'
 import FileDropzone from '../../components/FileDropzone'
 import ImportCallout from '../../components/ImportCallout'
+import ChannelNotice from '../../components/ChannelNotice'
+import BugReportButton from '../../components/BugReportButton'
 import AudioList from '../../components/AudioList'
 import MetricSelector from '../../components/MetricSelector'
 import AudioPlayer from '../../components/AudioPlayer'
@@ -150,6 +152,7 @@ export default function PostProcessingPage() {
                 onChange={(k) => { setMetricKey(k); if (k !== 'none') setViewMode('normal') }}
                 disabled={!selectedId}
               />
+              {(selectedFile?.channels ?? 1) > 1 && (metricKey !== 'none' || viewMode !== 'normal') && <ChannelNotice />}
             </div>
 
             <div className="border-t border-border pt-3 space-y-2">
@@ -227,6 +230,7 @@ export default function PostProcessingPage() {
 
           </>
         )}
+        <BugReportButton />
       </aside>
 
       <div className="flex flex-col flex-1 overflow-hidden">

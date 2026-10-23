@@ -8,6 +8,7 @@ import { MetricKey, FieldType } from '../../types'
 import { exportXlsx } from '../../api/exportApi'
 import { toast } from '../../store/useToast'
 import { useT } from '../../i18n'
+import ChannelNotice from '../../components/ChannelNotice'
 
 const BATCH_METRICS: { key: MetricKey; label: string; short: string }[] = [
   { key: 'loudness_zwk',         label: 'Loudness ZWK',    short: 'N (ZWK)' },
@@ -288,6 +289,8 @@ export default function BatchPanel() {
 
         {/* Controls bar */}
         <div className="shrink-0 border-b border-border px-4 py-3 flex flex-col gap-3 bg-surface/40">
+
+          {selectedFiles.some(f => f.channels > 1) && <ChannelNotice />}
 
           {/* Row 1: metrics */}
           <div className="flex flex-wrap items-center gap-2">

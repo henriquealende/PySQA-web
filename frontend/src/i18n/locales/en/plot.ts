@@ -59,9 +59,9 @@ export default {
   'plot.axis.octCentre': '1/3-Octave Band Centre (Hz)',
 
   'plot.trace.waveform': 'Waveform',
-  'plot.trace.peak': 'Peak',
+  'plot.trace.left': 'Left (L)',
+  'plot.trace.right': 'Right (R)',
   'plot.trace.spectrum': 'Spectrum',
-  'plot.trace.average': 'Average',
   'plot.trace.timeVarying': 'Time-varying',
   'plot.trace.signal': 'Signal',
   'plot.trace.envelope': 'Envelope',

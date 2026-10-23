@@ -68,8 +68,8 @@ export interface WaveformData {
 
 export interface SpectrumData {
   freqs: number[]
-  magnitude_db: number[]  // per-bucket peak when the spectrum was reduced for plotting
-  average_db?: number[]   // per-bucket power mean (noise floor); present when reduced
+  magnitude_db: number[]  // first channel; per-bucket peak when the spectrum was reduced for plotting
+  channels?: { name: string; magnitude_db: number[] }[]   // left and right, only for a file with two or more channels
   calibrated?: boolean
   section?: Section | null
 }

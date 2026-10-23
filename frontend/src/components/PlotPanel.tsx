@@ -23,7 +23,7 @@ import { serverLabel } from '../i18n/serverLabels'
 const C_TEAL   = '#50b89e'   // primary time
 const C_ORANGE = '#ed693b'   // primary freq
 const C_AMBER  = '#ffa94d'   // envelope
-const C_PEAK   = '#8fd3ff'   // spectrum peak line: a different hue from the orange average, so the two are told apart
+const C_RIGHT  = '#4cc9f0'   // right channel of the spectrum (the left one is C_ORANGE)
 const C_BLUE   = '#60a5fa'   // compare time
 const C_YELLOW = '#fbbf24'   // compare freq
 
@@ -421,18 +421,17 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   const specCalibrated = sp.calibrated ?? false
   const specUnit = specCalibrated ? 'dB SPL' : 'dBFS'
 
-  // When the server reduced the spectrum for plotting it sends the per-bucket peak
-  // (tones stay at their true level) plus the power average (the noise floor).
-  const hasAvg = !!sp.average_db
+  // A file with two channels draws one curve each (left orange, right blue); a mono file draws one.
+  const stereo = !!sp.channels && sp.channels.length > 1
+  const spCurves = stereo
+    ? sp.channels!.map((c, i) => ({ y: c.magnitude_db, color: i === 0 ? C_ORANGE : C_RIGHT, name: t(i === 0 ? 'plot.trace.left' : 'plot.trace.right') }))
+    : [{ y: sp.magnitude_db, color: C_ORANGE, name: t('plot.trace.spectrum') }]
   const spData: Plotly.Data[] = [
-    { x: sp.freqs, y: sp.magnitude_db, type: 'scatter', mode: 'lines',
-      line: { color: hasAvg ? C_PEAK : C_ORANGE, width: 1 }, name: hasAvg ? t('plot.trace.peak') : t('plot.trace.spectrum'),
-      hovertemplate: `%{x:.1f} Hz — %{y:.1f} ${specUnit}<extra></extra>` },
-    ...(hasAvg ? [{
-      x: sp.freqs, y: sp.average_db, type: 'scatter' as const, mode: 'lines' as const,
-      line: { color: C_ORANGE, width: 1.6 }, name: t('plot.trace.average'),
+    ...spCurves.map(c => ({
+      x: sp.freqs, y: c.y, type: 'scatter' as const, mode: 'lines' as const,
+      line: { color: c.color, width: 1.2 }, name: c.name,
       hovertemplate: `%{x:.1f} Hz — %{y:.1f} ${specUnit}<extra></extra>`,
-    }] : []),
+    })),
     ...(spCmp ? [{
       x: spCmp.freqs, y: spCmp.magnitude_db, type: 'scatter' as const, mode: 'lines' as const,
       line: { color: C_YELLOW, width: 1, dash: 'dot' as const }, name: `${t('plot.trace.spectrum')} (${compareName})`,
@@ -499,7 +498,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
           yaxis: { ...BASE_LAYOUT.yaxis, title: isCalibrated ? t('plot.axis.spl') : t('plot.axis.magnitudeDbfs') },
           shapes: f0 ? harmonicShapes(f0, C_ORANGE) : [],
           annotations: spPins.map(p => makePinAnnotation(p, true, '.0f', '.1f', specUnit)),
-          showlegend: showLegend || hasAvg,
+          showlegend: showLegend || stereo,
           legend: { x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top', font: { size: 10, color: '#8ab4c9' }, bgcolor: 'rgba(17,28,40,0.7)' } }}
         config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler
         onClick={(evt: any) => { const pt = evt.points?.[0]; if (!pt) return; setSpPins(p => [...p, {x: pt.x, y: pt.y}]) }}

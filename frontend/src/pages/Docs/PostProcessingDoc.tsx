@@ -33,7 +33,7 @@ export default function PostProcessingDoc() {
           <li><strong>Exportar:</strong> WAV, planilha (XLSX) ou tabela (CSV).</li>
         </ol>
         <Callout kind="info" title="Um canal por vez">
-          Arquivos estéreo ou multicanal são analisados pelo <strong>primeiro canal</strong>. Para analisar outro canal, separe-o antes em um arquivo mono.
+          Em arquivos estéreo, só o <strong>espectro</strong> (vista Normal) mostra os dois canais, esquerdo em laranja e direito em azul. A forma de onda, o espectrograma, o 1/3 de oitava, o envelope e todas as métricas usam o <strong>canal esquerdo</strong>: calcular os dois dobraria o tempo de processamento, e a tela avisa quando isso vale. Para analisar o canal direito, separe-o antes em um arquivo mono.
         </Callout>
       </Section>
 
@@ -122,8 +122,8 @@ export default function PostProcessingDoc() {
             <SpectrumChart />
           </Figure>
           <P>
-            Para desenhar rápido, o espectro é reduzido a 2 400 pontos em eixo logarítmico: a curva principal guarda o <em>pico</em> de cada
-            faixa (nenhum tom desaparece) e a curva de média mostra o piso de ruído. O desenho segue a ideia da análise espectral por
+            Para desenhar rápido, o espectro é reduzido a 2 400 pontos em eixo logarítmico: cada ponto guarda o <em>pico</em> da sua
+            faixa (nenhum tom desaparece). Em arquivos estéreo há uma curva por canal, esquerdo e direito. O desenho segue a ideia da análise espectral por
             janelas descrita por Harris <Cite ids={['harris1978']} />.
           </P>
         </Section>
@@ -497,7 +497,7 @@ export default function PostProcessingDoc() {
       <Section id="limites" title="Limites e boas práticas">
         <UL>
           <li><strong>Calibre sempre que possível.</strong> Sem calibração, as métricas servem apenas para comparar arquivos gravados da mesma forma.</li>
-          <li><strong>Um canal por vez.</strong> Estéreo e multicanal usam o primeiro canal.</li>
+          <li><strong>Um canal por vez nas métricas.</strong> Estéreo e multicanal usam o canal esquerdo; só o espectro mostra os dois.</li>
           <li><strong>Trechos estacionários ou curtos.</strong> Métricas ECMA-418-2 (tonalidade, roughness e loudness) consomem muito tempo e memória; o servidor avisa quando um cálculo não cabe e sugere selecionar um trecho.</li>
           <li><strong>Taxa de amostragem.</strong> Frequências acima da metade da taxa de amostragem não existem no arquivo; para as métricas, 44,1 e 48 kHz são adequados.</li>
           <li><strong>Filtros de fase zero</strong> preservam a forma de onda, mas aplicam a resposta duas vezes; planeje as frequências de corte considerando os −6 dB.</li>

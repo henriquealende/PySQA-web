@@ -39,18 +39,18 @@ shown = max(sp["magnitude_db"])
 fpk = sp["freqs"][int(np.argmax(sp["magnitude_db"]))]
 check("spectrum tone level", abs(shown - true_peak) < 0.1, f"true {true_peak:.2f} dBFS, plotted {shown:.2f} dBFS")
 check("spectrum tone frequency", abs(fpk - 3217.3) < 25, f"plotted at {fpk:.1f} Hz")
-check("spectrum size", len(sp["freqs"]) <= 2500 and "average_db" in sp, f"{len(sp['freqs'])} points, avg trace present")
+check("spectrum size", len(sp["freqs"]) <= 2500 and "channels" not in sp, f"{len(sp['freqs'])} points, one curve for a mono file")
 check("spectrum monotonic x", bool(np.all(np.diff(sp["freqs"]) > 0)), "freqs strictly increasing")
 
-# 1b) noise floor honesty: white noise, average trace should be flat within ~1.5 dB across HF
-noise = 0.05 * rng.standard_normal(10 * SR)
-sn = svc.compute_spectrum(entry(noise))
-f = np.array(sn["freqs"]); avg = np.array(sn["average_db"]); pk = np.array(sn["magnitude_db"])
-band = (f > 1000) & (f < 20000)
-hf = (f > 10000) & (f < 20000)
-lf = (f > 1000) & (f < 2000)
-drift = abs(np.mean(avg[hf]) - np.mean(avg[lf]))
-check("noise average is flat", np.std(avg[band]) < 1.0 and drift < 0.5, f"std {np.std(avg[band]):.2f} dB, 1-2 kHz vs 10-20 kHz differ by {drift:.2f} dB (the peak trace sits {np.mean(pk[band]-avg[band]):.1f} dB above the average)")
+# 1b) stereo: one curve per channel, each with its own tone
+st2 = entry(tone)
+st2.data = np.stack([tone, 0.1 * np.sin(2 * np.pi * 1000.0 * t)], axis=1)
+sps = svc.compute_spectrum(st2)
+chs = sps.get("channels", [])
+fl = np.array(sps["freqs"])
+peaks = [fl[int(np.argmax(c["magnitude_db"]))] for c in chs]
+check("stereo spectrum has L and R", [c["name"] for c in chs] == ["L", "R"] and abs(peaks[0] - 3217.3) < 25 and abs(peaks[1] - 1000.0) < 25, f"peaks at {peaks} Hz")
+check("stereo magnitude_db is the left channel", sps["magnitude_db"] == chs[0]["magnitude_db"], "same curve")
 
 # 2) click and clipping in the waveform
 sig = 0.01 * rng.standard_normal(10 * SR)
@@ -70,7 +70,7 @@ short = entry(0.1 * np.sin(2 * np.pi * 440 * np.arange(1000) / SR))
 ws = svc.compute_waveform(short)
 check("short waveform untouched", len(ws["t"]) == 1000, f"{len(ws['t'])} samples")
 ss = svc.compute_spectrum(short)
-check("short spectrum untouched", "average_db" not in ss and len(ss["freqs"]) == 501, f"{len(ss['freqs'])} bins")
+check("short spectrum untouched", len(ss["freqs"]) == 501, f"{len(ss['freqs'])} bins")
 
 # 3) envelope view
 env = svc.compute_envelope(entry(cl), smoothing_ms=0)

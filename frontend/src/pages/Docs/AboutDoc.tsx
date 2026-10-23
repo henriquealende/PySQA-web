@@ -111,7 +111,7 @@ function AboutPt() {
         </UL>
         <P>O código está em <Repo />.</P>
         <Callout kind="tip" title="Encontrou algo estranho?">
-          Um resultado que não bate, um botão confuso, um texto que não ficou claro: conte. É assim que a ferramenta melhora.
+          Um resultado que não bate, um botão confuso, um texto que não ficou claro: conte. É assim que a ferramenta melhora. Use o botão <strong>Reportar um bug</strong>, no fim da coluna da esquerda de qualquer página: o texto chega até nós junto com a tela, o arquivo aberto e o navegador (o áudio não é enviado).
         </Callout>
       </Section>
 
@@ -195,7 +195,7 @@ function AboutEn() {
         </UL>
         <P>The code is at <Repo />.</P>
         <Callout kind="tip" title="Found something odd?">
-          A result that does not add up, a confusing button, a text that is not clear: tell us. That is how the tool gets better.
+          A result that does not add up, a confusing button, a text that is not clear: tell us. That is how the tool gets better. Use the <strong>Report a bug</strong> button at the bottom of the left column on any page: your text reaches us together with the current page, the open file and your browser (the audio itself is not sent).
         </Callout>
       </Section>
 

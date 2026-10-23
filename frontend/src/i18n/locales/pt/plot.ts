@@ -59,9 +59,9 @@ export default {
   'plot.axis.octCentre': 'Centro da banda de 1/3 de oitava (Hz)',
 
   'plot.trace.waveform': 'Forma de onda',
-  'plot.trace.peak': 'Pico',
+  'plot.trace.left': 'Esquerdo (L)',
+  'plot.trace.right': 'Direito (R)',
   'plot.trace.spectrum': 'Espectro',
-  'plot.trace.average': 'Média',
   'plot.trace.timeVarying': 'Variação no tempo',
   'plot.trace.signal': 'Sinal',
   'plot.trace.envelope': 'Envelope',

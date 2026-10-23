@@ -6,6 +6,7 @@ import { CiteContext } from './ui'
 import { DATA_ACQUISITION_TOC, POST_PROCESSING_TOC, SYSTEM_ANALYSIS_TOC } from './tocs'
 import { ABOUT_TOC } from './AboutDoc'
 import { useLang, useT } from '../../i18n'
+import BugReportButton from '../../components/BugReportButton'
 
 const AboutDoc = lazy(() => import('./AboutDoc'))
 const PostProcessingDoc = lazy(() => import('./PostProcessingDoc'))
@@ -121,6 +122,7 @@ export default function DocsPage() {
             </nav>
           </>
         )}
+        <BugReportButton />
       </aside>
 
       {/* ── Content ── */}

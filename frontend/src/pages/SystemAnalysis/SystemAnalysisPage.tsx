@@ -7,6 +7,7 @@ import type { FrfResult, RespType } from '../../api/frfApi'
 import type { FrfView } from './FrfPlots'
 import ImportCallout from '../../components/ImportCallout'
 import { useT } from '../../i18n'
+import BugReportButton from '../../components/BugReportButton'
 
 type T = (key: string, vars?: Record<string, string | number>) => string
 
@@ -319,6 +320,7 @@ export default function SystemAnalysisPage() {
             </Group>
           </>
         )}
+        <BugReportButton />
       </aside>
 
       {/* ── Results column ── */}

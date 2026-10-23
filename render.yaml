@@ -15,3 +15,10 @@ services:
     envVars:
       - key: PYSQA_MEMORY_MB    # explicit, so the limits never fall back to the 512 MB assumed when the cgroup cannot be read
         value: "2048"
+      # Bug reports from the "Report a bug" button (see backend/routers/feedback.py). Set the values in the Render dashboard.
+      - key: PYSQA_FEEDBACK_WEBHOOK     # Slack / Discord incoming-webhook URL that receives each report
+        sync: false
+      - key: PYSQA_FEEDBACK_EMAIL_TO    # e-mail that receives each report (also needs the PYSQA_SMTP_* variables)
+        sync: false
+      - key: PYSQA_FEEDBACK_TOKEN       # secret for GET /api/feedback (header X-Feedback-Token)
+        sync: false

@@ -33,7 +33,7 @@ export default function PostProcessingDocEn() {
           <li><strong>Export:</strong> WAV, spreadsheet (XLSX) or table (CSV).</li>
         </ol>
         <Callout kind="info" title="One channel at a time">
-          Stereo or multichannel files are analyzed through the <strong>first channel</strong>. To analyze another channel, first split it into a mono file.
+          In stereo files only the <strong>spectrum</strong> (Normal view) shows both channels, left in orange and right in blue. The waveform, spectrogram, 1/3-octave, envelope and all metrics use the <strong>left channel</strong>: computing both would double the processing time, and the screen warns you when this applies. To analyze the right channel, first split it into a mono file.
         </Callout>
       </Section>
 
@@ -122,8 +122,8 @@ export default function PostProcessingDocEn() {
             <SpectrumChart />
           </Figure>
           <P>
-            To draw quickly, the spectrum is reduced to 2,400 points on a logarithmic axis: the main curve keeps the <em>peak</em> of each
-            band (no tone disappears) and the average curve shows the noise floor. The drawing follows the idea of windowed spectral
+            To draw quickly, the spectrum is reduced to 2,400 points on a logarithmic axis: each point keeps the <em>peak</em> of its
+            band (no tone disappears). Stereo files get one curve per channel, left and right. The drawing follows the idea of windowed spectral
             analysis described by Harris <Cite ids={['harris1978']} />.
           </P>
         </Section>
@@ -497,7 +497,7 @@ export default function PostProcessingDocEn() {
       <Section id="limites" title="Limits and good practices">
         <UL>
           <li><strong>Calibrate whenever possible.</strong> Without calibration, the metrics are only useful to compare files recorded in the same way.</li>
-          <li><strong>One channel at a time.</strong> Stereo and multichannel files use the first channel.</li>
+          <li><strong>One channel at a time for metrics.</strong> Stereo and multichannel files use the left channel; only the spectrum shows both.</li>
           <li><strong>Stationary or short segments.</strong> ECMA-418-2 metrics (tonality, roughness and loudness) consume a lot of time and memory; the server warns when a computation does not fit and suggests selecting a segment.</li>
           <li><strong>Sampling rate.</strong> Frequencies above half the sampling rate do not exist in the file; for the metrics, 44.1 and 48 kHz are adequate.</li>
           <li><strong>Zero-phase filters</strong> preserve the waveform, but apply the response twice; plan the cutoff frequencies taking the −6 dB into account.</li>

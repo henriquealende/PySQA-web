@@ -39,3 +39,6 @@ ngrok
 .env
 .env.*
 !.env.example
+
+# Bug reports sent from the app (user data)
+backend/feedback/

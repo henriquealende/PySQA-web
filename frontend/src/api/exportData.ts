@@ -50,9 +50,8 @@ function waveformSheet(wf: WaveformData): Sheet {
 function spectrumSheet(sp: SpectrumData): Sheet {
   const unit = sp.calibrated ? 'dB SPL re 20 µPa' : 'dBFS'
   const columns: Record<string, Column> = { [tr('pp.export.colFrequency')]: sp.freqs }
-  if (sp.average_db) {
-    columns[tr('pp.export.colPeak', { unit })] = sp.magnitude_db
-    columns[tr('pp.export.colAverage', { unit })] = sp.average_db
+  if (sp.channels && sp.channels.length > 1) {
+    sp.channels.forEach((c) => { columns[tr('pp.export.colChannel', { ch: c.name, unit })] = c.magnitude_db })
   } else {
     columns[tr('pp.export.colMagnitude', { unit })] = sp.magnitude_db
   }

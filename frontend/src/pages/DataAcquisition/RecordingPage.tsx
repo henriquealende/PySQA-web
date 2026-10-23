@@ -26,6 +26,7 @@ import { toast } from '../../store/useToast'
 import { saveTake, deleteTake, loadTakes } from '../../api/recordingsStore'
 import { useNavigate } from 'react-router-dom'
 import { t as tr, useT } from '../../i18n'
+import BugReportButton from '../../components/BugReportButton'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1714,7 +1715,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       </section>
 
       {/* ── Settings column ── */}
-      <aside className="order-2 lg:order-1 shrink-0 lg:w-80 lg:border-r border-border p-3 lg:overflow-y-auto">
+      <aside className="order-2 lg:order-1 shrink-0 lg:w-80 lg:border-r border-border p-3 lg:overflow-y-auto flex flex-col">
         <div className="hidden lg:flex items-center gap-2 px-1 pb-3">
           <Mic size={18} className="text-teal" />
           <h1 className="text-base font-semibold">{t('rec.title')}</h1>
@@ -1934,6 +1935,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         </div>
       </div>
       </div>
+      <BugReportButton />
       </aside>
 
       {wizardOpen && (

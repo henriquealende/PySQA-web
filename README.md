@@ -141,6 +141,19 @@ the same `t0` / `t1` (seconds) on the view endpoints and in the body of `/metric
 
 ---
 
+## Bug reports
+
+Every page has a **Report a bug** button at the bottom of the left column. The report (text, optional contact, page, open file, view and browser; never the audio) is appended to `backend/feedback/reports.jsonl` and, when configured, forwarded so it reaches you even though the hosted disk is temporary:
+
+| Variable | Effect |
+|---|---|
+| `PYSQA_FEEDBACK_WEBHOOK` | URL of a Slack / Discord incoming webhook; each report is posted there |
+| `PYSQA_FEEDBACK_EMAIL_TO` | e-mail that receives each report; needs `PYSQA_SMTP_HOST` (and `PYSQA_SMTP_PORT`, `PYSQA_SMTP_USER`, `PYSQA_SMTP_PASSWORD`, `PYSQA_SMTP_FROM`) |
+| `PYSQA_FEEDBACK_TOKEN` | secret that opens `GET /api/feedback` (header `X-Feedback-Token`), which lists the reports kept on the server |
+| `PYSQA_FEEDBACK_DIR` | folder of the JSON-lines file (default `backend/feedback`) |
+
+A sender can file 5 reports per 10 minutes.
+
 ## Session recovery
 
 The server keeps uploaded files in memory and on a temporary disk, so a restart, a deploy or an

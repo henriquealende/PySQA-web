@@ -67,7 +67,7 @@ aid = d[0]["audio_id"]
 
 st, d = req("GET", f"/api/audio/{sess}/{aid}/spectrum")
 mags = d.get("magnitude_db", []) if st == 200 else []
-check("spectrum shows the 1 kHz tone (peak above -25 dBFS)", st == 200 and mags and max(mags) > -25 and "average_db" in d, f"max {max(mags):.1f} dBFS, {len(mags)} points" if mags else d)
+check("spectrum shows the 1 kHz tone (peak above -25 dBFS)", st == 200 and mags and max(mags) > -25, f"max {max(mags):.1f} dBFS, {len(mags)} points" if mags else d)
 st, d = req("GET", f"/api/audio/{sess}/{aid}/waveform")
 check("waveform keeps the clipped burst", st == 200 and d.get("peak", 0) >= 0.999 and max(d.get("amplitude", [0])) >= 0.999, f"peak {d.get('peak')}")
 st, d = req("GET", f"/api/audio/{sess}/{aid}/octave")
