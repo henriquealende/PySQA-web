@@ -10,16 +10,15 @@ import { useLang, useLocale, useT } from '../../i18n'
 import { getStreamUrl, uploadFiles, isAbort } from '../../api/audioApi'
 import {
   Catalog, deleteAsset, fetchCatalog, fetchHrtfResponse, fetchPreview, HrtfResponse, listAssets, renderToSession,
-  NO_ENV, SPHERE_ID, uploadHrtf,
+  NO_ENV, NO_HEADPHONE, SPHERE_ID, uploadHrtf,
 } from '../../api/auralizationApi'
 import HrtfMap from './HrtfMap'
 import ResponsePlot from './ResponsePlot'
 import AbPlayer from './AbPlayer'
 import EnvironmentSection from './EnvironmentSection'
+import HeadphoneSection from './HeadphoneSection'
 import NoiseSection from './NoiseSection'
 import ScenesBar from './ScenesBar'
-
-const LOCKED = ['aur.chain.environment', 'aur.chain.headphone'] as const
 
 function Block({ n, title, children, active }: { n: number; title: string; children: React.ReactNode; active?: boolean }) {
   return (
@@ -37,7 +36,8 @@ export default function AuralizationPage() {
   const fmt = (n: number, d = 1) => n.toLocaleString(locale, { minimumFractionDigits: d, maximumFractionDigits: d })
   const navigate = useNavigate()
   const { sessionId, files, addFiles, selectFile } = useStore()
-  const { sourceId, hrtf, env, noise, assets, lastRender, setSource, setHrtf, setEnv, setAssets, setLastRender } = useAuralStore()
+  const { sourceId, hrtf, env, noise, headphone, assets, lastRender, setSource, setHrtf, setEnv, setHeadphone, setAssets, setLastRender } = useAuralStore()
+  const hpEff = useMemo(() => (headphone.mode !== 'off' && !headphone.asset ? NO_HEADPHONE : headphone), [headphone])
   // a room type without a file chosen yet means no room
   const envEff = useMemo(() => (env.type !== 'none' && !env.asset ? NO_ENV : env), [env])
 
@@ -66,6 +66,7 @@ export default function AuralizationPage() {
       setAssets(list)
       if (hrtf.asset !== SPHERE_ID && !list.some((a) => a.asset_id === hrtf.asset)) setHrtf({ asset: SPHERE_ID })
       if (env.asset && !list.some((a) => a.asset_id === env.asset)) setEnv({ type: 'none', asset: null })
+      if (headphone.asset && !list.some((a) => a.asset_id === headphone.asset)) setHeadphone({ mode: 'off', asset: null })
     })
     void fetchCatalog().then(setCatalog).catch(() => undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -90,13 +91,13 @@ export default function AuralizationPage() {
     setPreviewBusy(true)
     setPreviewError('')
     const id = window.setTimeout(() => {
-      fetchPreview(sessionId, sourceId, hrtf, envEff, noise, 0, ctrl.signal)
+      fetchPreview(sessionId, sourceId, hrtf, envEff, noise, hpEff, 0, ctrl.signal)
         .then((p) => { made = p.url; setPreview((old) => { if (old) URL.revokeObjectURL(old.url); return p }) })
         .catch((e) => { if (!isAbort(e)) setPreviewError(e.message) })
         .finally(() => { if (!ctrl.signal.aborted) setPreviewBusy(false) })
     }, 600)
     return () => { window.clearTimeout(id); ctrl.abort(); if (made && !ctrl.signal.aborted) URL.revokeObjectURL(made) }
-  }, [sessionId, sourceId, hrtf, envEff, noise])
+  }, [sessionId, sourceId, hrtf, envEff, noise, hpEff])
   useEffect(() => () => { setPreview((old) => { if (old) URL.revokeObjectURL(old.url); return null }) }, [])
 
   const handleFiles = async (list: File[]) => {
@@ -133,7 +134,7 @@ export default function AuralizationPage() {
     if (!sourceId) return
     setRendering(true)
     try {
-      const r = await renderToSession(sessionId, sourceId, hrtf, envEff, noise)
+      const r = await renderToSession(sessionId, sourceId, hrtf, envEff, noise, hpEff)
       addFiles([r])
       setLastRender(r)
       toast.success(t('aur.render.done', { name: r.name }))
@@ -143,7 +144,7 @@ export default function AuralizationPage() {
   const asset = assets.find((a) => a.asset_id === hrtf.asset)
   const setName = hrtf.asset === SPHERE_ID ? t('aur.hrtf.sphere') : asset?.name ?? '—'
   const modelDesc = useMemo(() => catalog?.builtin.find((b) => b.id === SPHERE_ID)?.description[lang] ?? '', [catalog, lang])
-  const freeSets = catalog?.datasets.filter((d) => d.kind === 'hrtf' || d.kind === 'room') ?? []
+  const freeSets = catalog?.datasets.filter((d) => d.kind === 'hrtf' || d.kind === 'room' || d.kind === 'headphone') ?? []
   const clipped = (preview?.peakDbfs ?? -200) > 0
 
   return (
@@ -208,10 +209,10 @@ export default function AuralizationPage() {
             {noise.type !== 'none' && <span className="text-muted">{noise.snr_db} dB</span>}
           </Block>
           <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
-          <div className="flex-1 min-w-[130px] rounded-lg border border-dashed border-border px-3 py-2 opacity-60">
-            <p className="text-[10px] uppercase tracking-wider text-muted">5 · {t(LOCKED[1])}</p>
-            <p className="text-xs mt-1">{t('aur.chain.soon')}</p>
-          </div>
+          <Block n={5} title={t('aur.chain.headphone')} active={hpEff.mode !== 'off'}>
+            <span className="font-semibold block truncate">{hpEff.mode === 'off' ? t('aur.hp.mode.off') : assets.find((a) => a.asset_id === hpEff.asset)?.name ?? '—'}</span>
+            {hpEff.mode !== 'off' && <span className="text-muted">{t(`aur.hp.mode.${hpEff.mode}`)}</span>}
+          </Block>
         </div>
 
         {!source && (
@@ -274,6 +275,8 @@ export default function AuralizationPage() {
         </section>
 
         <NoiseSection />
+
+        <HeadphoneSection />
 
         {/* ── A/B preview ─────────────────────────────────────────────── */}
         <section className="rounded-lg border border-border bg-panel p-4 space-y-2" aria-labelledby="aur-ab">

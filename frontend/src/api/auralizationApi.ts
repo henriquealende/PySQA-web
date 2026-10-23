@@ -32,6 +32,25 @@ export interface NoiseParams {
 
 export const NO_NOISE: NoiseParams = { type: 'none', snr_db: 15 }
 
+export type HeadphoneMode = 'off' | 'compensate' | 'simulate'
+
+export interface HeadphoneParams {
+  mode: HeadphoneMode
+  asset: string | null
+  max_boost_db: number
+}
+
+export const NO_HEADPHONE: HeadphoneParams = { mode: 'off', asset: null, max_boost_db: 12 }
+
+export interface HeadphoneResponse {
+  freq: number[]
+  measured_db: number[]
+  target_db: number[]
+  filter_db: number[]
+  result_db: number[] | null
+  max_boost_db: number
+}
+
 /** What the synthetic room needs: volume, source distance and the reverberation time of each octave band. */
 export interface SynthParams {
   volume_m3: number
@@ -54,7 +73,7 @@ export interface Scene {
 /** A file the user uploaded: an HRTF set (SOFA) or a room response (WAV). */
 export interface Asset {
   asset_id: string
-  kind: 'hrtf' | 'rir'
+  kind: 'hrtf' | 'rir' | 'headphone'
   name: string
   sample_rate: number
   n_directions: number
@@ -63,6 +82,9 @@ export interface Asset {
   channels: number
   duration_s: number
   suggested_type: 'rir' | 'brir' | null
+  n_points: number
+  f_min: number
+  f_max: number
 }
 
 export interface RirInfo {
@@ -111,10 +133,11 @@ export interface RenderResult extends AudioFile {
 }
 
 const json = { 'Content-Type': 'application/json' }
-const blocks = (h: HrtfParams, env: EnvParams, noise: NoiseParams) => ({
+const blocks = (h: HrtfParams, env: EnvParams, noise: NoiseParams, hp: HeadphoneParams) => ({
   hrtf: { enabled: env.type !== 'brir', ...h },
   environment: env,
   noise,
+  headphone: hp,
 })
 
 export async function fetchCatalog(): Promise<Catalog> {
@@ -129,7 +152,7 @@ export async function listAssets(sessionId: string): Promise<Asset[]> {
   return res.json()
 }
 
-async function upload(sessionId: string, kind: 'hrtf' | 'rir', file: File): Promise<Asset> {
+async function upload(sessionId: string, kind: 'hrtf' | 'rir' | 'headphone', file: File): Promise<Asset> {
   const form = new FormData()
   form.append('session_id', sessionId)
   form.append('kind', kind)
@@ -141,6 +164,18 @@ async function upload(sessionId: string, kind: 'hrtf' | 'rir', file: File): Prom
 
 export const uploadHrtf = (sessionId: string, file: File) => upload(sessionId, 'hrtf', file)
 export const uploadRir = (sessionId: string, file: File) => upload(sessionId, 'rir', file)
+export const uploadHeadphone = (sessionId: string, file: File) => upload(sessionId, 'headphone', file)
+
+export async function fetchHeadphoneResponse(
+  sessionId: string, asset: string, mode: 'compensate' | 'simulate', maxBoostDb: number, fs: number, signal?: AbortSignal,
+): Promise<HeadphoneResponse> {
+  const res = await fetch(`${BASE}/headphone/response`, {
+    method: 'POST', headers: json, signal,
+    body: JSON.stringify({ session_id: sessionId, asset, mode, max_boost_db: maxBoostDb, fs }),
+  })
+  await checkResponse(res)
+  return res.json()
+}
 
 export async function deleteAsset(sessionId: string, assetId: string): Promise<void> {
   await fetch(`${BASE}/${sessionId}/assets/${assetId}`, { method: 'DELETE' })
@@ -188,11 +223,11 @@ export async function fetchHrtfResponse(sessionId: string, h: HrtfParams, fs: nu
 
 /** A short stretch of the result, ready to play. The caller owns the object URL (revoke it when done). */
 export async function fetchPreview(
-  sessionId: string, audioId: string, h: HrtfParams, env: EnvParams, noise: NoiseParams, t0: number, signal?: AbortSignal,
+  sessionId: string, audioId: string, h: HrtfParams, env: EnvParams, noise: NoiseParams, hp: HeadphoneParams, t0: number, signal?: AbortSignal,
 ): Promise<{ url: string; peakDbfs: number }> {
   const res = await apiFetch(sessionId, `${BASE}/preview`, {
     method: 'POST', headers: json, signal,
-    body: JSON.stringify({ session_id: sessionId, audio_id: audioId, blocks: blocks(h, env, noise), t0 }),
+    body: JSON.stringify({ session_id: sessionId, audio_id: audioId, blocks: blocks(h, env, noise, hp), t0 }),
   })
   await checkResponse(res)
   const peak = Number(res.headers.get('X-Peak-Dbfs'))
@@ -202,18 +237,18 @@ export async function fetchPreview(
 
 /**
  * Render the whole file into a new stereo audio of the session. The browser names the new file; when nothing from the
- * server's memory is needed (the built-in head model and no room response) it also remembers the step so the file can
+ * server's memory is needed (the built-in head model, no room response and no headphone file) it also remembers the step so the file can
  * be rebuilt after a server restart. Uploaded SOFA and room files live only in the server's memory, so results made
  * with them cannot be rebuilt.
  */
-export async function renderToSession(sessionId: string, audioId: string, h: HrtfParams, env: EnvParams, noise: NoiseParams): Promise<RenderResult> {
-  const body = { audio_id: audioId, blocks: blocks(h, env, noise) }
+export async function renderToSession(sessionId: string, audioId: string, h: HrtfParams, env: EnvParams, noise: NoiseParams, hp: HeadphoneParams): Promise<RenderResult> {
+  const body = { audio_id: audioId, blocks: blocks(h, env, noise, hp) }
   const res = await apiFetch(sessionId, `${BASE}/render`, {
     method: 'POST', headers: json,
     body: JSON.stringify({ ...body, session_id: sessionId, new_audio_id: newClientId() }),
   })
   await checkResponse(res)
   const result: RenderResult = await res.json()
-  if (h.asset === SPHERE_ID && env.type === 'none') await recovery.recordDerived(sessionId, result, `${BASE}/render`, body, [audioId])
+  if (h.asset === SPHERE_ID && env.type === 'none' && hp.mode === 'off') await recovery.recordDerived(sessionId, result, `${BASE}/render`, body, [audioId])
   return result
 }

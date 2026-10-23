@@ -16,7 +16,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 import services.audio_service as svc
-from auralization import assets, chain as chain_mod, hrtf as hrtf_mod, rir as rir_mod, rir_synth
+from auralization import assets, chain as chain_mod, headphone as hp_mod, hrtf as hrtf_mod, rir as rir_mod, rir_synth
 from auralization.rir import RirError, read_rir
 from auralization.sofa_io import HrtfSet, SofaError, read_sofa
 from services.session_store import add_entry, check_session_id, get_entry
@@ -59,10 +59,17 @@ class NoiseBlock(BaseModel):
     snr_db: float = Field(15.0, ge=-20, le=60)
 
 
+class HeadphoneBlock(BaseModel):
+    mode: Literal["off", "compensate", "simulate"] = "off"
+    asset: Optional[str] = None
+    max_boost_db: float = Field(12.0, ge=0, le=24)
+
+
 class Blocks(BaseModel):
     hrtf: HrtfBlock = HrtfBlock()
     environment: EnvironmentBlock = EnvironmentBlock()
     noise: NoiseBlock = NoiseBlock()
+    headphone: HeadphoneBlock = HeadphoneBlock()
 
 
 class RenderRequest(BaseModel):
@@ -91,7 +98,7 @@ class SynthRequest(BaseModel):
 
 class AssetMeta(BaseModel):
     asset_id: str
-    kind: Literal["hrtf", "rir"] = "hrtf"
+    kind: Literal["hrtf", "rir", "headphone"] = "hrtf"
     name: str
     sample_rate: float
     # HRTF
@@ -102,6 +109,10 @@ class AssetMeta(BaseModel):
     channels: int = 0
     duration_s: float = 0.0
     suggested_type: Optional[str] = None      # "rir" (1 channel) or "brir" (2 channels)
+    # headphone response
+    n_points: int = 0
+    f_min: float = 0.0
+    f_max: float = 0.0
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -136,6 +147,7 @@ def _chain(blocks: Blocks) -> chain_mod.Chain:
         hrtf=chain_mod.HrtfStep(enabled=h.enabled, asset=h.asset, azimuth=h.azimuth, elevation=h.elevation, distance_m=h.distance_m),
         environment=chain_mod.EnvironmentStep(type="rir" if inline else e.type, asset=_INLINE_ID if inline else e.asset, reverb_gain_db=e.reverb_gain_db),
         noise=chain_mod.NoiseStep(type=nz.type, snr_db=nz.snr_db),
+        headphone=chain_mod.HeadphoneStep(mode=blocks.headphone.mode, asset=blocks.headphone.asset, max_boost_db=blocks.headphone.max_boost_db),
     )
 
 
@@ -150,6 +162,7 @@ def _run(session_id: str, mono: np.ndarray, fs: int, blocks: Blocks, kind: str) 
                 mono, fs, _chain(blocks),
                 lambda aid: assets.get_hrtf(session_id, aid, fs),
                 lambda aid: inline if (inline is not None and aid == _INLINE_ID) else assets.get_rir(session_id, aid),
+                lambda aid: assets.get_headphone(session_id, aid),
             )
     except chain_mod.ChainError as exc:
         raise HTTPException(400, str(exc))
@@ -159,6 +172,9 @@ def _meta(asset_id: str, a) -> AssetMeta:
     if isinstance(a, HrtfSet):
         return AssetMeta(asset_id=asset_id, kind="hrtf", name=a.name, sample_rate=a.fs, n_directions=a.n_dirs,
                          n_taps=a.n_taps, radius_m=a.radius_m)
+    if isinstance(a, hp_mod.HeadphoneSet):
+        return AssetMeta(asset_id=asset_id, kind="headphone", name=a.name, sample_rate=0.0, n_points=a.n_points,
+                         f_min=float(a.freq[0]), f_max=float(a.freq[-1]))
     return AssetMeta(asset_id=asset_id, kind="rir", name=a.name, sample_rate=a.fs, channels=a.channels,
                      duration_s=round(a.duration_s, 3), suggested_type="brir" if a.channels == 2 else "rir")
 
@@ -201,6 +217,14 @@ async def upload_asset(session_id: str = Form(...), kind: str = Form("hrtf"), fi
         try:
             asset = read_rir(data, name)
         except RirError as exc:
+            raise HTTPException(400, str(exc))
+    elif kind == "headphone":
+        if not name.lower().endswith((".csv", ".txt")):
+            raise HTTPException(400, msg(f"{name} não é um arquivo .csv ou .txt", f"{name} is not a .csv or .txt file"))
+        data = await _read_upload(file, name)
+        try:
+            asset = hp_mod.read_headphone_csv(data, name)
+        except hp_mod.HeadphoneError as exc:
             raise HTTPException(400, str(exc))
     else:
         raise HTTPException(400, msg("Tipo de arquivo desconhecido.", "Unknown file kind."))
@@ -291,6 +315,33 @@ def render(body: RenderRequest):
         "azimuth": res.azimuth,
         "elevation": res.elevation,
         "notes": res.notes,
+    }
+
+
+class HeadphoneResponseRequest(BaseModel):
+    session_id: str
+    asset: str
+    mode: Literal["compensate", "simulate"] = "compensate"
+    max_boost_db: float = Field(12.0, ge=0, le=24)
+    fs: int = 48000
+
+
+@router.post("/headphone/response")
+def headphone_response(body: HeadphoneResponseRequest):
+    """Measured response (levelled), the correction asked for and what the FIR really does, for the plot."""
+    check_session_id(body.session_id)
+    hp = assets.get_headphone(body.session_id, body.asset)
+    if hp is None:
+        raise HTTPException(400, msg("A resposta do fone não está mais no servidor. Envie o arquivo de novo.", "The headphone response is no longer on the server. Upload the file again."))
+    freq, measured, corr = hp_mod.correction_db(hp, body.fs, body.mode, body.max_boost_db)
+    fir = hp_mod.min_phase_fir(freq, corr, body.fs)
+    return {
+        "freq": np.round(freq, 2).tolist(),
+        "measured_db": np.round(measured, 2).tolist(),
+        "target_db": np.round(corr, 2).tolist(),
+        "filter_db": np.round(hp_mod.response_db(fir, body.fs, freq), 2).tolist(),
+        "result_db": np.round(measured + hp_mod.response_db(fir, body.fs, freq), 2).tolist() if body.mode == "compensate" else None,
+        "max_boost_db": body.max_boost_db,
     }
 
 

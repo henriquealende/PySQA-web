@@ -1,4 +1,4 @@
-"""Files the user brings for the chain: HRTF sets (SOFA) and room responses (WAV).
+"""Files the user brings for the chain: HRTF sets (SOFA), room responses (WAV) and headphone responses (CSV).
 
 They are parsed once and kept in memory, per session. They go when the session goes (or when the server restarts:
 the browser then asks for the file again).
@@ -13,20 +13,23 @@ from services import session_store
 from utils import limits
 from utils.lang import msg
 
+from .headphone import HeadphoneSet
 from .hrtf import SPHERE_ID, sphere_set
 from .rir import RirSet
 from .sofa_io import HrtfSet
 
 MAX_PER_KIND = 4
 
-Asset = Union[HrtfSet, RirSet]
+Asset = Union[HrtfSet, RirSet, HeadphoneSet]
 
 _assets: Dict[str, Dict[str, Asset]] = {}
 _lock = threading.Lock()
 
 
 def kind_of(a: Asset) -> str:
-    return "rir" if isinstance(a, RirSet) else "hrtf"
+    if isinstance(a, RirSet):
+        return "rir"
+    return "headphone" if isinstance(a, HeadphoneSet) else "hrtf"
 
 
 def _prune() -> None:
@@ -61,6 +64,12 @@ def get_rir(session_id: str, asset_id: str) -> Optional[RirSet]:
     with _lock:
         a = _assets.get(session_id, {}).get(asset_id)
     return a if isinstance(a, RirSet) else None
+
+
+def get_headphone(session_id: str, asset_id: str) -> Optional[HeadphoneSet]:
+    with _lock:
+        a = _assets.get(session_id, {}).get(asset_id)
+    return a if isinstance(a, HeadphoneSet) else None
 
 
 def get(session_id: str, asset_id: str) -> Optional[Asset]:

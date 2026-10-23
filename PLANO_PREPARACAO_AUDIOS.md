@@ -198,3 +198,13 @@ A página passou a se chamar "Preparação de áudios" (EN: "Audio Preparation")
 - Demonstração "Ouça a diferença": o áudio do usuário em duas salas sintéticas (sem e com tratamento), pela rota `/preview` com `environment.synth` (sala de uso único, não guardada; não entra no limite de 4 respostas). Diz que é uma simulação do PySQA, não um resultado do Auralize Salas.
 - Testes: `test_aural.py` com 115 verificações (4 novas, da sala de uso único). Verificado no navegador: card, demonstração A/B, fechar e reabrir, janela do vídeo (com arquivo de teste vazio, removido depois).
 - Pendente: nada. Se quiser uma capa com imagem do vídeo, é preciso baixar a miniatura do YouTube (não foi feito, para o card não pedir nada ao YouTube antes do clique).
+
+### Bloco Fone: feito (2026-10-23)
+- Backend: `headphone.py` (leitura de CSV/TXT com cabeçalho opcional, vírgula, ponto e vírgula com vírgula decimal ou tabulação; coluna `raw`, depois `smoothed`, depois a segunda; correção em dB: compensar = `mín(−M, reforço máximo)` com M suavizada em 1/6 de oitava e média 0 dB entre 200 Hz e 4 kHz, ou simular = M; fade nas pontas; filtro FIR de fase mínima de 2048 amostras pelo cepstro). Passo `HeadphoneStep` na cadeia, aplicado por último (depois da sala, da HRTF e do ruído). Rotas: `POST /assets` com `kind=headphone` e `POST /headphone/response` (curva medida, correção, filtro real e resultado, para o gráfico).
+- Frontend: `HeadphoneSection` (modo, CSV, reforço máximo, gráfico `HeadphonePlot`); o bloco 5 da cadeia ficou ativo; a lista de bases livres mostra também o AutoEq.
+- Documentação: seção "Fone de ouvido" (PT e EN), equação 8, aviso de que vale para o fone medido, tabela de origem das medições (AutoEq: código MIT, dados por fonte, a confirmar; nada é embutido).
+- Testes: `test_aural.py` com 149 verificações (leitores de CSV, achatamento do resultado dentro de 1 dB de 100 Hz a 10 kHz, nível médio, limite de reforço, fase mínima, taxas de 16, 44,1 e 96 kHz, cadeia e API).
+- Verificado no navegador: CSV de um fone sintético, gráfico (medido, filtro e resultado), render com compensação (pico −8,1 dBFS).
+
+### Ainda não feito
+- Nível absoluto (dB SPL alvo); medições de fone embutidas (dependem da licença de cada fonte); correção por orelha (CSV com canais esquerdo e direito); ruído de cabine gravado.

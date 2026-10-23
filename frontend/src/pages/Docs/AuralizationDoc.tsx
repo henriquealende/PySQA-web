@@ -11,7 +11,7 @@ export default function AuralizationDoc() {
         </P>
         <Callout kind="info" title="Nesta primeira versão">
           A cadeia tem cinco blocos: Fonte, Ambiente, HRTF, Ruído e Fone. Funcionam agora <strong>Fonte</strong>, <strong>Ambiente</strong> (você envia a resposta ao impulso da
-          sala, do carro ou do avião) <strong>HRTF</strong> e <strong>Ruído</strong> de fundo. Os <strong>Cenários rápidos</strong> montam tudo isso de uma vez. O bloco Fone (compensação da resposta do fone) aparece como “Em breve”.
+          sala, do carro ou do avião) <strong>HRTF</strong> e <strong>Ruído</strong> de fundo. Os <strong>Cenários rápidos</strong> montam tudo isso de uma vez. O bloco <strong>Fone</strong> (compensar ou simular um fone medido) é o último passo da cadeia.
         </Callout>
       </header>
 
@@ -233,6 +233,47 @@ export default function AuralizationDoc() {
         </P>
       </Section>
 
+      <Section id="fone" title="Fone de ouvido">
+        <P>
+          O bloco <strong>Fone</strong> é o último passo da cadeia: ele age sobre o resultado final (sala, posição e ruído). Você envia a medição de um fone, um CSV com a
+          frequência em Hz e o nível em dB, e escolhe o que fazer com ela:
+        </P>
+        <Table
+          head={['Modo', 'O que o filtro faz', 'Quando usar']}
+          widths={['24%', '40%', '36%']}
+          rows={[
+            ['Sem correção', 'Nada.', 'Quando o estímulo será tocado como está.'],
+            ['Compensar o fone', 'Aplica o inverso da resposta medida, para que o fone soe plano.', 'Para o ouvinte receber o estímulo como foi preparado.'],
+            ['Simular o fone', 'Aplica a própria resposta do fone.', 'Para ouvir ou analisar um som como aquele fone o reproduziria.'],
+          ]}
+        />
+        <Eq n={8} where={<>onde M(f) é a resposta medida em dB, suavizada em 1/6 de oitava e com média 0 dB entre 200 Hz e 4 kHz, e G<sub>máx</sub> é o reforço máximo (12 dB por padrão).</>}>
+          C(f) = mín( −M(f) , G<sub>máx</sub> )   [dB]
+        </Eq>
+        <P>
+          A correção é <strong>limitada</strong>: reforçar uma cava profunda custa muita energia e quase sempre vem de uma medição ruidosa, então o reforço tem teto e só os
+          cortes são livres. Ela também some suavemente abaixo de 60 Hz e perto do topo da faixa. A média entre 200 Hz e 4 kHz fica em 0 dB: o filtro muda o formato do
+          espectro, não o nível geral. O filtro é de <strong>fase mínima</strong> (2048 amostras), construído a partir do módulo da resposta pelo cepstro
+          <Cite ids={['oppenheim2010']} />: não cria pré-eco, e a fase da resposta real do fone não é usada.
+        </P>
+        <Callout kind="warn" title="Vale para o fone que foi medido">
+          A resposta de um fone muda de um exemplar para outro e com o assentamento nas orelhas. A compensação corrige a <strong>medição que você enviou</strong>, não o seu
+          fone em uso. A medição de um cabeça artificial não é a resposta no ouvido de uma pessoa.
+        </Callout>
+        <P>
+          O PySQA aceita CSV ou TXT com cabeçalho opcional, separado por vírgula, ponto e vírgula (com vírgula decimal) ou tabulação, cobrindo ao menos 200 Hz a 8 kHz. Se houver
+          várias colunas, usa a chamada <K>raw</K> e, na falta dela, a <K>smoothed</K>. O arquivo precisa ter entre 8 e 20 000 linhas.
+        </P>
+        <Table
+          head={['Origem das medições', 'Licença', 'Situação']}
+          widths={['34%', '30%', '36%']}
+          rows={[
+            [<>AutoEq <Cite ids={['pasanen']} /></>, 'Código MIT; dados por fonte (oratory1990, crinacle, Rtings, InnerFidelity)', 'A confirmar, fonte por fonte. O PySQA não embute nenhuma medição.'],
+          ]}
+        />
+        <P>Confira a licença de cada medição que usar e cite a fonte no seu trabalho.</P>
+      </Section>
+
       <Section id="sala-propria" title="Quer uma sala própria?">
         <P>
           Se a sala que você precisa não está nos cenários, o <strong>Auralize Salas</strong> (<a href="https://auralize.com.br/salas?utm_source=pysqa&utm_medium=app&utm_campaign=docs" target="_blank" rel="noopener noreferrer" className="text-teal underline">auralize.com.br/salas</a>),
@@ -247,8 +288,8 @@ export default function AuralizationDoc() {
           <li><strong>Use fones de ouvido.</strong> Em caixas de som a sensação de direção se perde.</li>
           <li><strong>Fonte com mais de um canal:</strong> os canais são somados em um só antes do processamento.</li>
           <li><strong>A prévia usa os primeiros 12 s</strong> (com a cauda da sala). A versão <K>Original</K> toca o arquivo inteiro.</li>
-          <li><strong>Arquivos SOFA e respostas de sala enviados ficam na memória do servidor</strong> e somem se ele reiniciar; o PySQA avisa e você envia de novo. Arquivos gerados só com o modelo de cabeça esférica são refeitos sozinhos; os gerados com SOFA ou sala enviados, não.</li>
-          <li><strong>No máximo 4 arquivos de cada tipo por sessão</strong> (4 SOFA e 4 respostas de sala).</li>
+          <li><strong>Arquivos SOFA, respostas de sala e medições de fone enviados ficam na memória do servidor</strong> e somem se ele reiniciar; o PySQA avisa e você envia de novo. Arquivos gerados só com o modelo de cabeça esférica são refeitos sozinhos; os gerados com SOFA, sala ou fone enviados, não.</li>
+          <li><strong>No máximo 4 arquivos de cada tipo por sessão</strong> (4 SOFA, 4 respostas de sala e 4 medições de fone).</li>
           <li><strong>Respostas de sala:</strong> WAV de 1 ou 2 canais, até 30 s.</li>
           <li><strong>Cada pessoa ouve de um jeito.</strong> HRTFs de outra pessoa ou de manequim funcionam melhor para uns do que para outros; relate qual conjunto usou.</li>
         </UL>

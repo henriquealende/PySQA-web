@@ -1,7 +1,7 @@
 """Runs the auralization chain on a mono signal.
 
-Blocks: Environment (room response, optional), HRTF (binaural positioning) and background noise (optional, at a given
-signal-to-noise ratio). Each ear ends up with one filter that
+Blocks: Environment (room response, optional), HRTF (binaural positioning), background noise (optional, at a given
+signal-to-noise ratio) and Headphone (compensation or simulation of a measured response, applied last). Each ear ends up with one filter that
 holds everything, so the signal is convolved once per ear. The structure is a list of steps so the next blocks
 (headphone, level) are added without touching the callers.
 
@@ -24,13 +24,16 @@ from scipy.signal import oaconvolve, resample_poly
 
 from utils.lang import msg
 
+from . import headphone as headphone_mod
 from . import hrtf as hrtf_mod
+from .headphone import HeadphoneSet
 from .noise import COLORS, mix_snr
 from .rir import RirSet, decorrelate
 from .sofa_io import HrtfSet
 
 HrtfResolver = Callable[[str], Optional[HrtfSet]]
 RirResolver = Callable[[str], Optional[RirSet]]
+HeadphoneResolver = Callable[[str], Optional[HeadphoneSet]]
 
 DIRECT_MS = 2.5          # what counts as the direct sound after the peak of the response
 DECORR_MS = 10.0         # length of the all-pass that decorrelates the reverberation of the two ears
@@ -64,10 +67,18 @@ class NoiseStep:
 
 
 @dataclass
+class HeadphoneStep:
+    mode: str = "off"                   # off | compensate | simulate
+    asset: Optional[str] = None
+    max_boost_db: float = 12.0
+
+
+@dataclass
 class Chain:
     hrtf: HrtfStep = field(default_factory=HrtfStep)
     environment: EnvironmentStep = field(default_factory=EnvironmentStep)
     noise: NoiseStep = field(default_factory=NoiseStep)
+    headphone: HeadphoneStep = field(default_factory=HeadphoneStep)
 
 
 @dataclass
@@ -143,7 +154,7 @@ def _environment_filters(env: EnvironmentStep, fs: int, rir: RirSet, hrir: Optio
 
 
 def render(mono: np.ndarray, fs: int, chain: Chain, resolve_hrtf: HrtfResolver,
-           resolve_rir: Optional[RirResolver] = None) -> RenderResult:
+           resolve_rir: Optional[RirResolver] = None, resolve_headphone: Optional[HeadphoneResolver] = None) -> RenderResult:
     notes: List[str] = []
     x = np.asarray(mono, dtype=np.float32)
     step, env = chain.hrtf, chain.environment
@@ -195,6 +206,17 @@ def render(mono: np.ndarray, fs: int, chain: Chain, resolve_hrtf: HrtfResolver,
         if chain.noise.type not in COLORS:
             raise ChainError(msg("Tipo de ruído desconhecido.", "Unknown noise type."))
         out = mix_snr(out, fs, chain.noise.type, chain.noise.snr_db)
+    hp = chain.headphone
+    if hp.mode != "off":
+        hset = resolve_headphone(hp.asset) if (resolve_headphone and hp.asset) else None
+        if hset is None:
+            raise ChainError(msg("A resposta do fone não está mais no servidor. Envie o arquivo de novo.",
+                                 "The headphone response is no longer on the server. Upload the file again."))
+        try:
+            fir = headphone_mod.design(hset, fs, hp.mode, hp.max_boost_db)
+        except headphone_mod.HeadphoneError as exc:
+            raise ChainError(str(exc))
+        out = np.stack([oaconvolve(out[:, c], fir) for c in range(out.shape[1])], axis=1)
     peak = float(np.max(np.abs(out))) if out.size else 0.0
     peak_db = 20 * np.log10(peak) if peak > 0 else -200.0
     if peak > 1.0:

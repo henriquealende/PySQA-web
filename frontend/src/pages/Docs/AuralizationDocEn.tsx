@@ -11,7 +11,7 @@ export default function AuralizationDocEn() {
         </P>
         <Callout kind="info" title="In this first version">
           The chain has five blocks: Source, Environment, HRTF, Noise and Headphone. <strong>Source</strong>, <strong>Environment</strong> (you upload the impulse response of
-          the room, car or aircraft) <strong>HRTF</strong> and background <strong>Noise</strong> work now. The <strong>Quick scenes</strong> set all of this up at once. The Headphone block (headphone response compensation) shows as “Coming soon”.
+          the room, car or aircraft) <strong>HRTF</strong> and background <strong>Noise</strong> work now. The <strong>Quick scenes</strong> set all of this up at once. The <strong>Headphone</strong> block (compensate or simulate a measured headphone) is the last step of the chain.
         </Callout>
       </header>
 
@@ -233,6 +233,47 @@ export default function AuralizationDocEn() {
         </P>
       </Section>
 
+      <Section id="fone" title="Headphone">
+        <P>
+          The <strong>Headphone</strong> block is the last step of the chain: it acts on the final result (room, position and noise). You upload the measurement of a headphone,
+          a CSV with frequency in Hz and level in dB, and choose what to do with it:
+        </P>
+        <Table
+          head={['Mode', 'What the filter does', 'When to use it']}
+          widths={['24%', '40%', '36%']}
+          rows={[
+            ['No correction', 'Nothing.', 'When the stimulus will be played as it is.'],
+            ['Compensate the headphone', 'Applies the inverse of the measured response, so the headphone sounds flat.', 'So the listener receives the stimulus as it was prepared.'],
+            ['Simulate the headphone', 'Applies the headphone’s own response.', 'To hear or analyse a sound as that headphone would reproduce it.'],
+          ]}
+        />
+        <Eq n={8} where={<>where M(f) is the measured response in dB, smoothed to 1/6 octave and with a mean of 0 dB between 200 Hz and 4 kHz, and G<sub>max</sub> is the maximum boost (12 dB by default).</>}>
+          C(f) = min( −M(f) , G<sub>max</sub> )   [dB]
+        </Eq>
+        <P>
+          The correction is <strong>limited</strong>: boosting a deep dip costs a lot of energy and almost always comes from a noisy measurement, so the boost has a ceiling and only
+          cuts are free. It also fades out smoothly below 60 Hz and near the top of the band. The mean between 200 Hz and 4 kHz stays at 0 dB: the filter changes the shape of the
+          spectrum, not the overall level. The filter is <strong>minimum phase</strong> (2048 samples), built from the magnitude of the response through the cepstrum
+          <Cite ids={['oppenheim2010']} />: it creates no pre-ringing, and the phase of the real headphone response is not used.
+        </P>
+        <Callout kind="warn" title="It holds for the headphone that was measured">
+          A headphone’s response changes from one unit to another and with how it sits on the ears. The compensation corrects the <strong>measurement you uploaded</strong>, not the
+          headphone you are using. A measurement on an artificial head is not the response at a person’s ear.
+        </Callout>
+        <P>
+          PySQA accepts CSV or TXT with an optional header, separated by comma, semicolon (with a decimal comma) or tab, covering at least 200 Hz to 8 kHz. With several columns it uses the
+          one called <K>raw</K> and, failing that, <K>smoothed</K>. The file needs between 8 and 20,000 rows.
+        </P>
+        <Table
+          head={['Source of measurements', 'Licence', 'Status']}
+          widths={['34%', '30%', '36%']}
+          rows={[
+            [<>AutoEq <Cite ids={['pasanen']} /></>, 'Code MIT; data per source (oratory1990, crinacle, Rtings, InnerFidelity)', 'To be confirmed, source by source. PySQA embeds no measurement.'],
+          ]}
+        />
+        <P>Check the licence of each measurement you use and cite the source in your work.</P>
+      </Section>
+
       <Section id="sala-propria" title="Want a room of your own?">
         <P>
           If the room you need is not among the scenes, <strong>Auralize Salas</strong> (<a href="https://auralize.com.br/salas?utm_source=pysqa&utm_medium=app&utm_campaign=docs" target="_blank" rel="noopener noreferrer" className="text-teal underline">auralize.com.br/salas</a>),
@@ -247,8 +288,8 @@ export default function AuralizationDocEn() {
           <li><strong>Use headphones.</strong> On loudspeakers the sense of direction is lost.</li>
           <li><strong>Multichannel source:</strong> the channels are summed into one before processing.</li>
           <li><strong>The preview uses the first 12 s</strong> (with the room tail). The <K>Original</K> version plays the whole file.</li>
-          <li><strong>Uploaded SOFA files and room responses live in the server’s memory</strong> and vanish if it restarts; PySQA tells you and you upload again. Files made only with the spherical-head model are rebuilt on their own; those made with an uploaded SOFA or room are not.</li>
-          <li><strong>At most 4 files of each kind per session</strong> (4 SOFA and 4 room responses).</li>
+          <li><strong>Uploaded SOFA files, room responses and headphone measurements live in the server’s memory</strong> and vanish if it restarts; PySQA tells you and you upload again. Files made only with the spherical-head model are rebuilt on their own; those made with an uploaded SOFA, room or headphone are not.</li>
+          <li><strong>At most 4 files of each kind per session</strong> (4 SOFA, 4 room responses and 4 headphone measurements).</li>
           <li><strong>Room responses:</strong> 1- or 2-channel WAV, up to 30 s.</li>
           <li><strong>Everyone hears differently.</strong> HRTFs from another person or a mannequin work better for some listeners than others; report which set you used.</li>
         </UL>

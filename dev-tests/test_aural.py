@@ -1,4 +1,4 @@
-"""Audio Preparation (phases 1 to 3: HRTF, room responses, quick scenes) checks. Run with the backend venv from the backend folder:
+"""Audio Preparation (phases 1 to 3: HRTF, room responses, quick scenes, headphone) checks. Run with the backend venv from the backend folder:
 
     cd backend
     .venv\\Scripts\\python.exe ..\\dev-tests\\test_aural.py
@@ -291,6 +291,91 @@ check("catalog: four scenes with room, head position and a note that they are no
       [s["id"] for s in _cat["scenes"]] == ["kitchen", "living", "car", "aircraft"] and "pt" in _cat["scenes_note"] and all(len(s["room"]["rt60"]) == 6 for s in _cat["scenes"]))
 check("catalog: scenes keep the head distance at 1 m (the room already sets the direct-to-reverberant ratio)", all(s["hrtf"]["distance_m"] == 1.0 for s in _cat["scenes"]))
 
+# ── Headphone block ──────────────────────────────────────────────────────────
+from auralization import headphone as HP
+
+_f = np.geomspace(20, 20000, 300)
+_bass = 6.0 / (1.0 + (_f / 150.0) ** 2)
+_peak = 8.0 * np.exp(-0.5 * ((np.log10(_f) - np.log10(3000.0)) / 0.12) ** 2)
+_roll = -3.0 / (1.0 + (12000.0 / _f) ** 4)
+_db = _bass + _peak + _roll                                    # a headphone with bass boost, a presence peak and a treble roll-off
+
+
+def hp_text(freq, db, header=None, sep=",", decimal="."):
+    rows = ([header] if header else []) + [f"{a:.3f}{sep}{b:.3f}".replace(".", decimal) if decimal != "." else f"{a:.3f}{sep}{b:.3f}" for a, b in zip(freq, db)]
+    return ("\n".join(rows)).encode("utf-8")
+
+
+hpa = HP.read_headphone_csv(hp_text(_f, _db, header="frequency,raw"), "a.csv")
+check("headphone csv: header with frequency and raw", hpa.n_points == 300 and abs(hpa.db[0] - _db[0]) < 0.01)
+multi = "frequency,raw,error,smoothed\n" + "\n".join(f"{a:.3f},{b:.3f},0,{b + 5:.3f}" for a, b in zip(_f, _db))
+hpm = HP.read_headphone_csv(multi.encode(), "m.csv")
+check("headphone csv: the raw column is used when there are several", abs(hpm.db[100] - _db[100]) < 0.01)
+hps = HP.read_headphone_csv(hp_text(_f, _db, sep=";", decimal=","), "s.csv")
+check("headphone csv: semicolons and decimal comma", abs(hps.db[50] - _db[50]) < 0.01 and hps.n_points == 300)
+hpt = HP.read_headphone_csv(hp_text(_f, _db, sep="\t"), "t.txt")
+check("headphone csv: tab separated without header", hpt.n_points == 300)
+shuf = np.random.default_rng(2).permutation(300)
+hpu = HP.read_headphone_csv(hp_text(_f[shuf], _db[shuf], header="f,db"), "u.csv")
+check("headphone csv: unsorted rows are put in order", bool(np.all(np.diff(hpu.freq) > 0)))
+for label, payload in (("too few lines", b"1,2\n3,4\n"), ("not numbers", b"a,b\n" + b"x,y\n" * 20),
+                       ("range too narrow", hp_text(np.geomspace(500, 2000, 40), np.zeros(40))),
+                       ("levels that are not dB", hp_text(_f, _db * 1000.0))):
+    try:
+        HP.read_headphone_csv(payload, "bad.csv")
+        check(f"headphone csv: {label} rejected", False)
+    except HP.HeadphoneError:
+        check(f"headphone csv: {label} rejected", True)
+
+fs = 48000
+freq, measured, corr = HP.correction_db(hpa, fs, "compensate", 12.0)
+fir = HP.design(hpa, fs, "compensate", 12.0)
+flt = HP.response_db(fir, fs, freq)
+res = measured + flt
+band = (freq >= 100) & (freq <= 10000)
+check("headphone: compensation makes the response flat within 1 dB from 100 Hz to 10 kHz", float(np.max(np.abs(res[band]))) < 1.0, float(np.max(np.abs(res[band]))))
+nb = (freq >= 200) & (freq <= 4000)
+check("headphone: the filter leaves the mid-band level alone (mean 0 dB)", abs(float(np.mean(flt[nb]))) < 0.7, float(np.mean(flt[nb])))
+sim = HP.response_db(HP.design(hpa, fs, "simulate"), fs, freq)
+check("headphone: simulation follows the measured response within 1 dB", float(np.max(np.abs((sim - measured)[band]))) < 1.0, float(np.max(np.abs((sim - measured)[band]))))
+notch = _db - 30.0 * np.exp(-0.5 * ((np.log10(_f) - np.log10(5000.0)) / 0.05) ** 2)
+hpn = HP.read_headphone_csv(hp_text(_f, notch, header="f,db"), "n.csv")
+_, _, cn = HP.correction_db(hpn, fs, "compensate", 12.0)
+check("headphone: the boost is limited (a deep dip is not chased)", float(np.max(cn)) <= 12.0 + 1e-6, float(np.max(cn)))
+_, _, c6 = HP.correction_db(hpn, fs, "compensate", 6.0)
+check("headphone: a lower boost limit gives a lower maximum correction", float(np.max(c6)) <= 6.0 + 1e-6)
+check("headphone: the correction fades to zero at 20 Hz and at the top of the band", abs(corr[0]) < 0.01 and abs(corr[-1]) < 0.01, (corr[0], corr[-1]))
+e = fir ** 2
+check("headphone: the FIR is minimum phase (energy in front, no pre-ringing)", int(np.argmax(np.abs(fir))) < 120 and float(e[:1024].sum() / e.sum()) > 0.95, (int(np.argmax(np.abs(fir))), float(e[:1024].sum() / e.sum())))
+flat = HP.read_headphone_csv(hp_text(_f, np.zeros(300), header="f,db"), "flat.csv")
+fflat = HP.design(flat, fs, "compensate")
+check("headphone: a flat headphone gives a filter that does nothing", float(np.max(np.abs(HP.response_db(fflat, fs, freq)[band]))) < 0.05)
+for sr_ in (44100, 96000, 16000):
+    fr, _, cr = HP.correction_db(hpa, sr_, "compensate", 12.0)
+    check(f"headphone: works at {sr_} Hz (grid stops at 0.45 fs or 20 kHz)", fr[-1] <= 0.45 * sr_ + 1 and len(HP.design(hpa, sr_, "compensate")) == 2048)
+try:
+    HP.correction_db(hpa, fs, "wrong", 12.0)
+    check("headphone: an unknown mode is refused", False)
+except HP.HeadphoneError:
+    check("headphone: an unknown mode is refused", True)
+
+xs_h = 0.1 * np.random.default_rng(8).standard_normal(9600)
+store_hp = {"h": hpa}
+out_off = C.render(xs_h, fs, C.Chain(hrtf=C.HrtfStep(enabled=False)), lambda a: None, None, lambda a: store_hp.get(a))
+out_hp = C.render(xs_h, fs, C.Chain(hrtf=C.HrtfStep(enabled=False), headphone=C.HeadphoneStep(mode="compensate", asset="h")), lambda a: None, None, lambda a: store_hp.get(a))
+check("chain headphone: off leaves the signal alone, on adds the filter's tail", out_off.data.shape == (9600, 2) and out_hp.data.shape == (9600 + 2048 - 1, 2))
+sp_in = np.abs(np.fft.rfft(xs_h * np.hanning(9600)))
+sp_out = np.abs(np.fft.rfft(out_hp.data[:9600, 0] * np.hanning(9600)))
+f_axis = np.fft.rfftfreq(9600, 1 / fs)
+sel = (f_axis > 2000) & (f_axis < 4500)
+gain_at_peak = 20 * np.log10(np.mean(sp_out[sel]) / np.mean(sp_in[sel]))
+check("chain headphone: the presence peak of the headphone is taken down (about -5 dB at 2-4.5 kHz)", -9.0 < gain_at_peak < -2.0, gain_at_peak)
+try:
+    C.render(xs_h, fs, C.Chain(hrtf=C.HrtfStep(enabled=False), headphone=C.HeadphoneStep(mode="compensate", asset="gone")), lambda a: None, None, lambda a: None)
+    check("chain headphone: a missing response raises", False)
+except C.ChainError:
+    check("chain headphone: a missing response raises", True)
+
 # ── API (a real server, like the other dev-tests) ─────────────────────────────
 import http.client
 import json
@@ -475,6 +560,32 @@ try:
     check("api: an inline room with no reverberation time answers 400", st == 400, badi)
     st, badj = srv.json("POST", "/api/auralization/preview", {"session_id": S, "audio_id": aid, "blocks": {"environment": {"synth": {"rt60": {"1000": 0.5}, "volume_m3": 0}}}})
     check("api: an inline room with volume 0 answers 422", st == 422)
+
+    # ── Headphone over the API ──
+    st, hm = srv.form("/api/auralization/assets", {"session_id": S, "kind": "headphone"}, "hd600.csv", hp_text(_f, _db, header="frequency,raw"))
+    check("api: headphone CSV upload", st == 200 and hm["kind"] == "headphone" and hm["n_points"] == 300 and hm["f_min"] < 30 and hm["f_max"] > 15000, hm)
+    hid = hm["asset_id"]
+    st, hr_ = srv.json("POST", "/api/auralization/headphone/response", {"session_id": S, "asset": hid, "mode": "compensate", "max_boost_db": 12})
+    flat_ok = st == 200 and len(hr_["freq"]) == len(hr_["result_db"]) == len(hr_["measured_db"]) and max(abs(v) for f_, v in zip(hr_["freq"], hr_["result_db"]) if 100 <= f_ <= 10000) < 1.0
+    check("api: the headphone response for the plot shows a flat result", flat_ok, hr_ if st != 200 else "")
+    st, hr2 = srv.json("POST", "/api/auralization/headphone/response", {"session_id": S, "asset": hid, "mode": "simulate"})
+    check("api: simulation has no 'result' curve", st == 200 and hr2["result_db"] is None)
+    hblocks = {"headphone": {"mode": "compensate", "asset": hid, "max_boost_db": 12}}
+    st, rh = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": hblocks})
+    check("api: render with a headphone compensation", st == 200 and rh["channels"] == 2, rh)
+    st, raw, hdr = srv.req("POST", "/api/auralization/preview", json.dumps({"session_id": S, "audio_id": aid, "blocks": hblocks}), {"Content-Type": "application/json"})
+    check("api: preview with a headphone compensation is a stereo WAV", st == 200 and sf.info(io.BytesIO(raw)).channels == 2)
+    st, lsh = srv.json("GET", f"/api/auralization/{S}/assets")
+    check("api: the list shows the headphone file with its kind", st == 200 and any(a["kind"] == "headphone" for a in lsh))
+    st, badh = srv.form("/api/auralization/assets", {"session_id": S, "kind": "headphone"}, "x.csv", b"a,b\n1,2\n")
+    check("api: a broken headphone CSV answers 400", st == 400, badh)
+    st, badx = srv.form("/api/auralization/assets", {"session_id": S, "kind": "headphone"}, "x.wav", b"nope")
+    check("api: a headphone file with the wrong extension answers 400", st == 400)
+    srv.json("DELETE", f"/api/auralization/{S}/assets/{hid}")
+    st, goneh = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": hblocks})
+    check("api: a removed headphone response answers 400 with a message", st == 400 and "headphone" in goneh["detail"], goneh)
+    st, oobh = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"headphone": {"mode": "compensate", "asset": "x", "max_boost_db": 99}}})
+    check("api: a boost limit out of range answers 422", st == 422)
 finally:
     srv.stop()
 
