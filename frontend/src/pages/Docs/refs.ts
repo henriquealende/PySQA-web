@@ -201,6 +201,18 @@ export const REFS: Record<string, Ref> = {
     id: 'majdak2013', cite: 'MAJDAK et al., 2013', sort: 'MAJDAK',
     entry: 'MAJDAK, P. *et al.* Spatially oriented format for acoustics: a data exchange format representing head-related transfer functions. *In*: AUDIO ENGINEERING SOCIETY CONVENTION, 134., 2013, Rome. **Proceedings** [...]. New York: AES, 2013.',
   },
+  iso33821: {
+    id: 'iso33821', cite: 'ISO, 2009', sort: 'INTERNATIONAL ORGANIZATION 2009',
+    entry: 'INTERNATIONAL ORGANIZATION FOR STANDARDIZATION. **ISO 3382-1:2009**: acoustics – measurement of room acoustic parameters – Part 1: performance spaces. Geneva: ISO, 2009.',
+  },
+  iso33822: {
+    id: 'iso33822', cite: 'ISO, 2008', sort: 'INTERNATIONAL ORGANIZATION 2008',
+    entry: 'INTERNATIONAL ORGANIZATION FOR STANDARDIZATION. **ISO 3382-2:2008**: acoustics – measurement of room acoustic parameters – Part 2: reverberation time in ordinary rooms. Geneva: ISO, 2008.',
+  },
+  schroeder1965: {
+    id: 'schroeder1965', cite: 'SCHROEDER, 1965', sort: 'SCHROEDER',
+    entry: 'SCHROEDER, M. R. New method of measuring reverberation time. **The Journal of the Acoustical Society of America**, [s. l.], v. 37, n. 3, p. 409-412, mar. 1965.',
+  },
   // --- Preparação de áudios: bases abertas de HRTF, fones e respostas ao impulso (página planejada) ---
   algazi2001: {
     id: 'algazi2001', cite: 'ALGAZI et al., 2001', sort: 'ALGAZI',

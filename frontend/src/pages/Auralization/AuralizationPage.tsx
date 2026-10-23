@@ -10,11 +10,12 @@ import { useLang, useLocale, useT } from '../../i18n'
 import { getStreamUrl, uploadFiles, isAbort } from '../../api/audioApi'
 import {
   Catalog, deleteAsset, fetchCatalog, fetchHrtfResponse, fetchPreview, HrtfResponse, listAssets, renderToSession,
-  SPHERE_ID, uploadHrtf,
+  NO_ENV, SPHERE_ID, uploadHrtf,
 } from '../../api/auralizationApi'
 import HrtfMap from './HrtfMap'
 import ResponsePlot from './ResponsePlot'
 import AbPlayer from './AbPlayer'
+import EnvironmentSection from './EnvironmentSection'
 
 const LOCKED = ['aur.chain.environment', 'aur.chain.headphone'] as const
 
@@ -34,7 +35,9 @@ export default function AuralizationPage() {
   const fmt = (n: number, d = 1) => n.toLocaleString(locale, { minimumFractionDigits: d, maximumFractionDigits: d })
   const navigate = useNavigate()
   const { sessionId, files, addFiles, selectFile } = useStore()
-  const { sourceId, hrtf, assets, lastRender, setSource, setHrtf, setAssets, setLastRender } = useAuralStore()
+  const { sourceId, hrtf, env, assets, lastRender, setSource, setHrtf, setEnv, setAssets, setLastRender } = useAuralStore()
+  // a room type without a file chosen yet means no room
+  const envEff = useMemo(() => (env.type !== 'none' && !env.asset ? NO_ENV : env), [env])
 
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
@@ -60,6 +63,7 @@ export default function AuralizationPage() {
     void listAssets(sessionId).then((list) => {
       setAssets(list)
       if (hrtf.asset !== SPHERE_ID && !list.some((a) => a.asset_id === hrtf.asset)) setHrtf({ asset: SPHERE_ID })
+      if (env.asset && !list.some((a) => a.asset_id === env.asset)) setEnv({ type: 'none', asset: null })
     })
     void fetchCatalog().then(setCatalog).catch(() => undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,13 +88,13 @@ export default function AuralizationPage() {
     setPreviewBusy(true)
     setPreviewError('')
     const id = window.setTimeout(() => {
-      fetchPreview(sessionId, sourceId, hrtf, 0, ctrl.signal)
+      fetchPreview(sessionId, sourceId, hrtf, envEff, 0, ctrl.signal)
         .then((p) => { made = p.url; setPreview((old) => { if (old) URL.revokeObjectURL(old.url); return p }) })
         .catch((e) => { if (!isAbort(e)) setPreviewError(e.message) })
         .finally(() => { if (!ctrl.signal.aborted) setPreviewBusy(false) })
     }, 600)
     return () => { window.clearTimeout(id); ctrl.abort(); if (made && !ctrl.signal.aborted) URL.revokeObjectURL(made) }
-  }, [sessionId, sourceId, hrtf])
+  }, [sessionId, sourceId, hrtf, envEff])
   useEffect(() => () => { setPreview((old) => { if (old) URL.revokeObjectURL(old.url); return null }) }, [])
 
   const handleFiles = async (list: File[]) => {
@@ -127,7 +131,7 @@ export default function AuralizationPage() {
     if (!sourceId) return
     setRendering(true)
     try {
-      const r = await renderToSession(sessionId, sourceId, hrtf)
+      const r = await renderToSession(sessionId, sourceId, hrtf, envEff)
       addFiles([r])
       setLastRender(r)
       toast.success(t('aur.render.done', { name: r.name }))
@@ -137,7 +141,7 @@ export default function AuralizationPage() {
   const asset = assets.find((a) => a.asset_id === hrtf.asset)
   const setName = hrtf.asset === SPHERE_ID ? t('aur.hrtf.sphere') : asset?.name ?? '—'
   const modelDesc = useMemo(() => catalog?.builtin.find((b) => b.id === SPHERE_ID)?.description[lang] ?? '', [catalog, lang])
-  const hrtfSets = catalog?.datasets.filter((d) => d.kind === 'hrtf') ?? []
+  const freeSets = catalog?.datasets.filter((d) => d.kind === 'hrtf' || d.kind === 'room') ?? []
   const clipped = (preview?.peakDbfs ?? -200) > 0
 
   return (
@@ -182,14 +186,17 @@ export default function AuralizationPage() {
             <span className="font-semibold block truncate">{source ? source.name.replace(/\.wav$/i, '') : t('aur.chain.noSource')}</span>
           </Block>
           <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
-          <div className="flex-1 min-w-[130px] rounded-lg border border-dashed border-border px-3 py-2 opacity-60">
-            <p className="text-[10px] uppercase tracking-wider text-muted">2 · {t(LOCKED[0])}</p>
-            <p className="text-xs mt-1">{t('aur.chain.soon')}</p>
-          </div>
+          <Block n={2} title={t('aur.chain.environment')} active={envEff.type !== 'none'}>
+            <span className="font-semibold block truncate">
+              {envEff.type === 'none' ? t('aur.env.type.none') : assets.find((a) => a.asset_id === envEff.asset)?.name ?? '—'}
+            </span>
+            {envEff.type !== 'none' && <span className="text-muted">{t(`aur.env.type.${envEff.type}`)}</span>}
+          </Block>
           <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
           <Block n={3} title="HRTF" active>
             <span className="font-semibold block truncate">{setName}</span>
             <span className="text-muted">{t('aur.chain.pos', { az: hrtf.azimuth, el: hrtf.elevation })}</span>
+            {envEff.type === 'brir' && <span className="text-amber block">{t('aur.chain.ignored')}</span>}
           </Block>
           <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
           <div className="flex-1 min-w-[130px] rounded-lg border border-dashed border-border px-3 py-2 opacity-60">
@@ -202,8 +209,10 @@ export default function AuralizationPage() {
           <p className="text-sm text-muted rounded-lg border border-border bg-panel px-4 py-6 text-center">{t('aur.page.empty')}</p>
         )}
 
+        <EnvironmentSection />
+
         {/* ── HRTF block ──────────────────────────────────────────────── */}
-        <section className="rounded-lg border border-border bg-panel p-4 space-y-4" aria-labelledby="aur-hrtf">
+        <section className={clsx('rounded-lg border border-border bg-panel p-4 space-y-4', envEff.type === 'brir' && 'opacity-50')} aria-labelledby="aur-hrtf">
           <h2 id="aur-hrtf" className="text-sm font-semibold">{t('aur.hrtf.title')}</h2>
           <div className="flex flex-wrap items-center gap-2">
             <label className="text-xs text-muted" htmlFor="aur-set">{t('aur.hrtf.set')}</label>
@@ -212,7 +221,7 @@ export default function AuralizationPage() {
               className="bg-dark border border-field rounded px-2 py-1 text-xs focus:border-teal focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal"
             >
               <option value={SPHERE_ID}>{t('aur.hrtf.sphere')}</option>
-              {assets.map((a) => <option key={a.asset_id} value={a.asset_id}>{a.name}</option>)}
+              {assets.filter((a) => a.kind === 'hrtf').map((a) => <option key={a.asset_id} value={a.asset_id}>{a.name}</option>)}
             </select>
             <input ref={sofaInput} type="file" accept=".sofa" className="hidden" onChange={(e) => void handleSofa(e.target.files?.[0])} />
             <button
@@ -308,13 +317,14 @@ export default function AuralizationPage() {
         </section>
 
         {/* ── Where to find free HRTF sets ────────────────────────────── */}
-        {hrtfSets.length > 0 && (
+        {freeSets.length > 0 && (
           <details className="rounded-lg border border-border bg-panel p-4">
             <summary className="text-sm font-semibold cursor-pointer">{t('aur.open.title')}</summary>
             <p className="text-[11px] text-muted mt-2">{t('aur.open.help')}</p>
             <ul className="mt-2 space-y-2">
-              {hrtfSets.map((d) => (
+              {freeSets.map((d) => (
                 <li key={d.id} className="text-xs">
+                  <span className="text-muted">{t(`aur.open.kind.${d.kind}`)} · </span>
                   <a href={d.url} target="_blank" rel="noreferrer" className="text-teal underline">{d.name}</a>
                   <span className="text-muted"> · {d.license} · </span>
                   <span className={d.license_status === 'verified' ? 'text-teal' : 'text-amber'}>{t(`aur.open.status.${d.license_status}`)}</span>

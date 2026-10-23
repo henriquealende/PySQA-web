@@ -1,4 +1,4 @@
-"""Audio Preparation (phase 1: HRTF) checks. Run with the backend venv from the backend folder:
+"""Audio Preparation (phases 1 and 2: HRTF and room responses) checks. Run with the backend venv from the backend folder:
 
     cd backend
     .venv\\Scripts\\python.exe ..\\dev-tests\\test_aural.py
@@ -116,6 +116,113 @@ try:
 except C.ChainError:
     check("chain: missing asset raises", True)
 
+# ── Phase 2: room responses ───────────────────────────────────────────────────
+from auralization import rir as R
+from auralization.rir import RirError, read_rir
+
+
+def exp_rir(rt60=0.6, secs=1.5, fs=48000, seed=3, floor_db=None):
+    rng = np.random.default_rng(seed)
+    t = np.arange(int(secs * fs)) / fs
+    h = rng.standard_normal(len(t)) * np.exp(-np.log(1000.0) * t / rt60)
+    if floor_db is not None:
+        h = h + rng.standard_normal(len(t)) * 10 ** (floor_db / 20) * np.max(np.abs(h))
+    return (h / np.max(np.abs(h)) * 0.9).astype("float32")
+
+
+def wav_of(x, fs=48000):
+    b = io.BytesIO()
+    sf.write(b, x, fs, format="WAV", subtype="FLOAT")
+    return b.getvalue()
+
+
+rs = read_rir(wav_of(exp_rir(0.6)), "exp.wav")
+m = rs.metrics
+check("rir: T20 close to the true 0.6 s", abs(m["rt60_t20"] - 0.6) < 0.06, m["rt60_t20"])
+check("rir: T30 close to the true 0.6 s", abs(m["rt60_t30"] - 0.6) < 0.06, m["rt60_t30"])
+check("rir: EDT close to the true 0.6 s", abs(m["edt"] - 0.6) < 0.09, m["edt"])
+d50_true = 100 * (1 - np.exp(-13.8155 * 0.05 / 0.6))
+check("rir: D50 matches the exponential decay", abs(m["d50"] - d50_true) < 4, (m["d50"], d50_true))
+c50_true = 10 * np.log10((d50_true / 100) / (1 - d50_true / 100))
+check("rir: C50 matches the exponential decay", abs(m["c50"] - c50_true) < 1.2, (m["c50"], c50_true))
+check("rir: octave bands of a flat decay are all near 0.6 s", all(v is not None and abs(v - 0.6) < 0.12 for v in rs.bands.values()) and len(rs.bands) == 6, rs.bands)
+check("rir: decay curve starts at 0 dB and falls", rs.decay["db"][0] > -1 and rs.decay["db"][-1] < -50 and len(rs.decay["t"]) <= 410)
+noisy = read_rir(wav_of(exp_rir(0.6, secs=2.0, floor_db=-65)), "noisy.wav")
+check("rir: a noise floor 65 dB down does not wreck T20", abs(noisy.metrics["rt60_t20"] - 0.6) < 0.1, noisy.metrics["rt60_t20"])
+check("rir: longer room, longer T20", read_rir(wav_of(exp_rir(1.2, secs=3.0)), "l.wav").metrics["rt60_t20"] > 1.0)
+for label, payload in (("3 channels", wav_of(np.ones((4800, 3), dtype="float32") * 0.1)),
+                       ("31 s", wav_of(np.ones(48000 * 31, dtype="float32") * 0.1)),
+                       ("silence", wav_of(np.zeros(4800, dtype="float32"))),
+                       ("garbage", b"nope")):
+    try:
+        read_rir(payload, "bad.wav")
+        check(f"rir: {label} rejected", False)
+    except RirError:
+        check(f"rir: {label} rejected", True)
+
+# decorrelation keeps spectrum and decay, changes the waveform
+tailx = exp_rir(0.5, secs=1.0).astype(np.float64)
+dl, dr = R.decorrelate(tailx, 11, 10.0, 48000), R.decorrelate(tailx, 12, 10.0, 48000)
+cc = float(np.corrcoef(dl, dr)[0, 1])
+check("decorrelate: the two ears get different reverberation", abs(cc) < 0.35, cc)
+check("decorrelate: energy kept within 1 dB", abs(10 * np.log10(np.sum(dl ** 2) / np.sum(tailx ** 2))) < 1.0)
+h1, h2 = np.sum(dl[:24000] ** 2), np.sum(dl[24000:] ** 2)
+o1, o2 = np.sum(tailx[:24000] ** 2), np.sum(tailx[24000:] ** 2)
+check("decorrelate: decay envelope kept", abs(10 * np.log10(h1 / h2) - 10 * np.log10(o1 / o2)) < 1.0)
+
+# chain with a room
+from auralization.rir import RirSet
+fs = 48000
+xs = 0.1 * np.random.default_rng(5).standard_normal(4800)
+
+
+def mk(ir2d, name="r"):
+    ir2d = np.asarray(ir2d, dtype=np.float32)
+    ir2d = ir2d if ir2d.ndim == 2 else ir2d[:, None]
+    return RirSet(name=name, fs=48000.0, ir=ir2d, channels=ir2d.shape[1], duration_s=len(ir2d) / 48000.0)
+
+
+delta1 = np.zeros(2400)
+delta1[0] = 1.0
+env_off = C.Chain(hrtf=C.HrtfStep(enabled=False), environment=C.EnvironmentStep(type="rir", asset="r"))
+res = C.render(xs, fs, env_off, lambda a: None, lambda a: mk(delta1))
+check("chain room: a delta RIR leaves the signal as it is", np.allclose(res.data[:4800, 0], xs, atol=1e-5) and np.allclose(res.data[:4800, 1], xs, atol=1e-5))
+
+bir = np.zeros((2400, 2))
+bir[0, 0] = 1.0
+bir[20, 1] = 0.5
+res = C.render(xs, fs, C.Chain(hrtf=C.HrtfStep(enabled=True), environment=C.EnvironmentStep(type="brir", asset="b")), lambda a: delta, lambda a: mk(bir))
+k_en = (1.0 / ((1.0 + 0.25) / 2.0)) ** 0.5            # energy kept equal to a unit impulse: the level difference between the ears stays 2:1
+check("chain BRIR: right = half the left, 20 samples later, level scaled to keep the energy",
+      np.allclose(res.data[:4800, 0], k_en * xs, atol=1e-5) and np.allclose(res.data[20:4820, 1], 0.5 * k_en * xs, atol=1e-5))
+check("chain BRIR: warns that the HRTF was ignored", len(res.notes) == 1)
+
+room = np.zeros(24000)
+room[100] = 1.0
+room[3000:] = 0.2 * np.random.default_rng(9).standard_normal(21000) * np.exp(-np.arange(21000) / 6000)
+res0 = C.render(xs, fs, C.Chain(hrtf=C.HrtfStep(asset="a"), environment=C.EnvironmentStep(type="rir", asset="r", reverb_gain_db=0)), lambda a: delta, lambda a: mk(room))
+res20 = C.render(xs, fs, C.Chain(hrtf=C.HrtfStep(asset="a"), environment=C.EnvironmentStep(type="rir", asset="r", reverb_gain_db=-20)), lambda a: delta, lambda a: mk(room))
+late0, late20 = res0.data[5000:, 0], res20.data[5000:, 0]       # after the source has ended: reverberation only
+check("chain room: reverberation level -20 dB lowers the late part by 20 dB", abs(10 * np.log10(np.sum(late20 ** 2) / np.sum(late0 ** 2)) + 20) < 0.5)
+check("chain room: the direct part is untouched by the reverberation gain", np.allclose(res0.data[:100, 0], res20.data[:100, 0], atol=1e-6))
+check("chain room: the two ears differ in the reverberant part", abs(float(np.corrcoef(res0.data[3000:9000, 0], res0.data[3000:9000, 1])[0, 1])) < 0.5)
+e_in = float(np.sum(xs ** 2))
+check("chain room: loudness kept (output energy about the input energy, within 2 dB, white source)", abs(10 * np.log10(np.sum(res0.data[:, 0] ** 2) / e_in)) < 2.0, 10 * np.log10(np.sum(res0.data[:, 0] ** 2) / e_in))
+check("chain room: the output holds the whole tail", res0.data.shape[0] > 4800 + 15000, res0.data.shape)
+try:
+    C.render(xs, fs, C.Chain(environment=C.EnvironmentStep(type="rir", asset="gone")), lambda a: delta, lambda a: None)
+    check("chain room: missing response raises", False)
+except C.ChainError:
+    check("chain room: missing response raises", True)
+mono_brir = C.Chain(hrtf=C.HrtfStep(enabled=False), environment=C.EnvironmentStep(type="brir", asset="m"))
+try:
+    C.render(xs, fs, mono_brir, lambda a: None, lambda a: mk(delta1))
+    check("chain room: a 1-channel BRIR is refused", False)
+except C.ChainError:
+    check("chain room: a 1-channel BRIR is refused", True)
+res44 = C.render(xs, fs, env_off, lambda a: None, lambda a: RirSet(name="x", fs=44100.0, ir=np.pad(np.ones((1, 1), dtype=np.float32), ((0, 2000), (0, 0))), channels=1, duration_s=0.05))
+check("chain room: a response at another sample rate is resampled (signal comes back)", float(np.corrcoef(res44.data[:4800, 0], xs)[0, 1]) > 0.97 and abs(20 * np.log10(np.std(res44.data[:4800, 0]) / np.std(xs))) < 0.5)
+
 # ── API (a real server, like the other dev-tests) ─────────────────────────────
 import http.client
 import json
@@ -228,6 +335,36 @@ try:
     check("api: an unsafe session id answers 400", st == 400, badsid)
     st, oob = srv.json("POST", "/api/auralization/render", {**body, "blocks": {"hrtf": {"azimuth": 9999}}})
     check("api: out-of-range azimuth answers 422", st == 422)
+
+    # ── Phase 2 over the API ──
+    st, rm = srv.form("/api/auralization/assets", {"session_id": S, "kind": "rir"}, "sala.wav", wav_of(exp_rir(0.6)))
+    check("api: RIR upload gives channels, duration and a suggested type", st == 200 and rm["kind"] == "rir" and rm["channels"] == 1 and rm["suggested_type"] == "rir", rm)
+    rid = rm["asset_id"]
+    st, inf = srv.json("GET", f"/api/auralization/{S}/assets/{rid}/info")
+    check("api: info gives T20 near 0.6 s, bands and a decay curve", st == 200 and abs(inf["metrics"]["rt60_t20"] - 0.6) < 0.06 and len(inf["bands"]) == 6 and len(inf["decay"]["t"]) > 20, inf if st != 200 else inf["metrics"])
+    st, brm = srv.form("/api/auralization/assets", {"session_id": S, "kind": "rir"}, "binaural.wav", wav_of(np.stack([exp_rir(0.4, seed=1), exp_rir(0.4, seed=2)], axis=1)))
+    check("api: a 2-channel file is suggested as BRIR", st == 200 and brm["suggested_type"] == "brir", brm)
+    st, bad3 = srv.form("/api/auralization/assets", {"session_id": S, "kind": "rir"}, "x.wav", wav_of(np.ones((4800, 3), dtype="float32") * 0.1))
+    check("api: a 3-channel response answers 400", st == 400, bad3)
+    st, badx = srv.form("/api/auralization/assets", {"session_id": S, "kind": "rir"}, "x.sofa", b"nope")
+    check("api: a RIR with the wrong extension answers 400", st == 400)
+
+    roomblocks = {"hrtf": {"azimuth": 30}, "environment": {"type": "rir", "asset": rid, "reverb_gain_db": -6}}
+    st, rr = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": roomblocks})
+    check("api: render with a room is longer than the source by about the tail", st == 200 and rr["duration_s"] > 2.0 + 1.0 and "sala" in rr["name"], rr)
+    st, rb = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"environment": {"type": "brir", "asset": brm["asset_id"]}}})
+    check("api: render with a BRIR works and warns that the HRTF is ignored", st == 200 and "BRIR" in rb["name"] and any("already" in n for n in rb["notes"]), rb)
+    st, raw, hdr = srv.req("POST", "/api/auralization/preview", json.dumps({"session_id": S, "audio_id": aid, "blocks": roomblocks}), {"Content-Type": "application/json"})
+    check("api: preview with a room is a stereo WAV", st == 200 and sf.info(io.BytesIO(raw)).channels == 2)
+    srv.json("DELETE", f"/api/auralization/{S}/assets/{rid}")
+    st, gone = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": roomblocks})
+    check("api: a removed room response answers 400 with a message", st == 400 and "impulse response" in gone["detail"], gone)
+    st, ls = srv.json("GET", f"/api/auralization/{S}/assets")
+    check("api: the list holds the remaining BRIR", st == 200 and [a["kind"] for a in ls] == ["rir"], ls)
+    st, nf = srv.json("GET", f"/api/auralization/{S}/assets/doesnotexist/info")
+    check("api: info of an unknown file answers 404", st == 404)
+    st, oob = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"environment": {"type": "rir", "asset": "x", "reverb_gain_db": 99}}})
+    check("api: an out-of-range reverberation gain answers 422", st == 422)
 finally:
     srv.stop()
 

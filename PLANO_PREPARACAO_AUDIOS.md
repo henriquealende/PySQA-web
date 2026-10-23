@@ -168,3 +168,15 @@ Nada foi baixado nem embutido no repositório ainda. A fase 1 usa o modelo de ca
 
 ### Renomeação
 A página passou a se chamar "Preparação de áudios" (EN: "Audio Preparation"): rota, menu, textos e documentação (`/docs/audio-preparation`). Nomes internos (pacote `backend/auralization`, rotas `/api/auralization/*`, arquivos e componentes do frontend) ficaram como estavam.
+
+### Fase 2: feito (2026-10-23)
+- Backend: `rir.py` (leitura de WAV de 1 ou 2 canais até 30 s; T20, T30, EDT, C50, C80, D50 e T20 por oitava de 125 Hz a 4 kHz, pela integral de Schroeder, com descarte do ruído de fundo; curva de decaimento) e `decorrelate` (passa-tudo de fase aleatória de 10 ms para a reverberação das duas orelhas). `assets.py` guarda HRTF e respostas de sala (até 4 de cada). `chain.py` ganhou o bloco Ambiente: RIR + HRTF (som direto pela HRIR, cauda depois de 2,5 ms descorrelacionada), BRIR (HRTF ignorada) e RIR sem HRTF. O filtro é escalado para manter a energia total igual à da cabeça sozinha (a sala não deixa o som mais alto); o controle de reverberação (−30 a +10 dB) mexe só no que vem depois do som direto.
+- Rotas: `POST /assets` com `kind=rir`, `GET /{sessão}/assets/{id}/info` (parâmetros, bandas e decaimento) e `blocks.environment` em `/preview` e `/render`.
+- Frontend: `EnvironmentSection` (tipo, arquivo, métricas, bandas, controle de reverberação), `DecayPlot`; o bloco 2 da cadeia ficou ativo.
+- Documentação: seção "Ambiente: a sala no som" (PT e EN), equações 3 a 5 e 3 referências (ISO 3382-1, ISO 3382-2, Schroeder 1965).
+- Testes: `test_aural.py` passou a ter 77 verificações (T20 e T30 de uma RIR sintética de 0,6 s dentro de 10 %, C50 e D50 contra a fórmula do decaimento exponencial, ruído de fundo a −65 dB, decorrelação, BRIR com atraso e nível entre as orelhas, ganho da reverberação, reamostragem, erros de arquivo e a API).
+- Verificado no navegador: RIR sintética de 0,7 s deu T20 = 0,70 s; BRIR de 0,5 s deu T20 = 0,50 s; o arquivo gerado fica sem corte (pico de −4,6 dBFS no teste de BRIR).
+
+### Ainda não feito
+- Embutir bases de salas (cozinha, carro, avião) no servidor, bloco Fone, nível/SNR, RIR sintética e cenários rápidos (fases 3 a 5).
+- Respostas de sala de mais de 2 canais (IR64-CAR) precisam ser reduzidas antes do envio.
