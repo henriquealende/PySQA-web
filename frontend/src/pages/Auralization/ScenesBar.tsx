@@ -17,7 +17,7 @@ export default function ScenesBar() {
   const lang = useLang((s) => s.lang)
   const sessionId = useStore((s) => s.sessionId)
   const files = useStore((s) => s.files)
-  const { sourceId, scene, setSynth, setHrtf, setNoise, setScene, setEnv, setAdDismissed } = useAuralStore()
+  const { sourceId, scene, setSynth, setHrtf, setNoise, setScene, setEnv, setAdDismissed, setStep } = useAuralStore()
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const fs = files.find((f) => f.audio_id === sourceId)?.sample_rate ?? 48000
@@ -51,6 +51,7 @@ export default function ScenesBar() {
 
   const goToCard = () => {
     setAdDismissed(false)
+    setStep('environment')                     // the card lives in the Environment step
     window.setTimeout(() => {
       const el = document.getElementById('auralize-salas')
       el?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' })

@@ -166,4 +166,6 @@ export default {
   'aur.lv.gain': 'Ganho aplicado na prévia: {db} dB',
   'aur.lv.rendered': 'Nível ajustado para {spl} dB SPL (ganho de {gain} dB).',
   'aur.lv.warning': 'O valor do equipamento é uma suposição sua, a menos que você o tenha medido com um ouvido artificial ou acoplador. Sem isso, o nível real no ouvido pode ser outro. A prévia calcula o ganho só nos primeiros 12 s.',
+  'aur.step.on': 'ativo',
+  'aur.step.hint': 'Clique em uma etapa para ver e ajustar o que foi feito nela. A fonte se escolhe na coluna da esquerda.',
 }

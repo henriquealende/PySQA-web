@@ -25,6 +25,10 @@ export default function AuralizationDoc() {
           <li><strong>Ouça:</strong> em <K>Ouvir e comparar</K>, alterne entre <K>Processado</K> e <K>Original</K> sem perder o ponto da reprodução.</li>
           <li><strong>Gere o arquivo:</strong> <K>Gerar arquivo estéreo</K> processa o arquivo inteiro e o coloca na sua lista. Depois, <K>Abrir no Pós-processamento</K> ou <K>Baixar WAV</K>.</li>
         </ol>
+        <P>
+          Os cartões da cadeia (Ambiente, HRTF, Ruído, Fone e Nível) funcionam como abas: cada um mostra o que foi definido naquela etapa e, ao clicar, abre os ajustes dela.
+          A fonte não é uma aba: ela se escolhe na coluna da esquerda. A prévia e a geração do arquivo ficam sempre abaixo.
+        </P>
       </Section>
 
       <Section id="hrtf" title="Como o som ganha direção">

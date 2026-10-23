@@ -1,7 +1,10 @@
 import { create } from 'zustand'
 import { Asset, EnvParams, HeadphoneParams, HrtfParams, LevelParams, NO_ENV, NO_HEADPHONE, NO_LEVEL, NO_NOISE, NoiseParams, RenderResult, SPHERE_ID, SynthParams } from '../api/auralizationApi'
 
+export type StepId = 'environment' | 'hrtf' | 'noise' | 'headphone' | 'level'
+
 interface AuralState {
+  step: StepId                   // the chain card whose settings are shown
   sourceId: string | null
   hrtf: HrtfParams
   env: EnvParams
@@ -15,6 +18,7 @@ interface AuralState {
   assets: Asset[]
   lastRender: RenderResult | null
 
+  setStep: (s: StepId) => void
   setSource: (id: string | null) => void
   setHrtf: (p: Partial<HrtfParams>) => void
   setEnv: (p: Partial<EnvParams>) => void
@@ -35,6 +39,7 @@ const writeDismissed = (v: boolean) => { try { if (v) localStorage.setItem(AD_KE
 
 /** State of the Audio Preparation page; kept here so it survives a visit to another page. */
 export const useAuralStore = create<AuralState>((set) => ({
+  step: 'environment',
   sourceId: null,
   hrtf: { asset: SPHERE_ID, azimuth: 30, elevation: 0, distance_m: 1 },
   env: NO_ENV,
@@ -48,6 +53,7 @@ export const useAuralStore = create<AuralState>((set) => ({
   assets: [],
   lastRender: null,
 
+  setStep: (step) => set({ step }),
   setSource: (sourceId) => set({ sourceId, lastRender: null }),
   setHrtf: (p) => set((s) => ({ hrtf: { ...s.hrtf, ...p } })),
   setEnv: (p) => set((s) => ({ env: { ...s.env, ...p } })),

@@ -166,4 +166,6 @@ export default {
   'aur.lv.gain': 'Gain applied in the preview: {db} dB',
   'aur.lv.rendered': 'Level set to {spl} dB SPL (gain of {gain} dB).',
   'aur.lv.warning': 'The equipment value is your own assumption unless you measured it with an artificial ear or coupler. Without that, the real level at the ear may be different. The preview computes the gain on the first 12 s only.',
+  'aur.step.on': 'on',
+  'aur.step.hint': 'Click a step to see and adjust what was set in it. The source is chosen in the left column.',
 }

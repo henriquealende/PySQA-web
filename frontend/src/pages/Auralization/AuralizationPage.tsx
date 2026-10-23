@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, ChevronRight, Download, ExternalLink, Headphones, Trash2, Upload, Wand2 } from 'lucide-react'
+import { AlertTriangle, Check, ChevronRight, Download, ExternalLink, Headphones, Trash2, Upload, Wand2 } from 'lucide-react'
 import clsx from 'clsx'
 import FileDropzone from '../../components/FileDropzone'
 import { useStore } from '../../store/useStore'
-import { useAuralStore } from '../../store/useAuralStore'
+import { StepId, useAuralStore } from '../../store/useAuralStore'
 import { toast } from '../../store/useToast'
 import { useLang, useLocale, useT } from '../../i18n'
 import { getStreamUrl, uploadFiles, isAbort } from '../../api/audioApi'
@@ -21,12 +21,36 @@ import LevelSection from './LevelSection'
 import NoiseSection from './NoiseSection'
 import ScenesBar from './ScenesBar'
 
-function Block({ n, title, children, active }: { n: number; title: string; children: React.ReactNode; active?: boolean }) {
+const STEPS: StepId[] = ['environment', 'hrtf', 'noise', 'headphone', 'level']
+
+/**
+ * A card of the chain. The source card is only a summary (the source is chosen in the left column); the others are tabs:
+ * they show what was set and, when selected, open their settings below.
+ */
+function StepCard({ n, title, children, configured, selected, step, onSelect }: {
+  n: number; title: string; children: React.ReactNode; configured?: boolean; selected?: boolean; step?: StepId; onSelect?: () => void
+}) {
+  const t = useT()
+  const base = 'flex-1 min-w-[130px] rounded-lg border px-3 py-2 text-left'
+  const body = (
+    <>
+      <span className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted">
+        <span>{n} · {title}</span>
+        {configured && <><Check size={12} className="text-teal" aria-hidden="true" /><span className="sr-only">{t('aur.step.on')}</span></>}
+      </span>
+      <span className="block text-xs mt-1">{children}</span>
+    </>
+  )
+  if (!onSelect || !step) return <div className={clsx(base, 'border-border bg-panel')}>{body}</div>
   return (
-    <div className={clsx('flex-1 min-w-[130px] rounded-lg border px-3 py-2', active ? 'border-teal bg-teal/10' : 'border-border bg-panel')}>
-      <p className="text-[10px] uppercase tracking-wider text-muted">{n} · {title}</p>
-      <div className="text-xs mt-1">{children}</div>
-    </div>
+    <button
+      role="tab" id={`aur-tab-${step}`} aria-selected={selected} aria-controls="aur-panel" tabIndex={selected ? 0 : -1} onClick={onSelect}
+      className={clsx(base, 'transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal',
+        configured ? 'border-teal/60 bg-teal/10 hover:bg-teal/15' : 'border-border bg-panel hover:border-teal/40',
+        selected && 'ring-2 ring-teal')}
+    >
+      {body}
+    </button>
   )
 }
 
@@ -37,7 +61,7 @@ export default function AuralizationPage() {
   const fmt = (n: number, d = 1) => n.toLocaleString(locale, { minimumFractionDigits: d, maximumFractionDigits: d })
   const navigate = useNavigate()
   const { sessionId, files, addFiles, selectFile, calibrations } = useStore()
-  const { sourceId, hrtf, env, noise, headphone, level, assets, lastRender, setSource, setHrtf, setEnv, setHeadphone, setAssets, setLastRender } = useAuralStore()
+  const { step, setStep, sourceId, hrtf, env, noise, headphone, level, assets, lastRender, setSource, setHrtf, setEnv, setHeadphone, setAssets, setLastRender } = useAuralStore()
   // keeping the level of a recording needs the calibration of the microphone; without it there is nothing to keep
   const calibrated = sourceId != null && calibrations[sourceId] != null
   const lvEff = useMemo(() => (level.mode === 'source' && !calibrated ? NO_LEVEL : level), [level, calibrated])
@@ -145,6 +169,17 @@ export default function AuralizationPage() {
     } catch (e: any) { toast.error(e.message) } finally { setRendering(false) }
   }
 
+  // arrows, Home and End move between the cards of the chain
+  const onTabKeys = (e: React.KeyboardEvent) => {
+    const i = STEPS.indexOf(step)
+    const next = e.key === 'ArrowRight' ? STEPS[(i + 1) % STEPS.length] : e.key === 'ArrowLeft' ? STEPS[(i + STEPS.length - 1) % STEPS.length]
+      : e.key === 'Home' ? STEPS[0] : e.key === 'End' ? STEPS[STEPS.length - 1] : null
+    if (!next) return
+    e.preventDefault()
+    setStep(next)
+    window.setTimeout(() => document.getElementById(`aur-tab-${next}`)?.focus(), 0)
+  }
+
   const asset = assets.find((a) => a.asset_id === hrtf.asset)
   const setName = hrtf.asset === SPHERE_ID ? t('aur.hrtf.sphere') : asset?.name ?? '—'
   const modelDesc = useMemo(() => catalog?.builtin.find((b) => b.id === SPHERE_ID)?.description[lang] ?? '', [catalog, lang])
@@ -191,45 +226,50 @@ export default function AuralizationPage() {
 
         {/* ── The chain ───────────────────────────────────────────────── */}
         <div className="flex items-stretch gap-2 flex-wrap" aria-label={t('aur.chain.title')}>
-          <Block n={1} title={t('aur.chain.source')}>
+          <StepCard n={1} title={t('aur.chain.source')}>
             <span className="font-semibold block truncate">{source ? source.name.replace(/\.wav$/i, '') : t('aur.chain.noSource')}</span>
-          </Block>
+          </StepCard>
           <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
-          <Block n={2} title={t('aur.chain.environment')} active={envEff.type !== 'none'}>
+          <div role="tablist" aria-label={t('aur.chain.title')} onKeyDown={onTabKeys} className="contents">
+          <StepCard n={2} title={t('aur.chain.environment')} step="environment" selected={step === 'environment'} onSelect={() => setStep('environment')} configured={envEff.type !== 'none'}>
             <span className="font-semibold block truncate">
               {envEff.type === 'none' ? t('aur.env.type.none') : assets.find((a) => a.asset_id === envEff.asset)?.name ?? '—'}
             </span>
             {envEff.type !== 'none' && <span className="text-muted">{t(`aur.env.type.${envEff.type}`)}</span>}
-          </Block>
+          </StepCard>
           <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
-          <Block n={3} title="HRTF" active>
+          <StepCard n={3} title="HRTF" step="hrtf" selected={step === 'hrtf'} onSelect={() => setStep('hrtf')} configured={envEff.type !== 'brir'}>
             <span className="font-semibold block truncate">{setName}</span>
             <span className="text-muted">{t('aur.chain.pos', { az: hrtf.azimuth, el: hrtf.elevation })}</span>
             {envEff.type === 'brir' && <span className="text-amber block">{t('aur.chain.ignored')}</span>}
-          </Block>
+          </StepCard>
           <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
-          <Block n={4} title={t('aur.chain.noise')} active={noise.type !== 'none'}>
+          <StepCard n={4} title={t('aur.chain.noise')} step="noise" selected={step === 'noise'} onSelect={() => setStep('noise')} configured={noise.type !== 'none'}>
             <span className="font-semibold block truncate">{t(`aur.noise.type.${noise.type}`)}</span>
             {noise.type !== 'none' && <span className="text-muted">{noise.snr_db} dB</span>}
-          </Block>
+          </StepCard>
           <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
-          <Block n={5} title={t('aur.chain.headphone')} active={hpEff.mode !== 'off'}>
+          <StepCard n={5} title={t('aur.chain.headphone')} step="headphone" selected={step === 'headphone'} onSelect={() => setStep('headphone')} configured={hpEff.mode !== 'off'}>
             <span className="font-semibold block truncate">{hpEff.mode === 'off' ? t('aur.hp.mode.off') : assets.find((a) => a.asset_id === hpEff.asset)?.name ?? '—'}</span>
             {hpEff.mode !== 'off' && <span className="text-muted">{t(`aur.hp.mode.${hpEff.mode}`)}</span>}
-          </Block>
+          </StepCard>
           <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
-          <Block n={6} title={t('aur.chain.level')} active={lvEff.mode !== 'off'}>
+          <StepCard n={6} title={t('aur.chain.level')} step="level" selected={step === 'level'} onSelect={() => setStep('level')} configured={lvEff.mode !== 'off'}>
             <span className="font-semibold block truncate">{lvEff.mode === 'off' ? t('aur.lv.mode.off') : lvEff.mode === 'spl' ? `${lvEff.target_db_spl} dB SPL` : t('aur.lv.mode.source')}</span>
-          </Block>
+          </StepCard>
+          </div>
         </div>
+        <p className="text-[11px] text-muted -mt-2">{t('aur.step.hint')}</p>
 
         {!source && (
           <p className="text-sm text-muted rounded-lg border border-border bg-panel px-4 py-6 text-center">{t('aur.page.empty')}</p>
         )}
 
-        <EnvironmentSection />
+        {/* ── The settings of the selected card ───────────────────────── */}
+        <div role="tabpanel" id="aur-panel" aria-labelledby={`aur-tab-${step}`} className="space-y-4">
+        {step === 'environment' && <EnvironmentSection />}
 
-        {/* ── HRTF block ──────────────────────────────────────────────── */}
+        {step === 'hrtf' && (
         <section className={clsx('rounded-lg border border-border bg-panel p-4 space-y-4', envEff.type === 'brir' && 'opacity-50')} aria-labelledby="aur-hrtf">
           <h2 id="aur-hrtf" className="text-sm font-semibold">{t('aur.hrtf.title')}</h2>
           <div className="flex flex-wrap items-center gap-2">
@@ -281,12 +321,14 @@ export default function AuralizationPage() {
             </div>
           </div>
         </section>
+        )}
 
-        <NoiseSection />
+        {step === 'noise' && <NoiseSection />}
 
-        <HeadphoneSection />
+        {step === 'headphone' && <HeadphoneSection />}
 
-        <LevelSection gainDb={lvEff.mode === 'off' ? null : preview?.gainDb ?? null} calibrated={calibrated} />
+        {step === 'level' && <LevelSection gainDb={lvEff.mode === 'off' ? null : preview?.gainDb ?? null} calibrated={calibrated} />}
+        </div>
 
         {/* ── A/B preview ─────────────────────────────────────────────── */}
         <section className="rounded-lg border border-border bg-panel p-4 space-y-2" aria-labelledby="aur-ab">

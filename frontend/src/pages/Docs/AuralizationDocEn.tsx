@@ -25,6 +25,10 @@ export default function AuralizationDocEn() {
           <li><strong>Listen:</strong> under <K>Listen and compare</K>, switch between <K>Processed</K> and <K>Original</K> without losing your place.</li>
           <li><strong>Create the file:</strong> <K>Create stereo file</K> processes the whole file and adds it to your list. Then <K>Open in Post-Processing</K> or <K>Download WAV</K>.</li>
         </ol>
+        <P>
+          The chain cards (Environment, HRTF, Noise, Headphone and Level) work as tabs: each shows what was set in that step and, when clicked, opens its settings.
+          The source is not a tab: it is chosen in the left column. The preview and the file creation always stay below.
+        </P>
       </Section>
 
       <Section id="hrtf" title="How the sound gets a direction">

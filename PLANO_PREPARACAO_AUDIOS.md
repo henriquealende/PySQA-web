@@ -219,3 +219,7 @@ A página passou a se chamar "Preparação de áudios" (EN: "Audio Preparation")
 
 ### Ainda não feito
 - Correção por orelha (CSV esquerdo e direito); constantes de tempo (Fast/Slow); medições embutidas de fone e de salas (dependem de licença); ruído gravado de cabine.
+
+### Cartões da cadeia como navegação: feito (2026-10-23)
+- A página tinha informação demais (seis seções empilhadas). Os cartões da cadeia (Ambiente, HRTF, Ruído, Fone, Nível) viraram abas (`role="tablist"`): cada um mostra o resumo do que foi feito (arquivo, modo, valor) e um sinal de "ativo"; ao clicar, abre só os ajustes daquela etapa (`step` em `useAuralStore`). Teclado: setas, Home e End. O cartão da Fonte é só um resumo, sem navegação (a fonte é escolhida na coluna da esquerda). Cenários rápidos, prévia A/B e "Gerar arquivo" continuam sempre visíveis; o chip "Construir minha sala" abre a aba Ambiente, onde está o card do Auralize Salas.
+- Verificado no navegador: clique em HRTF, seta para a direita (Ruído), chip "Construir minha sala" (volta ao Ambiente com o card).
