@@ -23,6 +23,34 @@ export interface EnvParams {
 
 export const NO_ENV: EnvParams = { type: 'none', asset: null, reverb_gain_db: 0 }
 
+export type NoiseType = 'none' | 'white' | 'pink' | 'brown'
+
+export interface NoiseParams {
+  type: NoiseType
+  snr_db: number
+}
+
+export const NO_NOISE: NoiseParams = { type: 'none', snr_db: 15 }
+
+/** What the synthetic room needs: volume, source distance and the reverberation time of each octave band. */
+export interface SynthParams {
+  volume_m3: number
+  distance_m: number
+  rt60: Record<string, number>
+}
+
+export const BANDS = ['125', '250', '500', '1000', '2000', '4000'] as const
+
+export interface Scene {
+  id: 'kitchen' | 'living' | 'car' | 'aircraft'
+  icon: string
+  name: { pt: string; en: string }
+  description: { pt: string; en: string }
+  room: SynthParams
+  hrtf: { azimuth: number; elevation: number; distance_m: number }
+  noise: { type: NoiseType; snr_db: number } | null
+}
+
 /** A file the user uploaded: an HRTF set (SOFA) or a room response (WAV). */
 export interface Asset {
   asset_id: string
@@ -61,6 +89,8 @@ export interface CatalogDataset {
 export interface Catalog {
   builtin: { id: string; kind: string; name: string; description: { pt: string; en: string }; license: string }[]
   datasets: CatalogDataset[]
+  scenes: Scene[]
+  scenes_note: { pt: string; en: string }
 }
 
 export interface HrtfResponse {
@@ -81,9 +111,10 @@ export interface RenderResult extends AudioFile {
 }
 
 const json = { 'Content-Type': 'application/json' }
-const blocks = (h: HrtfParams, env: EnvParams) => ({
+const blocks = (h: HrtfParams, env: EnvParams, noise: NoiseParams) => ({
   hrtf: { enabled: env.type !== 'brir', ...h },
   environment: env,
+  noise,
 })
 
 export async function fetchCatalog(): Promise<Catalog> {
@@ -115,6 +146,16 @@ export async function deleteAsset(sessionId: string, assetId: string): Promise<v
   await fetch(`${BASE}/${sessionId}/assets/${assetId}`, { method: 'DELETE' })
 }
 
+/** A synthetic room response; the server returns it as an uploaded file (kind rir). */
+export async function synthesizeRoom(sessionId: string, name: string, fs: number, p: SynthParams): Promise<Asset> {
+  const res = await fetch(`${BASE}/rir/synth`, {
+    method: 'POST', headers: json,
+    body: JSON.stringify({ session_id: sessionId, name, fs, ...p }),
+  })
+  await checkResponse(res)
+  return res.json()
+}
+
 export async function fetchRirInfo(sessionId: string, assetId: string, signal?: AbortSignal): Promise<RirInfo> {
   const res = await fetch(`${BASE}/${sessionId}/assets/${assetId}/info`, { signal })
   await checkResponse(res)
@@ -132,11 +173,11 @@ export async function fetchHrtfResponse(sessionId: string, h: HrtfParams, fs: nu
 
 /** A short stretch of the result, ready to play. The caller owns the object URL (revoke it when done). */
 export async function fetchPreview(
-  sessionId: string, audioId: string, h: HrtfParams, env: EnvParams, t0: number, signal?: AbortSignal,
+  sessionId: string, audioId: string, h: HrtfParams, env: EnvParams, noise: NoiseParams, t0: number, signal?: AbortSignal,
 ): Promise<{ url: string; peakDbfs: number }> {
   const res = await apiFetch(sessionId, `${BASE}/preview`, {
     method: 'POST', headers: json, signal,
-    body: JSON.stringify({ session_id: sessionId, audio_id: audioId, blocks: blocks(h, env), t0 }),
+    body: JSON.stringify({ session_id: sessionId, audio_id: audioId, blocks: blocks(h, env, noise), t0 }),
   })
   await checkResponse(res)
   const peak = Number(res.headers.get('X-Peak-Dbfs'))
@@ -150,8 +191,8 @@ export async function fetchPreview(
  * be rebuilt after a server restart. Uploaded SOFA and room files live only in the server's memory, so results made
  * with them cannot be rebuilt.
  */
-export async function renderToSession(sessionId: string, audioId: string, h: HrtfParams, env: EnvParams): Promise<RenderResult> {
-  const body = { audio_id: audioId, blocks: blocks(h, env) }
+export async function renderToSession(sessionId: string, audioId: string, h: HrtfParams, env: EnvParams, noise: NoiseParams): Promise<RenderResult> {
+  const body = { audio_id: audioId, blocks: blocks(h, env, noise) }
   const res = await apiFetch(sessionId, `${BASE}/render`, {
     method: 'POST', headers: json,
     body: JSON.stringify({ ...body, session_id: sessionId, new_audio_id: newClientId() }),

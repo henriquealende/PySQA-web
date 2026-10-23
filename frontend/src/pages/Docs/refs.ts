@@ -213,6 +213,10 @@ export const REFS: Record<string, Ref> = {
     id: 'schroeder1965', cite: 'SCHROEDER, 1965', sort: 'SCHROEDER',
     entry: 'SCHROEDER, M. R. New method of measuring reverberation time. **The Journal of the Acoustical Society of America**, [s. l.], v. 37, n. 3, p. 409-412, mar. 1965.',
   },
+  kuttruff2009: {
+    id: 'kuttruff2009', cite: 'KUTTRUFF, 2009', sort: 'KUTTRUFF',
+    entry: 'KUTTRUFF, H. **Room acoustics**. 5. ed. Abingdon: Spon Press, 2009.',
+  },
   // --- Preparação de áudios: bases abertas de HRTF, fones e respostas ao impulso (página planejada) ---
   algazi2001: {
     id: 'algazi2001', cite: 'ALGAZI et al., 2001', sort: 'ALGAZI',

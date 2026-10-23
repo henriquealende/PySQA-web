@@ -7,6 +7,7 @@ import { toast } from '../../store/useToast'
 import { useLocale, useT } from '../../i18n'
 import { deleteAsset, EnvType, fetchRirInfo, RirInfo, uploadRir } from '../../api/auralizationApi'
 import DecayPlot from './DecayPlot'
+import SyntheticRoomForm from './SyntheticRoomForm'
 
 const TYPES: EnvType[] = ['none', 'rir', 'brir']
 
@@ -15,7 +16,7 @@ export default function EnvironmentSection() {
   const t = useT()
   const locale = useLocale()
   const sessionId = useStore((s) => s.sessionId)
-  const { env, assets, setEnv, setAssets } = useAuralStore()
+  const { env, assets, synthAssetId, setEnv, setAssets, setSynthAsset } = useAuralStore()
   const [busy, setBusy] = useState(false)
   const [info, setInfo] = useState<RirInfo | null>(null)
   const input = useRef<HTMLInputElement>(null)
@@ -56,6 +57,7 @@ export default function EnvironmentSection() {
   const remove = async () => {
     if (!env.asset) return
     await deleteAsset(sessionId, env.asset)
+    if (env.asset === synthAssetId) setSynthAsset(null)
     setAssets(assets.filter((a) => a.asset_id !== env.asset))
     setEnv({ type: 'none', asset: null })
   }
@@ -146,6 +148,7 @@ export default function EnvironmentSection() {
           )}
         </>
       )}
+      <SyntheticRoomForm />
     </section>
   )
 }

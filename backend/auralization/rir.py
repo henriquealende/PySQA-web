@@ -52,11 +52,21 @@ def read_rir(data: bytes, name: str) -> RirSet:
         raise RirError(msg(f"{name} dura {dur:.1f} s; o máximo é {MAX_SECONDS:.0f} s.", f"{name} lasts {dur:.1f} s; the maximum is {MAX_SECONDS:.0f} s."))
     if dur < MIN_SECONDS or not np.any(x):
         raise RirError(msg(f"{name} é curto demais ou está em silêncio.", f"{name} is too short or silent."))
-    r = RirSet(name=name, fs=float(fs), ir=x, channels=ch, duration_s=dur)
+    return _build(name, x, fs)
+
+
+def _build(name: str, x: np.ndarray, fs: float) -> RirSet:
+    r = RirSet(name=name, fs=float(fs), ir=x, channels=x.shape[1], duration_s=x.shape[0] / fs)
     mono = x.mean(axis=1).astype(np.float64)
     r.metrics, r.decay = _metrics(mono, fs)
     r.bands = _bands(mono, fs)
     return r
+
+
+def from_array(name: str, x: np.ndarray, fs: float) -> RirSet:
+    """A room response made in memory (the synthetic ones): (n,) or (n, channels) float."""
+    x = np.asarray(x, dtype=np.float32)
+    return _build(name, x[:, None] if x.ndim == 1 else x, fs)
 
 
 # ── Energy decay ──────────────────────────────────────────────────────────────

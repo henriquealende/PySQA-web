@@ -1,32 +1,269 @@
 {
   "builtin": [
-    {"id": "builtin:sphere", "kind": "hrtf", "name": "Spherical head (model)",
-     "description": {"pt": "Cabeça esférica rígida: atraso interaural de Woodworth e sombra da cabeça de Brown e Duda. Modelo didático, sem orelha externa.",
-                     "en": "Rigid spherical head: Woodworth interaural delay and the Brown and Duda head shadow. A teaching model, no pinna."},
-     "license": "n/a (calculated by PySQA)"}
+    {
+      "id": "builtin:sphere",
+      "kind": "hrtf",
+      "name": "Spherical head (model)",
+      "description": {
+        "pt": "Cabeça esférica rígida: atraso interaural de Woodworth e sombra da cabeça de Brown e Duda. Modelo didático, sem orelha externa.",
+        "en": "Rigid spherical head: Woodworth interaural delay and the Brown and Duda head shadow. A teaching model, no pinna."
+      },
+      "license": "n/a (calculated by PySQA)"
+    }
   ],
   "datasets": [
-    {"id": "sadie2", "kind": "hrtf", "name": "SADIE II", "license": "Apache-2.0", "license_status": "verified", "ref": "kearney2024",
-     "url": "https://zenodo.org/records/10886409", "embedded": false, "note": "20 subjects, SOFA, 44.1/48/96 kHz. Cite the original dataset when used or modified."},
-    {"id": "ari", "kind": "hrtf", "name": "ARI HRTF database", "license": "CC BY-SA 3.0", "license_status": "verified", "ref": "ari",
-     "url": "https://www.oeaw.ac.at/isf/hrtf", "embedded": false, "note": "More than 250 subjects, SOFA. Share-alike: derived files keep the licence."},
-    {"id": "cipic", "kind": "hrtf", "name": "CIPIC HRTF database", "license": "public domain (2001 announcement)", "license_status": "to_confirm", "ref": "algazi2001",
-     "url": "https://www.ece.ucdavis.edu/cipic/spatial-sound/hrtf-data/", "embedded": false, "note": "45 subjects. The download page could not be opened on 2026-10-23; confirm the terms before embedding."},
-    {"id": "autoeq", "kind": "headphone", "name": "AutoEq (measurements)", "license": "code MIT; data per source", "license_status": "to_confirm", "ref": "pasanen",
-     "url": "https://github.com/jaakkopasanen/AutoEq", "embedded": false, "note": "The MIT licence covers the code. oratory1990, crinacle, Rtings and InnerFidelity data need a licence check each."},
-    {"id": "ebrird", "kind": "room", "name": "eBrIRD (kitchen, restaurant)", "license": "unknown", "license_status": "to_confirm", "ref": "ebrird",
-     "url": "https://www.phon.ucl.ac.uk/resource/ebrird", "embedded": false, "note": "Site unreachable on 2026-10-23: licence and download not confirmed."},
-    {"id": "mcvampire", "kind": "room", "name": "In-Car McVAMPIRE", "license": "CC BY 4.0", "license_status": "verified", "ref": "muller2024",
-     "url": "https://zenodo.org/records/12806684", "embedded": false, "note": "Minivan, 14 overhead microphones; includes driving noise."},
-    {"id": "ir64car", "kind": "room", "name": "IR64-CAR", "license": "CC BY 4.0", "license_status": "verified", "ref": "lopezballester2025",
-     "url": "https://zenodo.org/records/15168578", "embedded": false, "note": "Peugeot 208, 64-channel WAV, 24.1 MB. Needs ambisonic or beamforming rendering (phase 7)."},
-    {"id": "dechorate", "kind": "room", "name": "dEchorate", "license": "CC BY 4.0", "license_status": "verified", "ref": "dicarlo2021",
-     "url": "https://zenodo.org/records/4626590", "embedded": false, "note": "Shoebox laboratory room, 1800 annotated RIRs. Zenodo lists a newer version."},
-    {"id": "but-reverbdb", "kind": "room", "name": "BUT Speech@FIT ReverbDB", "license": "CC BY 4.0", "license_status": "verified", "ref": "szoke2019",
-     "url": "https://speech.fit.vut.cz/software/but-speech-fit-reverb-database", "embedded": false, "note": "8 to 9 rooms. The retransmitted-speech part needs an LDC licence."},
-    {"id": "air-aachen", "kind": "room", "name": "Aachen Impulse Response (AIR)", "license": "unknown", "license_status": "to_confirm", "ref": "jeub2009",
-     "url": "https://www.iks.rwth-aachen.de/en/research/tools-downloads/databases/aachen-impulse-response-database", "embedded": false, "note": "Site unreachable on 2026-10-23: licence not confirmed."},
-    {"id": "openair", "kind": "room", "name": "OpenAIR", "license": "Creative Commons, chosen per item", "license_status": "per_item", "ref": "murphy2010",
-     "url": "https://www.openair.hosted.york.ac.uk/", "embedded": false, "note": "Read the licence at the bottom of each item page."}
+    {
+      "id": "sadie2",
+      "kind": "hrtf",
+      "name": "SADIE II",
+      "license": "Apache-2.0",
+      "license_status": "verified",
+      "ref": "kearney2024",
+      "url": "https://zenodo.org/records/10886409",
+      "embedded": false,
+      "note": "20 subjects, SOFA, 44.1/48/96 kHz. Cite the original dataset when used or modified."
+    },
+    {
+      "id": "ari",
+      "kind": "hrtf",
+      "name": "ARI HRTF database",
+      "license": "CC BY-SA 3.0",
+      "license_status": "verified",
+      "ref": "ari",
+      "url": "https://www.oeaw.ac.at/isf/hrtf",
+      "embedded": false,
+      "note": "More than 250 subjects, SOFA. Share-alike: derived files keep the licence."
+    },
+    {
+      "id": "cipic",
+      "kind": "hrtf",
+      "name": "CIPIC HRTF database",
+      "license": "public domain (2001 announcement)",
+      "license_status": "to_confirm",
+      "ref": "algazi2001",
+      "url": "https://www.ece.ucdavis.edu/cipic/spatial-sound/hrtf-data/",
+      "embedded": false,
+      "note": "45 subjects. The download page could not be opened on 2026-10-23; confirm the terms before embedding."
+    },
+    {
+      "id": "autoeq",
+      "kind": "headphone",
+      "name": "AutoEq (measurements)",
+      "license": "code MIT; data per source",
+      "license_status": "to_confirm",
+      "ref": "pasanen",
+      "url": "https://github.com/jaakkopasanen/AutoEq",
+      "embedded": false,
+      "note": "The MIT licence covers the code. oratory1990, crinacle, Rtings and InnerFidelity data need a licence check each."
+    },
+    {
+      "id": "ebrird",
+      "kind": "room",
+      "name": "eBrIRD (kitchen, restaurant)",
+      "license": "unknown",
+      "license_status": "to_confirm",
+      "ref": "ebrird",
+      "url": "https://www.phon.ucl.ac.uk/resource/ebrird",
+      "embedded": false,
+      "note": "Site unreachable on 2026-10-23: licence and download not confirmed."
+    },
+    {
+      "id": "mcvampire",
+      "kind": "room",
+      "name": "In-Car McVAMPIRE",
+      "license": "CC BY 4.0",
+      "license_status": "verified",
+      "ref": "muller2024",
+      "url": "https://zenodo.org/records/12806684",
+      "embedded": false,
+      "note": "Minivan, 14 overhead microphones; includes driving noise."
+    },
+    {
+      "id": "ir64car",
+      "kind": "room",
+      "name": "IR64-CAR",
+      "license": "CC BY 4.0",
+      "license_status": "verified",
+      "ref": "lopezballester2025",
+      "url": "https://zenodo.org/records/15168578",
+      "embedded": false,
+      "note": "Peugeot 208, 64-channel WAV, 24.1 MB. Needs ambisonic or beamforming rendering (phase 7)."
+    },
+    {
+      "id": "dechorate",
+      "kind": "room",
+      "name": "dEchorate",
+      "license": "CC BY 4.0",
+      "license_status": "verified",
+      "ref": "dicarlo2021",
+      "url": "https://zenodo.org/records/4626590",
+      "embedded": false,
+      "note": "Shoebox laboratory room, 1800 annotated RIRs. Zenodo lists a newer version."
+    },
+    {
+      "id": "but-reverbdb",
+      "kind": "room",
+      "name": "BUT Speech@FIT ReverbDB",
+      "license": "CC BY 4.0",
+      "license_status": "verified",
+      "ref": "szoke2019",
+      "url": "https://speech.fit.vut.cz/software/but-speech-fit-reverb-database",
+      "embedded": false,
+      "note": "8 to 9 rooms. The retransmitted-speech part needs an LDC licence."
+    },
+    {
+      "id": "air-aachen",
+      "kind": "room",
+      "name": "Aachen Impulse Response (AIR)",
+      "license": "unknown",
+      "license_status": "to_confirm",
+      "ref": "jeub2009",
+      "url": "https://www.iks.rwth-aachen.de/en/research/tools-downloads/databases/aachen-impulse-response-database",
+      "embedded": false,
+      "note": "Site unreachable on 2026-10-23: licence not confirmed."
+    },
+    {
+      "id": "openair",
+      "kind": "room",
+      "name": "OpenAIR",
+      "license": "Creative Commons, chosen per item",
+      "license_status": "per_item",
+      "ref": "murphy2010",
+      "url": "https://www.openair.hosted.york.ac.uk/",
+      "embedded": false,
+      "note": "Read the licence at the bottom of each item page."
+    }
+  ],
+  "scenes_note": {
+    "pt": "Valores de partida escolhidos por PySQA a partir de ordens de grandeza usuais; não são medições de um local. Ajuste-os ao seu caso ou use uma resposta ao impulso medida.",
+    "en": "Starting values chosen by PySQA from usual orders of magnitude; they are not measurements of any place. Adjust them to your case or use a measured impulse response."
+  },
+  "scenes": [
+    {
+      "id": "kitchen",
+      "icon": "kitchen",
+      "name": {
+        "pt": "Cozinha",
+        "en": "Kitchen"
+      },
+      "description": {
+        "pt": "Cozinha de cerca de 30 m³, superfícies duras, fonte a 2 m.",
+        "en": "Kitchen of about 30 m³, hard surfaces, source at 2 m."
+      },
+      "room": {
+        "volume_m3": 30,
+        "distance_m": 2.0,
+        "rt60": {
+          "125": 0.6,
+          "250": 0.55,
+          "500": 0.5,
+          "1000": 0.5,
+          "2000": 0.45,
+          "4000": 0.4
+        }
+      },
+      "hrtf": {
+        "azimuth": 30,
+        "elevation": 0,
+        "distance_m": 1.0
+      },
+      "noise": null
+    },
+    {
+      "id": "living",
+      "icon": "living",
+      "name": {
+        "pt": "Sala de estar",
+        "en": "Living room"
+      },
+      "description": {
+        "pt": "Sala mobiliada de cerca de 45 m³, fonte a 2,5 m.",
+        "en": "Furnished room of about 45 m³, source at 2.5 m."
+      },
+      "room": {
+        "volume_m3": 45,
+        "distance_m": 2.5,
+        "rt60": {
+          "125": 0.59,
+          "250": 0.55,
+          "500": 0.5,
+          "1000": 0.47,
+          "2000": 0.43,
+          "4000": 0.41
+        }
+      },
+      "hrtf": {
+        "azimuth": 20,
+        "elevation": 0,
+        "distance_m": 1.0
+      },
+      "noise": null
+    },
+    {
+      "id": "car",
+      "icon": "car",
+      "name": {
+        "pt": "Cabine de carro",
+        "en": "Car cabin"
+      },
+      "description": {
+        "pt": "Habitáculo de cerca de 3 m³, reverberação muito curta, ruído de rodagem (grave).",
+        "en": "Cabin of about 3 m³, very short reverberation, low-frequency road noise."
+      },
+      "room": {
+        "volume_m3": 3,
+        "distance_m": 0.8,
+        "rt60": {
+          "125": 0.12,
+          "250": 0.09,
+          "500": 0.07,
+          "1000": 0.06,
+          "2000": 0.05,
+          "4000": 0.045
+        }
+      },
+      "hrtf": {
+        "azimuth": 20,
+        "elevation": 0,
+        "distance_m": 1.0
+      },
+      "noise": {
+        "type": "brown",
+        "snr_db": 12
+      }
+    },
+    {
+      "id": "aircraft",
+      "icon": "aircraft",
+      "name": {
+        "pt": "Cabine de avião",
+        "en": "Aircraft cabin"
+      },
+      "description": {
+        "pt": "Cabine de passageiros, reverberação curta, ruído contínuo de cruzeiro (banda larga).",
+        "en": "Passenger cabin, short reverberation, continuous broadband cruise noise."
+      },
+      "room": {
+        "volume_m3": 80,
+        "distance_m": 1.5,
+        "rt60": {
+          "125": 0.3,
+          "250": 0.25,
+          "500": 0.2,
+          "1000": 0.18,
+          "2000": 0.15,
+          "4000": 0.12
+        }
+      },
+      "hrtf": {
+        "azimuth": 0,
+        "elevation": 0,
+        "distance_m": 1.0
+      },
+      "noise": {
+        "type": "pink",
+        "snr_db": 8
+      }
+    }
   ]
 }

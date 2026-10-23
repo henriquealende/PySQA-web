@@ -16,7 +16,7 @@ all of them must end with `FAILS: 0 []`.
 `test_frf` (System Analysis) needs no server: it builds a system with known modes and checks the FRF estimators,
 coherence, impact averaging, mode detection and damping, and the UFF/WAV/CSV readers.
 
-`test_aural` (Audio Preparation, phases 1 and 2): 77 checks on the spherical-head model, the SOFA reader and its azimuth sign, room responses (RT60, EDT, C50, C80, D50), the chain and the API (its own server on port 8350); needs `h5py`.
+`test_aural` (Audio Preparation, phases 1 to 3): 111 checks on the spherical-head model, the SOFA reader and its azimuth sign, room responses (RT60, EDT, C50, C80, D50), synthetic rooms, background noise, the chain and the API (its own server on port 8350); needs `h5py`.
 
 Other files:
 - `test_aweight.js` (Node): the A-weighting filter of the recorder against IEC 61672.

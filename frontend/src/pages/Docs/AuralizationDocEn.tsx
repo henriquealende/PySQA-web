@@ -10,14 +10,15 @@ export default function AuralizationDocEn() {
           result on headphones. The final file is stereo and can be analysed in Post-Processing like any other.
         </P>
         <Callout kind="info" title="In this first version">
-          The chain has four blocks: Source, Environment, HRTF and Headphone. <strong>Source</strong>, <strong>Environment</strong> (you upload the impulse response of
-          the room, car or aircraft) and <strong>HRTF</strong> work now. The Headphone block (headphone response compensation) shows as “Coming soon”.
+          The chain has five blocks: Source, Environment, HRTF, Noise and Headphone. <strong>Source</strong>, <strong>Environment</strong> (you upload the impulse response of
+          the room, car or aircraft) <strong>HRTF</strong> and background <strong>Noise</strong> work now. The <strong>Quick scenes</strong> set all of this up at once. The Headphone block (headphone response compensation) shows as “Coming soon”.
         </Callout>
       </header>
 
       <Section id="visao-geral" title="Overview">
         <ol className="text-sm text-slate-200 leading-relaxed list-decimal pl-5 flex flex-col gap-1 max-w-[72ch]">
           <li><strong>Choose the source:</strong> upload a WAV in the left column and select it under <K>Source sound</K>.</li>
+          <li><strong>Quick scene (optional):</strong> pick kitchen, living room, car cabin or aircraft cabin to start from a realistic point.</li>
           <li><strong>Choose the environment (optional):</strong> under <K>Environment</K>, upload a room (RIR) or binaural (BRIR) impulse response.</li>
           <li><strong>Choose the HRTF set:</strong> the spherical-head model, or your own <K>.sofa</K> file (<K>Upload SOFA</K>).</li>
           <li><strong>Place the sound:</strong> click the map or use <K>Azimuth</K>, <K>Elevation</K> and <K>Distance</K>.</li>
@@ -164,6 +165,72 @@ export default function AuralizationDocEn() {
           ]}
         />
         <P>PySQA accepts 1- or 2-channel WAV files of up to 30 s, and converts the sample rate to that of your audio when they differ.</P>
+      </Section>
+
+            <Section id="cenarios" title="Quick scenes and background noise">
+        <P>
+          A <strong>scene</strong> sets up, with one click, a synthetic room, the position of the sound and the background noise. Then you adjust each block as
+          you like (or pick <K>No scene</K> to clear everything). They give you a realistic starting point, for example a refrigerator in a kitchen or an
+          alert tone in a cabin.
+        </P>
+        <Table
+          head={['Scene', 'Room (volume; source at)', 'T20 per band, 125 Hz to 4 kHz [s]', 'Background noise']}
+          widths={['18%', '24%', '34%', '24%']}
+          rows={[
+            ['Kitchen', '30 m³; 2 m', '0.60 · 0.55 · 0.50 · 0.50 · 0.45 · 0.40', 'None'],
+            ['Living room', '45 m³; 2.5 m', '0.59 · 0.55 · 0.50 · 0.47 · 0.43 · 0.41', 'None'],
+            ['Car cabin', '3 m³; 0.8 m', '0.12 · 0.09 · 0.07 · 0.06 · 0.05 · 0.045', 'Brown, signal-to-noise ratio 12 dB'],
+            ['Aircraft cabin', '80 m³; 1.5 m', '0.30 · 0.25 · 0.20 · 0.18 · 0.15 · 0.12', 'Pink, signal-to-noise ratio 8 dB'],
+          ]}
+        />
+        <Callout kind="warn" title="These are not measurements">
+          These values are <strong>starting points chosen by PySQA</strong> from usual orders of magnitude for each kind of space. They do not come from a
+          published table and do not represent a specific place or vehicle. For a study, adjust them to your case and describe them in the method, or use a
+          measured impulse response (Environment section).
+        </Callout>
+
+        <h3 className="text-base font-semibold text-white mt-2">How the synthetic room is made</h3>
+        <P>
+          PySQA generates a response with one impulse (the direct sound, at the time the sound takes to cover the distance) followed by a noise tail that decays
+          with the reverberation time of each octave band. The strength of the tail relative to the direct sound comes from the critical distance
+          <Cite ids={['kuttruff2009']} />, the distance at which the direct and reverberant energies are equal.
+        </P>
+        <Eq n={6} where={<>where V is the room volume (m³) and T the reverberation time at 1 kHz (s).</>}>
+          D<sub>c</sub> = 0.057 · √( V / T )
+        </Eq>
+        <Eq n={7} where={<>with the source at a distance r. Close to the source (r &lt; D<sub>c</sub>) the direct sound dominates; far from it, the reverberation.</>}>
+          E<sub>reverberant</sub> / E<sub>direct</sub> = ( r / D<sub>c</sub> )²
+        </Eq>
+        <Callout kind="info" title="What this model does not have">
+          It is a statistical model: <strong>no individual reflections</strong> and no room modes. Below the Schroeder frequency, estimated by
+          f<sub>S</sub> ≈ 2000 · √( T / V ) <Cite ids={['kuttruff2009']} />, a small room does not behave as a diffuse field: that is about 260 Hz in the kitchen and
+          300 Hz in the car. In that region a real response has resonances the model does not reproduce. In a small room the broadband T20 shown stays close
+          to that of the higher bands, which hold most of the energy.
+        </Callout>
+        <P>
+          With a scene, the distance of the HRTF block stays at 1 m: the source distance already enters the ratio between direct sound and reverberation of the
+          room, and adding it to the HRTF block would attenuate the direct sound twice.
+        </P>
+
+        <h3 className="text-base font-semibold text-white mt-2">Background noise</h3>
+        <P>
+          The <K>Background noise</K> block adds a continuous noise, <strong>different in each ear</strong>, at the chosen signal-to-noise ratio (SNR). The
+          colour of the noise sets the spectrum:
+        </P>
+        <Table
+          head={['Colour', 'Power spectrum', 'Typical use']}
+          widths={['20%', '30%', '50%']}
+          rows={[
+            ['White', 'Equal at all frequencies', 'Hiss, reference'],
+            ['Pink', 'Falls 3 dB per octave', 'Broadband noise, such as a cabin in cruise'],
+            ['Brown', 'Falls 6 dB per octave', 'Bass-dominated noise, such as a car’s road noise'],
+          ]}
+        />
+        <P>
+          The SNR is the ratio of the RMS value of the signal to that of the noise, computed over the <strong>whole file and both ears</strong>, silent stretches
+          included. The noise is generated with a fixed seed: the same settings always give the same file. The noise types are synthetic; they are not
+          recordings of cars or aircraft.
+        </P>
       </Section>
 
       <Section id="limites" title="Limits and good practices">

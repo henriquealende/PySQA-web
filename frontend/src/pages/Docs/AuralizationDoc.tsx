@@ -10,14 +10,15 @@ export default function AuralizationDoc() {
           fone de ouvido. O arquivo final é estéreo e pode ser analisado no Pós-processamento como qualquer outro.
         </P>
         <Callout kind="info" title="Nesta primeira versão">
-          A cadeia tem quatro blocos: Fonte, Ambiente, HRTF e Fone. Funcionam agora <strong>Fonte</strong>, <strong>Ambiente</strong> (você envia a resposta ao impulso da
-          sala, do carro ou do avião) e <strong>HRTF</strong>. O bloco Fone (compensação da resposta do fone) aparece como “Em breve”.
+          A cadeia tem cinco blocos: Fonte, Ambiente, HRTF, Ruído e Fone. Funcionam agora <strong>Fonte</strong>, <strong>Ambiente</strong> (você envia a resposta ao impulso da
+          sala, do carro ou do avião) <strong>HRTF</strong> e <strong>Ruído</strong> de fundo. Os <strong>Cenários rápidos</strong> montam tudo isso de uma vez. O bloco Fone (compensação da resposta do fone) aparece como “Em breve”.
         </Callout>
       </header>
 
       <Section id="visao-geral" title="Visão geral">
         <ol className="text-sm text-slate-200 leading-relaxed list-decimal pl-5 flex flex-col gap-1 max-w-[72ch]">
           <li><strong>Escolha a fonte:</strong> envie um WAV na coluna da esquerda e selecione-o em <K>Som de origem</K>.</li>
+          <li><strong>Cenário rápido (opcional):</strong> escolha cozinha, sala de estar, cabine de carro ou de avião para começar de um ponto realista.</li>
           <li><strong>Escolha o ambiente (opcional):</strong> em <K>Ambiente</K>, envie uma resposta ao impulso de sala (RIR) ou binaural (BRIR).</li>
           <li><strong>Escolha o conjunto de HRTF:</strong> o modelo de cabeça esférica, ou um arquivo <K>.sofa</K> seu (<K>Enviar SOFA</K>).</li>
           <li><strong>Posicione o som:</strong> clique no mapa ou use os controles de <K>Azimute</K>, <K>Elevação</K> e <K>Distância</K>.</li>
@@ -164,6 +165,72 @@ export default function AuralizationDoc() {
           ]}
         />
         <P>O PySQA aceita WAV de 1 ou 2 canais, de até 30 s, e converte a taxa de amostragem para a do seu áudio quando são diferentes.</P>
+      </Section>
+
+            <Section id="cenarios" title="Cenários rápidos e ruído de fundo">
+        <P>
+          Um <strong>cenário</strong> monta, com um clique, uma sala sintética, a posição do som e o ruído de fundo. Depois você ajusta cada bloco como quiser
+          (ou escolhe <K>Sem cenário</K> para limpar tudo). Servem para ter um ponto de partida realista, por exemplo uma geladeira numa cozinha ou um aviso
+          sonoro numa cabine.
+        </P>
+        <Table
+          head={['Cenário', 'Sala (volume; fonte a)', 'T20 por banda, 125 Hz a 4 kHz [s]', 'Ruído de fundo']}
+          widths={['18%', '24%', '34%', '24%']}
+          rows={[
+            ['Cozinha', '30 m³; 2 m', '0,60 · 0,55 · 0,50 · 0,50 · 0,45 · 0,40', 'Nenhum'],
+            ['Sala de estar', '45 m³; 2,5 m', '0,59 · 0,55 · 0,50 · 0,47 · 0,43 · 0,41', 'Nenhum'],
+            ['Cabine de carro', '3 m³; 0,8 m', '0,12 · 0,09 · 0,07 · 0,06 · 0,05 · 0,045', 'Marrom, relação sinal-ruído de 12 dB'],
+            ['Cabine de avião', '80 m³; 1,5 m', '0,30 · 0,25 · 0,20 · 0,18 · 0,15 · 0,12', 'Rosa, relação sinal-ruído de 8 dB'],
+          ]}
+        />
+        <Callout kind="warn" title="Não são medições">
+          Estes valores são <strong>pontos de partida escolhidos pelo PySQA</strong> a partir de ordens de grandeza usuais para cada tipo de espaço. Não vêm de
+          uma tabela publicada nem representam um local ou um veículo específico. Para um estudo, ajuste-os ao seu caso e descreva-os no método, ou use uma
+          resposta ao impulso medida (seção Ambiente).
+        </Callout>
+
+        <h3 className="text-base font-semibold text-white mt-2">Como a sala sintética é feita</h3>
+        <P>
+          O PySQA gera uma resposta com um impulso (o som direto, no instante que o som leva para percorrer a distância) seguido de uma cauda de ruído que decai
+          com o tempo de reverberação de cada banda de oitava. A força da cauda em relação ao som direto vem da distância crítica <Cite ids={['kuttruff2009']} />,
+          a distância em que a energia direta e a reverberante se igualam.
+        </P>
+        <Eq n={6} where={<>onde V é o volume da sala (m³) e T o tempo de reverberação a 1 kHz (s).</>}>
+          D<sub>c</sub> = 0,057 · √( V / T )
+        </Eq>
+        <Eq n={7} where={<>com a fonte a uma distância r. Perto da fonte (r &lt; D<sub>c</sub>) o som direto domina; longe dela, a reverberação.</>}>
+          E<sub>reverberante</sub> / E<sub>direta</sub> = ( r / D<sub>c</sub> )²
+        </Eq>
+        <Callout kind="info" title="O que este modelo não tem">
+          É um modelo estatístico: <strong>não há reflexões individuais</strong> nem modos da sala. Abaixo da frequência de Schroeder, estimada por
+          f<sub>S</sub> ≈ 2000 · √( T / V ) <Cite ids={['kuttruff2009']} />, uma sala pequena não se comporta como um campo difuso: isso dá cerca de 260 Hz na cozinha e
+          300 Hz no carro. Nessa região a resposta real tem ressonâncias que o modelo não reproduz. Em uma sala pequena, o T20 de banda larga mostrado fica perto
+          do das bandas mais altas, que concentram a energia.
+        </Callout>
+        <P>
+          Com um cenário, a distância do bloco HRTF fica em 1 m: a distância da fonte já entra na razão entre som direto e reverberação da sala, e somá-la
+          ao bloco HRTF atenuaria o som direto duas vezes.
+        </P>
+
+        <h3 className="text-base font-semibold text-white mt-2">Ruído de fundo</h3>
+        <P>
+          O bloco <K>Ruído de fundo</K> soma um ruído contínuo, <strong>diferente em cada orelha</strong>, com a relação sinal-ruído (SNR) escolhida. A
+          cor do ruído define o espectro:
+        </P>
+        <Table
+          head={['Cor', 'Espectro de potência', 'Uso típico']}
+          widths={['20%', '30%', '50%']}
+          rows={[
+            ['Branco', 'Igual em todas as frequências', 'Chiado, referência'],
+            ['Rosa', 'Cai 3 dB por oitava', 'Ruído de banda larga, como o de uma cabine em cruzeiro'],
+            ['Marrom', 'Cai 6 dB por oitava', 'Ruído dominado pelo grave, como o de rodagem de um carro'],
+          ]}
+        />
+        <P>
+          A SNR é a razão entre o valor RMS do sinal e o do ruído, calculados sobre o <strong>arquivo inteiro e as duas orelhas</strong>, com os trechos de
+          silêncio incluídos. O ruído é gerado com semente fixa: a mesma configuração dá sempre o mesmo arquivo. Os tipos de ruído são sintéticos; não são
+          gravações de carros ou aviões.
+        </P>
       </Section>
 
       <Section id="limites" title="Limites e boas práticas">

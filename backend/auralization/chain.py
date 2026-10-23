@@ -1,6 +1,7 @@
 """Runs the auralization chain on a mono signal.
 
-Blocks: Environment (room response, optional) and HRTF (binaural positioning). Each ear ends up with one filter that
+Blocks: Environment (room response, optional), HRTF (binaural positioning) and background noise (optional, at a given
+signal-to-noise ratio). Each ear ends up with one filter that
 holds everything, so the signal is convolved once per ear. The structure is a list of steps so the next blocks
 (headphone, level) are added without touching the callers.
 
@@ -24,6 +25,7 @@ from scipy.signal import oaconvolve, resample_poly
 from utils.lang import msg
 
 from . import hrtf as hrtf_mod
+from .noise import COLORS, mix_snr
 from .rir import RirSet, decorrelate
 from .sofa_io import HrtfSet
 
@@ -56,9 +58,16 @@ class EnvironmentStep:
 
 
 @dataclass
+class NoiseStep:
+    type: str = "none"                  # none | white | pink | brown
+    snr_db: float = 15.0
+
+
+@dataclass
 class Chain:
     hrtf: HrtfStep = field(default_factory=HrtfStep)
     environment: EnvironmentStep = field(default_factory=EnvironmentStep)
+    noise: NoiseStep = field(default_factory=NoiseStep)
 
 
 @dataclass
@@ -182,6 +191,10 @@ def render(mono: np.ndarray, fs: int, chain: Chain, resolve_hrtf: HrtfResolver,
         out = np.stack([oaconvolve(x, f.astype(np.float32)) for f in filters], axis=1)
 
     out = out.astype(np.float64)
+    if chain.noise.type != "none":
+        if chain.noise.type not in COLORS:
+            raise ChainError(msg("Tipo de ruído desconhecido.", "Unknown noise type."))
+        out = mix_snr(out, fs, chain.noise.type, chain.noise.snr_db)
     peak = float(np.max(np.abs(out))) if out.size else 0.0
     peak_db = 20 * np.log10(peak) if peak > 0 else -200.0
     if peak > 1.0:

@@ -1,4 +1,4 @@
-"""Audio Preparation (phases 1 and 2: HRTF and room responses) checks. Run with the backend venv from the backend folder:
+"""Audio Preparation (phases 1 to 3: HRTF, room responses, quick scenes) checks. Run with the backend venv from the backend folder:
 
     cd backend
     .venv\\Scripts\\python.exe ..\\dev-tests\\test_aural.py
@@ -223,6 +223,74 @@ except C.ChainError:
 res44 = C.render(xs, fs, env_off, lambda a: None, lambda a: RirSet(name="x", fs=44100.0, ir=np.pad(np.ones((1, 1), dtype=np.float32), ((0, 2000), (0, 0))), channels=1, duration_s=0.05))
 check("chain room: a response at another sample rate is resampled (signal comes back)", float(np.corrcoef(res44.data[:4800, 0], xs)[0, 1]) > 0.97 and abs(20 * np.log10(np.std(res44.data[:4800, 0]) / np.std(xs))) < 0.5)
 
+# ── Quick scenes: synthetic rooms and background noise ───────────────────────
+from auralization import rir_synth as RS, noise as NZ
+
+flat05 = {125: 0.5, 250: 0.5, 500: 0.5, 1000: 0.5, 2000: 0.5, 4000: 0.5}
+sy = RS.synth_rirset("flat", 48000, flat05, 30.0, 2.0)
+check("synth: T20 close to the 0.5 s asked for", abs(sy.metrics["rt60_t20"] - 0.5) < 0.06, sy.metrics["rt60_t20"])
+check("synth: every octave band close to 0.5 s", all(v is not None and abs(v - 0.5) < 0.1 for v in sy.bands.values()) and len(sy.bands) == 6, sy.bands)
+tilt = {125: 0.9, 250: 0.8, 500: 0.6, 1000: 0.5, 2000: 0.35, 4000: 0.25}
+st_ = RS.synth_rirset("tilt", 48000, tilt, 30.0, 2.0)
+okb = all(st_.bands[str(b)] is not None and abs(st_.bands[str(b)] - tilt[b]) < 0.2 * tilt[b] + 0.03 for b in tilt)
+check("synth: a falling reverberation time per band is followed", okb, st_.bands)
+h = RS.synth_rir(48000, flat05, 30.0, 2.0)
+delay = int(round(2.0 / 343.0 * 48000))
+check("synth: the direct impulse arrives after the travel time", int(np.argmax(np.abs(h))) == delay and abs(h[delay] - 1.0) < 0.2, (np.argmax(np.abs(h)), delay))
+dc = RS.critical_distance(30.0, 0.5)
+ratio = float(np.sum(h[delay + 1:].astype(np.float64) ** 2) / 1.0)
+check("synth: tail energy over direct energy equals (r / critical distance)^2", abs(10 * np.log10(ratio / (2.0 / dc) ** 2)) < 0.6, (ratio, (2.0 / dc) ** 2))
+near = RS.synth_rir(48000, flat05, 30.0, 0.5)
+check("synth: a closer source has a weaker tail relative to the direct sound", np.sum(near[int(round(0.5 / 343 * 48000)) + 1:] ** 2) < ratio)
+check("synth: same seed gives the same response, another seed a different one",
+      np.array_equal(h, RS.synth_rir(48000, flat05, 30.0, 2.0)) and not np.array_equal(h, RS.synth_rir(48000, flat05, 30.0, 2.0, seed=7)))
+car_rt = {125: 0.12, 250: 0.09, 500: 0.07, 1000: 0.06, 2000: 0.05, 4000: 0.045}
+carr = RS.synth_rir(48000, car_rt, 3.0, 0.8)
+check("synth: a car-cabin response is short (well under half a second)", len(carr) < 0.5 * 48000, len(carr))
+check("synth: 44.1 kHz and 16 kHz both work", len(RS.synth_rir(44100, flat05, 30.0, 2.0)) > 0 and len(RS.synth_rir(16000, flat05, 30.0, 2.0)) > 0)
+
+def psd_slope(x, fs, f_lo=100.0, f_hi=10000.0):
+    f = np.fft.rfftfreq(len(x), 1 / fs)
+    p = np.abs(np.fft.rfft(x)) ** 2
+    nb = 40                                         # smooth in log-spaced bins
+    edges = np.geomspace(f_lo, f_hi, nb + 1)
+    fc, pc = [], []
+    for a_, b_ in zip(edges[:-1], edges[1:]):
+        sel = (f >= a_) & (f < b_)
+        fc.append(np.sqrt(a_ * b_))
+        pc.append(p[sel].mean())
+    return float(np.polyfit(np.log10(fc), np.log10(pc), 1)[0])
+
+for color, expected in (("white", 0.0), ("pink", -1.0), ("brown", -2.0)):
+    nx = NZ.coloured_noise(48000 * 8, 48000, color, 1)
+    check(f"noise: {color} has a power slope of {expected:+.0f} per decade", abs(psd_slope(nx, 48000) - expected) < 0.15, psd_slope(nx, 48000))
+    check(f"noise: {color} has unit RMS", abs(float(np.sqrt(np.mean(nx ** 2))) - 1.0) < 1e-6)
+
+sg = np.stack([np.sin(2 * np.pi * 440 * np.arange(48000 * 2) / 48000)] * 2, axis=1) * 0.2
+mixed = NZ.mix_snr(sg, 48000, "pink", 10.0)
+added = mixed - sg
+snr = 20 * np.log10(np.sqrt(np.mean(sg ** 2)) / np.sqrt(np.mean(added ** 2)))
+check("noise: the mix has the SNR asked for", abs(snr - 10.0) < 0.05, snr)
+check("noise: the two ears get different noise", abs(float(np.corrcoef(added[:, 0], added[:, 1])[0, 1])) < 0.05)
+check("noise: a silent signal stays silent (no division by zero)", np.array_equal(NZ.mix_snr(np.zeros((100, 2)), 48000, "pink", 10.0), np.zeros((100, 2))))
+
+res_nz = C.render(xs, fs, C.Chain(hrtf=C.HrtfStep(enabled=False), noise=C.NoiseStep(type="brown", snr_db=6.0)), lambda a: None)
+res_clean = C.render(xs, fs, C.Chain(hrtf=C.HrtfStep(enabled=False)), lambda a: None)
+d = res_nz.data - res_clean.data
+check("chain noise: SNR measured on the result", abs(20 * np.log10(np.sqrt(np.mean(res_clean.data ** 2)) / np.sqrt(np.mean(d ** 2))) - 6.0) < 0.1)
+check("chain noise: same render twice gives the same file", np.array_equal(res_nz.data, C.render(xs, fs, C.Chain(hrtf=C.HrtfStep(enabled=False), noise=C.NoiseStep(type="brown", snr_db=6.0)), lambda a: None).data))
+try:
+    C.render(xs, fs, C.Chain(hrtf=C.HrtfStep(enabled=False), noise=C.NoiseStep(type="purple")), lambda a: None)
+    check("chain noise: an unknown colour is refused", False)
+except C.ChainError:
+    check("chain noise: an unknown colour is refused", True)
+
+import json as _json
+_cat = _json.loads(open(os.path.join("auralization", "catalog.json"), encoding="utf-8").read())
+check("catalog: four scenes with room, head position and a note that they are not measurements",
+      [s["id"] for s in _cat["scenes"]] == ["kitchen", "living", "car", "aircraft"] and "pt" in _cat["scenes_note"] and all(len(s["room"]["rt60"]) == 6 for s in _cat["scenes"]))
+check("catalog: scenes keep the head distance at 1 m (the room already sets the direct-to-reverberant ratio)", all(s["hrtf"]["distance_m"] == 1.0 for s in _cat["scenes"]))
+
 # ── API (a real server, like the other dev-tests) ─────────────────────────────
 import http.client
 import json
@@ -365,6 +433,32 @@ try:
     check("api: info of an unknown file answers 404", st == 404)
     st, oob = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"environment": {"type": "rir", "asset": "x", "reverb_gain_db": 99}}})
     check("api: an out-of-range reverberation gain answers 422", st == 422)
+
+    # ── Quick scenes over the API ──
+    kit = next(s for s in cat["scenes"] if s["id"] == "kitchen")
+    st, sa = srv.json("POST", "/api/auralization/rir/synth", {"session_id": S, "name": "Cozinha (sintética)", "fs": 48000, **kit["room"]})
+    check("api: synthesize a kitchen", st == 200 and sa["kind"] == "rir" and sa["channels"] == 1 and sa["suggested_type"] == "rir" and sa["name"].startswith("Cozinha"), sa)
+    st, si = srv.json("GET", f"/api/auralization/{S}/assets/{sa['asset_id']}/info")
+    check("api: the synthetic kitchen measures about 0.5 s", st == 200 and abs(si["metrics"]["rt60_t20"] - 0.5) < 0.08, si["metrics"] if st == 200 else si)
+    blocks_k = {"hrtf": kit["hrtf"], "environment": {"type": "rir", "asset": sa["asset_id"]}, "noise": {"type": "pink", "snr_db": 20}}
+    st, rk = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": blocks_k})
+    check("api: render the kitchen scene with noise", st == 200 and rk["channels"] == 2 and "sala" in rk["name"] and rk["duration_s"] > 2.0 + 0.5, rk)
+    st, raw, hdr = srv.req("POST", "/api/auralization/preview", json.dumps({"session_id": S, "audio_id": aid, "blocks": blocks_k}), {"Content-Type": "application/json"})
+    check("api: preview of the scene is a stereo WAV", st == 200 and sf.info(io.BytesIO(raw)).channels == 2)
+    st, rn = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"noise": {"type": "brown", "snr_db": 10}}})
+    check("api: noise alone (no room, no HRTF change) renders", st == 200 and rn["channels"] == 2, rn)
+    st, b1 = srv.json("POST", "/api/auralization/rir/synth", {"session_id": S, "rt60": {"abc": 0.5}})
+    check("api: a band that is not a number answers 400", st == 400, b1)
+    st, b2 = srv.json("POST", "/api/auralization/rir/synth", {"session_id": S, "rt60": {"1000": 9.0}})
+    check("api: a reverberation time out of range answers 400", st == 400, b2)
+    st, b3 = srv.json("POST", "/api/auralization/rir/synth", {"session_id": S, "rt60": {}})
+    check("api: no reverberation time answers 400", st == 400, b3)
+    st, b4 = srv.json("POST", "/api/auralization/rir/synth", {"session_id": S, "rt60": {"1000": 0.5}, "volume_m3": 0})
+    check("api: a volume of zero answers 422", st == 422)
+    st, b5 = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"noise": {"type": "purple"}}})
+    check("api: an unknown noise colour answers 422", st == 422)
+    st, b6 = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"noise": {"type": "pink", "snr_db": 99}}})
+    check("api: an SNR out of range answers 422", st == 422)
 finally:
     srv.stop()
 

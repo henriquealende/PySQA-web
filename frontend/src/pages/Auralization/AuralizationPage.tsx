@@ -16,6 +16,8 @@ import HrtfMap from './HrtfMap'
 import ResponsePlot from './ResponsePlot'
 import AbPlayer from './AbPlayer'
 import EnvironmentSection from './EnvironmentSection'
+import NoiseSection from './NoiseSection'
+import ScenesBar from './ScenesBar'
 
 const LOCKED = ['aur.chain.environment', 'aur.chain.headphone'] as const
 
@@ -35,7 +37,7 @@ export default function AuralizationPage() {
   const fmt = (n: number, d = 1) => n.toLocaleString(locale, { minimumFractionDigits: d, maximumFractionDigits: d })
   const navigate = useNavigate()
   const { sessionId, files, addFiles, selectFile } = useStore()
-  const { sourceId, hrtf, env, assets, lastRender, setSource, setHrtf, setEnv, setAssets, setLastRender } = useAuralStore()
+  const { sourceId, hrtf, env, noise, assets, lastRender, setSource, setHrtf, setEnv, setAssets, setLastRender } = useAuralStore()
   // a room type without a file chosen yet means no room
   const envEff = useMemo(() => (env.type !== 'none' && !env.asset ? NO_ENV : env), [env])
 
@@ -88,13 +90,13 @@ export default function AuralizationPage() {
     setPreviewBusy(true)
     setPreviewError('')
     const id = window.setTimeout(() => {
-      fetchPreview(sessionId, sourceId, hrtf, envEff, 0, ctrl.signal)
+      fetchPreview(sessionId, sourceId, hrtf, envEff, noise, 0, ctrl.signal)
         .then((p) => { made = p.url; setPreview((old) => { if (old) URL.revokeObjectURL(old.url); return p }) })
         .catch((e) => { if (!isAbort(e)) setPreviewError(e.message) })
         .finally(() => { if (!ctrl.signal.aborted) setPreviewBusy(false) })
     }, 600)
     return () => { window.clearTimeout(id); ctrl.abort(); if (made && !ctrl.signal.aborted) URL.revokeObjectURL(made) }
-  }, [sessionId, sourceId, hrtf, envEff])
+  }, [sessionId, sourceId, hrtf, envEff, noise])
   useEffect(() => () => { setPreview((old) => { if (old) URL.revokeObjectURL(old.url); return null }) }, [])
 
   const handleFiles = async (list: File[]) => {
@@ -131,7 +133,7 @@ export default function AuralizationPage() {
     if (!sourceId) return
     setRendering(true)
     try {
-      const r = await renderToSession(sessionId, sourceId, hrtf, envEff)
+      const r = await renderToSession(sessionId, sourceId, hrtf, envEff, noise)
       addFiles([r])
       setLastRender(r)
       toast.success(t('aur.render.done', { name: r.name }))
@@ -180,6 +182,8 @@ export default function AuralizationPage() {
       </aside>
 
       <main className="flex-1 overflow-y-auto p-4 space-y-4">
+        <ScenesBar />
+
         {/* ── The chain ───────────────────────────────────────────────── */}
         <div className="flex items-stretch gap-2 flex-wrap" aria-label={t('aur.chain.title')}>
           <Block n={1} title={t('aur.chain.source')}>
@@ -199,8 +203,13 @@ export default function AuralizationPage() {
             {envEff.type === 'brir' && <span className="text-amber block">{t('aur.chain.ignored')}</span>}
           </Block>
           <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
+          <Block n={4} title={t('aur.chain.noise')} active={noise.type !== 'none'}>
+            <span className="font-semibold block truncate">{t(`aur.noise.type.${noise.type}`)}</span>
+            {noise.type !== 'none' && <span className="text-muted">{noise.snr_db} dB</span>}
+          </Block>
+          <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
           <div className="flex-1 min-w-[130px] rounded-lg border border-dashed border-border px-3 py-2 opacity-60">
-            <p className="text-[10px] uppercase tracking-wider text-muted">4 · {t(LOCKED[1])}</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted">5 · {t(LOCKED[1])}</p>
             <p className="text-xs mt-1">{t('aur.chain.soon')}</p>
           </div>
         </div>
@@ -263,6 +272,8 @@ export default function AuralizationPage() {
             </div>
           </div>
         </section>
+
+        <NoiseSection />
 
         {/* ── A/B preview ─────────────────────────────────────────────── */}
         <section className="rounded-lg border border-border bg-panel p-4 space-y-2" aria-labelledby="aur-ab">

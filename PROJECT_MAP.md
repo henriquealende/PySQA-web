@@ -10,7 +10,7 @@ Repositório = esta pasta (`PySQA web`). Deploy: Render (`render.yaml`), um úni
 | `backend/routers/` | `audio`, `processing`, `export`, `frf`, `feedback`, `auralization` | em uso |
 | `backend/services/` | `audio_service`, `session_store`, `frf_service` | em uso |
 | `backend/processing/` | filtros e janelamento | em uso |
-| `backend/auralization/` | HRTF (SOFA e modelo esférico), respostas de sala (RIR/BRIR) com parâmetros ISO 3382, cadeia de renderização, catálogo de bases abertas com licença | em uso (fases 1 e 2; plano em `PLANO_PREPARACAO_AUDIOS.md`) |
+| `backend/auralization/` | HRTF (SOFA e modelo esférico), respostas de sala (RIR/BRIR) com parâmetros ISO 3382, sala sintética e ruído de fundo (cenários rápidos), cadeia de renderização, catálogo de bases abertas com licença | em uso (fases 1 e 2; plano em `PLANO_PREPARACAO_AUDIOS.md`) |
 | `backend/psychoacoustics/` | loudness, sharpness, roughness, FS, tonalidade, IPM (`mpi.py`) | em uso |
 | `backend/utils/` | `lang`, `limits`, `samples` | em uso |
 | `frontend/src/` | App React: `pages/` (PostProcessing, SystemAnalysis, DataAcquisition, Docs), `components/`, `api/`, `store/`, `hooks/`, `i18n/` | em uso |

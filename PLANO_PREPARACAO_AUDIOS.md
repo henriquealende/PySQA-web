@@ -180,3 +180,13 @@ A página passou a se chamar "Preparação de áudios" (EN: "Audio Preparation")
 ### Ainda não feito
 - Embutir bases de salas (cozinha, carro, avião) no servidor, bloco Fone, nível/SNR, RIR sintética e cenários rápidos (fases 3 a 5).
 - Respostas de sala de mais de 2 canais (IR64-CAR) precisam ser reduzidas antes do envio.
+
+### Cenários rápidos e ruído de fundo: feito (2026-10-23)
+- Backend: `rir_synth.py` (RIR sintética: impulso após o tempo de percurso mais cauda de ruído por banda de oitava com o T60 pedido; nível da cauda pela distância crítica de Kuttruff, `(r/Dc)²`; semente fixa) e `noise.py` (ruído branco, rosa e marrom, independente em cada orelha, misturado com SNR sobre o arquivo inteiro). `chain.py` ganhou o passo de ruído. Rota `POST /rir/synth`; `blocks.noise` em `/preview` e `/render`; `catalog.json` com 4 cenários (cozinha, sala de estar, cabine de carro, cabine de avião) e a nota de que são valores de partida, não medições.
+- Frontend: `ScenesBar` (chips), `SyntheticRoomForm` (volume, distância, T60 por banda), `NoiseSection`; a cadeia passou a ter 5 blocos (Fonte, Ambiente, HRTF, Ruído, Fone). Gerar uma sala sintética substitui a anterior, para não esgotar o limite de 4 respostas de sala.
+- Documentação: seção "Cenários rápidos e ruído de fundo" (PT e EN), equações 6 e 7, frequência de Schroeder, aviso de que os valores não são medições; referência Kuttruff (2009).
+- Testes: `test_aural.py` com 111 verificações (T20 por banda da sala sintética, razão entre cauda e som direto, determinismo, inclinação espectral dos ruídos, SNR medida, rotas e erros).
+- Valores dos cenários: a busca não achou tabelas publicadas de tempo de reverberação por banda para cozinha, carro e cabine de avião; por isso os valores são pontos de partida escolhidos pelo PySQA e assim estão descritos na interface e na documentação. Só o nível de ruído de cabine de avião (cerca de 71 a 85 dB(A) em cruzeiro) apareceu em resumos de busca; não foi usado nem citado, porque não consegui abrir as fontes.
+
+### Ainda não feito
+- Bloco Fone; nível absoluto (dB SPL alvo); embutir bases medidas (cozinha, carro) no servidor, dependendo da licença; ruído de cabine gravado.
