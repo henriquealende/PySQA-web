@@ -23,6 +23,7 @@ import { serverLabel } from '../i18n/serverLabels'
 const C_TEAL   = '#50b89e'   // primary time
 const C_ORANGE = '#ed693b'   // primary freq
 const C_AMBER  = '#ffa94d'   // envelope
+const C_PEAK   = '#8fd3ff'   // spectrum peak line: a different hue from the orange average, so the two are told apart
 const C_BLUE   = '#60a5fa'   // compare time
 const C_YELLOW = '#fbbf24'   // compare freq
 
@@ -333,8 +334,10 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
       const gd = wfGraph.current, line = cursorLine.current, clock = cursorClock.current
       const t = audioElementRef.current?.currentTime ?? 0
       const xa = gd?._fullLayout?.xaxis, ya = gd?._fullLayout?.yaxis
-      const shown = !!(xa?.range && ya && (audioIsPlaying || t > 0))
-      const x = shown ? xa._offset + ((t - xa.range[0]) / (xa.range[1] - xa.range[0])) * xa._length : 0
+      // With autorange Plotly leaves `range` at its placeholder ([-1, 6]); the span really drawn is `_rl`
+      const rng: [number, number] | undefined = xa?._rl ?? xa?.range
+      const shown = !!(rng && ya && (audioIsPlaying || t > 0))
+      const x = shown ? xa._offset + ((t - rng![0]) / (rng![1] - rng![0])) * xa._length : 0
       const inside = shown && x >= xa._offset - 1 && x <= xa._offset + xa._length + 1       // zoomed past it: hidden
       if (line) {
         line.style.display = inside ? 'block' : 'none'
@@ -423,7 +426,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   const hasAvg = !!sp.average_db
   const spData: Plotly.Data[] = [
     { x: sp.freqs, y: sp.magnitude_db, type: 'scatter', mode: 'lines',
-      line: { color: hasAvg ? 'rgba(237,105,59,0.55)' : C_ORANGE, width: 1 }, name: hasAvg ? t('plot.trace.peak') : t('plot.trace.spectrum'),
+      line: { color: hasAvg ? C_PEAK : C_ORANGE, width: 1 }, name: hasAvg ? t('plot.trace.peak') : t('plot.trace.spectrum'),
       hovertemplate: `%{x:.1f} Hz — %{y:.1f} ${specUnit}<extra></extra>` },
     ...(hasAvg ? [{
       x: sp.freqs, y: sp.average_db, type: 'scatter' as const, mode: 'lines' as const,
