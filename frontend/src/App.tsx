@@ -6,6 +6,7 @@ import PostProcessingPage from './pages/PostProcessing/PostProcessingPage'
 import SystemAnalysisPage from './pages/SystemAnalysis/SystemAnalysisPage'
 
 const DocsPage = lazy(() => import('./pages/Docs/DocsPage'))
+const AuralizationPage = lazy(() => import('./pages/Auralization/AuralizationPage'))
 
 export default function App() {
   // After a reload (or a server restart) bring the file list back
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="post-processing" element={<PostProcessingPage />} />
         <Route path="data-acquisition" element={null} />
         <Route path="system-analysis"  element={<SystemAnalysisPage />} />
+        <Route path="auralization" element={<Suspense fallback={null}><AuralizationPage /></Suspense>} />
         <Route path="docs" element={<Navigate to="/docs/sobre" replace />} />
         <Route path="docs/:page" element={<Suspense fallback={null}><DocsPage /></Suspense>} />
       </Route>

@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from routers import audio, processing, export, frf, feedback
+from routers import audio, processing, export, frf, feedback, auralization
 from services.audio_service import SectionError
 from services.session_store import InvalidIdError, audio_ram_mb, load_all_sessions, start_janitor
 from utils import limits
@@ -94,6 +94,7 @@ app.include_router(processing.router, prefix="/api/processing", tags=["processin
 app.include_router(export.router,     prefix="/api/export",     tags=["export"])
 app.include_router(frf.router,        prefix="/api/frf",        tags=["frf"])
 app.include_router(feedback.router,   prefix="/api/feedback",   tags=["feedback"])
+app.include_router(auralization.router, prefix="/api/auralization", tags=["auralization"])
 
 
 @app.get("/api/health")

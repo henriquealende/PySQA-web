@@ -1,0 +1,32 @@
+{
+  "builtin": [
+    {"id": "builtin:sphere", "kind": "hrtf", "name": "Spherical head (model)",
+     "description": {"pt": "Cabeça esférica rígida: atraso interaural de Woodworth e sombra da cabeça de Brown e Duda. Modelo didático, sem orelha externa.",
+                     "en": "Rigid spherical head: Woodworth interaural delay and the Brown and Duda head shadow. A teaching model, no pinna."},
+     "license": "n/a (calculated by PySQA)"}
+  ],
+  "datasets": [
+    {"id": "sadie2", "kind": "hrtf", "name": "SADIE II", "license": "Apache-2.0", "license_status": "verified", "ref": "kearney2024",
+     "url": "https://zenodo.org/records/10886409", "embedded": false, "note": "20 subjects, SOFA, 44.1/48/96 kHz. Cite the original dataset when used or modified."},
+    {"id": "ari", "kind": "hrtf", "name": "ARI HRTF database", "license": "CC BY-SA 3.0", "license_status": "verified", "ref": "ari",
+     "url": "https://www.oeaw.ac.at/isf/hrtf", "embedded": false, "note": "More than 250 subjects, SOFA. Share-alike: derived files keep the licence."},
+    {"id": "cipic", "kind": "hrtf", "name": "CIPIC HRTF database", "license": "public domain (2001 announcement)", "license_status": "to_confirm", "ref": "algazi2001",
+     "url": "https://www.ece.ucdavis.edu/cipic/spatial-sound/hrtf-data/", "embedded": false, "note": "45 subjects. The download page could not be opened on 2026-10-23; confirm the terms before embedding."},
+    {"id": "autoeq", "kind": "headphone", "name": "AutoEq (measurements)", "license": "code MIT; data per source", "license_status": "to_confirm", "ref": "pasanen",
+     "url": "https://github.com/jaakkopasanen/AutoEq", "embedded": false, "note": "The MIT licence covers the code. oratory1990, crinacle, Rtings and InnerFidelity data need a licence check each."},
+    {"id": "ebrird", "kind": "room", "name": "eBrIRD (kitchen, restaurant)", "license": "unknown", "license_status": "to_confirm", "ref": "ebrird",
+     "url": "https://www.phon.ucl.ac.uk/resource/ebrird", "embedded": false, "note": "Site unreachable on 2026-10-23: licence and download not confirmed."},
+    {"id": "mcvampire", "kind": "room", "name": "In-Car McVAMPIRE", "license": "CC BY 4.0", "license_status": "verified", "ref": "muller2024",
+     "url": "https://zenodo.org/records/12806684", "embedded": false, "note": "Minivan, 14 overhead microphones; includes driving noise."},
+    {"id": "ir64car", "kind": "room", "name": "IR64-CAR", "license": "CC BY 4.0", "license_status": "verified", "ref": "lopezballester2025",
+     "url": "https://zenodo.org/records/15168578", "embedded": false, "note": "Peugeot 208, 64-channel WAV, 24.1 MB. Needs ambisonic or beamforming rendering (phase 7)."},
+    {"id": "dechorate", "kind": "room", "name": "dEchorate", "license": "CC BY 4.0", "license_status": "verified", "ref": "dicarlo2021",
+     "url": "https://zenodo.org/records/4626590", "embedded": false, "note": "Shoebox laboratory room, 1800 annotated RIRs. Zenodo lists a newer version."},
+    {"id": "but-reverbdb", "kind": "room", "name": "BUT Speech@FIT ReverbDB", "license": "CC BY 4.0", "license_status": "verified", "ref": "szoke2019",
+     "url": "https://speech.fit.vut.cz/software/but-speech-fit-reverb-database", "embedded": false, "note": "8 to 9 rooms. The retransmitted-speech part needs an LDC licence."},
+    {"id": "air-aachen", "kind": "room", "name": "Aachen Impulse Response (AIR)", "license": "unknown", "license_status": "to_confirm", "ref": "jeub2009",
+     "url": "https://www.iks.rwth-aachen.de/en/research/tools-downloads/databases/aachen-impulse-response-database", "embedded": false, "note": "Site unreachable on 2026-10-23: licence not confirmed."},
+    {"id": "openair", "kind": "room", "name": "OpenAIR", "license": "Creative Commons, chosen per item", "license_status": "per_item", "ref": "murphy2010",
+     "url": "https://www.openair.hosted.york.ac.uk/", "embedded": false, "note": "Read the licence at the bottom of each item page."}
+  ]
+}

@@ -188,6 +188,10 @@ def get_or_create_session(session_id: str) -> Dict[str, AudioEntry]:
     return _sessions[session_id]
 
 
+def has_session(session_id: str) -> bool:
+    return session_id in _sessions
+
+
 def get_entry(session_id: str, audio_id: str) -> Optional[AudioEntry]:
     session = _sessions.get(session_id)
     if session is None:

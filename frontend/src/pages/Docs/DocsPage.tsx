@@ -3,7 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { BookOpen, Hammer } from 'lucide-react'
 import clsx from 'clsx'
 import { CiteContext } from './ui'
-import { DATA_ACQUISITION_TOC, POST_PROCESSING_TOC, SYSTEM_ANALYSIS_TOC } from './tocs'
+import { AURALIZATION_TOC, DATA_ACQUISITION_TOC, POST_PROCESSING_TOC, SYSTEM_ANALYSIS_TOC } from './tocs'
 import { ABOUT_TOC } from './AboutDoc'
 import { useLang, useT } from '../../i18n'
 import BugReportButton from '../../components/BugReportButton'
@@ -15,18 +15,22 @@ const SystemAnalysisDoc = lazy(() => import('./SystemAnalysisDoc'))
 const PostProcessingDocEn = lazy(() => import('./PostProcessingDocEn'))
 const DataAcquisitionDocEn = lazy(() => import('./DataAcquisitionDocEn'))
 const SystemAnalysisDocEn = lazy(() => import('./SystemAnalysisDocEn'))
+const AuralizationDoc = lazy(() => import('./AuralizationDoc'))
+const AuralizationDocEn = lazy(() => import('./AuralizationDocEn'))
 
 const PAGES = [
   { key: 'sobre',            label: 'docs.about',       ready: true },
   { key: 'data-acquisition', label: 'nav.dataAcq',      ready: true },
   { key: 'post-processing',  label: 'nav.postProc',     ready: true },
   { key: 'system-analysis',  label: 'nav.sysAnalysis',  ready: true },
+  { key: 'auralization',     label: 'nav.auralization', ready: true },
 ] as const
 
 const TOCS: Record<string, Record<'pt' | 'en', { id: string; title: string }[]>> = {
   'post-processing': POST_PROCESSING_TOC,
   'data-acquisition': DATA_ACQUISITION_TOC,
   'system-analysis': SYSTEM_ANALYSIS_TOC,
+  'auralization': AURALIZATION_TOC,
 }
 
 export default function DocsPage() {
@@ -84,6 +88,7 @@ export default function DocsPage() {
   const body = page === 'sobre' ? <AboutDoc />
     : page === 'data-acquisition' ? (en ? <DataAcquisitionDocEn /> : <DataAcquisitionDoc />)
     : page === 'system-analysis' ? (en ? <SystemAnalysisDocEn /> : <SystemAnalysisDoc />)
+    : page === 'auralization' ? (en ? <AuralizationDocEn /> : <AuralizationDoc />)
     : (en ? <PostProcessingDocEn /> : <PostProcessingDoc />)
 
   return (

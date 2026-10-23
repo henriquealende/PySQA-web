@@ -99,3 +99,20 @@ export const SYSTEM_ANALYSIS_TOC: Record<'pt' | 'en', Toc> = {
     { id: 'referencias', title: 'References' },
   ],
 }
+
+export const AURALIZATION_TOC: Record<'pt' | 'en', { id: string; title: string }[]> = {
+  pt: [
+    { id: 'visao-geral', title: 'Visão geral' },
+    { id: 'hrtf', title: 'Como o som ganha direção' },
+    { id: 'distancia', title: 'Distância e nível' },
+    { id: 'limites', title: 'Limites e boas práticas' },
+    { id: 'referencias', title: 'Referências' },
+  ],
+  en: [
+    { id: 'visao-geral', title: 'Overview' },
+    { id: 'hrtf', title: 'How the sound gets a direction' },
+    { id: 'distancia', title: 'Distance and level' },
+    { id: 'limites', title: 'Limits and good practices' },
+    { id: 'referencias', title: 'References' },
+  ],
+}

@@ -16,6 +16,8 @@ all of them must end with `FAILS: 0 []`.
 `test_frf` (System Analysis) needs no server: it builds a system with known modes and checks the FRF estimators,
 coherence, impact averaging, mode detection and damping, and the UFF/WAV/CSV readers.
 
+`test_aural` (Auralization, phase 1): 38 checks on the spherical-head model, the SOFA reader and its azimuth sign, the chain and the API (its own server on port 8350); needs `h5py`.
+
 Other files:
 - `test_aweight.js` (Node): the A-weighting filter of the recorder against IEC 61672.
 - `archive/` (`docker-test/`, `drive.py`, `stress.py`, `memexp.py`, `probe_wav.py`, `recv.py`, `seed_fidelity.py`, `check_exports.py`; one-off diagnostics, kept for reference): reproduce the old Render Starter plan (512 MB, 0.5 CPU) in Docker; for the current Standard plan (2 GB, 1 CPU) use `--memory=2g --cpus=1` and measure memory.

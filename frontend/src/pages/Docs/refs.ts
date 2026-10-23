@@ -185,6 +185,76 @@ export const REFS: Record<string, Ref> = {
     id: 'zwicker1980', cite: 'ZWICKER; TERHARDT, 1980', sort: 'ZWICKER 1980',
     entry: 'ZWICKER, E.; TERHARDT, E. Analytical expressions for critical-band rate and critical bandwidth as a function of frequency. **The Journal of the Acoustical Society of America**, [s. l.], v. 68, n. 5, p. 1523-1525, 1980.',
   },
+  brown1998: {
+    id: 'brown1998', cite: 'BROWN; DUDA, 1998', sort: 'BROWN',
+    entry: 'BROWN, C. P.; DUDA, R. O. A structural model for binaural sound synthesis. **IEEE Transactions on Speech and Audio Processing**, [s. l.], v. 6, n. 5, p. 476-488, set. 1998. DOI: 10.1109/89.709673.',
+  },
+  woodworth1954: {
+    id: 'woodworth1954', cite: 'WOODWORTH; SCHLOSBERG, 1954', sort: 'WOODWORTH',
+    entry: 'WOODWORTH, R. S.; SCHLOSBERG, H. **Experimental psychology**. Ed. rev. New York: Holt, Rinehart and Winston, 1954.',
+  },
+  blauert1997: {
+    id: 'blauert1997', cite: 'BLAUERT, 1997', sort: 'BLAUERT',
+    entry: 'BLAUERT, J. **Spatial hearing**: the psychophysics of human sound localization. Ed. rev. Cambridge: MIT Press, 1997.',
+  },
+  majdak2013: {
+    id: 'majdak2013', cite: 'MAJDAK et al., 2013', sort: 'MAJDAK',
+    entry: 'MAJDAK, P. *et al.* Spatially oriented format for acoustics: a data exchange format representing head-related transfer functions. *In*: AUDIO ENGINEERING SOCIETY CONVENTION, 134., 2013, Rome. **Proceedings** [...]. New York: AES, 2013.',
+  },
+  // --- Auralização: bases abertas de HRTF, fones e respostas ao impulso (página planejada) ---
+  algazi2001: {
+    id: 'algazi2001', cite: 'ALGAZI et al., 2001', sort: 'ALGAZI',
+    entry: 'ALGAZI, V. R.; DUDA, R. O.; THOMPSON, D. M.; AVENDANO, C. The CIPIC HRTF database. *In*: IEEE WORKSHOP ON APPLICATIONS OF SIGNAL PROCESSING TO AUDIO AND ACOUSTICS, 2001, New Paltz. **Proceedings** [...]. Piscataway: IEEE, 2001. p. 99-102.',
+  },
+  ari: {
+    id: 'ari', cite: 'ACOUSTICS RESEARCH INSTITUTE, [s. d.]', sort: 'ACOUSTICS',
+    entry: 'ACOUSTICS RESEARCH INSTITUTE. **HRTF database**. Vienna: Austrian Academy of Sciences, [s. d.]. Licença CC BY-SA 3.0. Disponível em: https://www.oeaw.ac.at/isf/hrtf. ' + ACCESS,
+    url: 'https://www.oeaw.ac.at/isf/hrtf',
+  },
+  kearney2024: {
+    id: 'kearney2024', cite: 'KEARNEY, 2024', sort: 'KEARNEY',
+    entry: 'KEARNEY, G. C. **SADIE II database**. Versão 2-1. [S. l.]: Zenodo, 2024. Licença Apache 2.0. DOI: 10.5281/zenodo.10886409. Disponível em: https://zenodo.org/records/10886409. ' + ACCESS,
+    url: 'https://zenodo.org/records/10886409',
+  },
+  pasanen: {
+    id: 'pasanen', cite: 'PASANEN, [s. d.]', sort: 'PASANEN',
+    entry: 'PASANEN, J. **AutoEq**: automatic headphone equalization from frequency responses. [S. l.]: GitHub, [s. d.]. Código sob licença MIT; a licença dos dados de medição (oratory1990, crinacle, Rtings, InnerFidelity) deve ser conferida por fonte. Disponível em: https://github.com/jaakkopasanen/AutoEq. ' + ACCESS,
+    url: 'https://github.com/jaakkopasanen/AutoEq',
+  },
+  murphy2010: {
+    id: 'murphy2010', cite: 'MURPHY; SHELLEY, 2010', sort: 'MURPHY',
+    entry: 'MURPHY, D. T.; SHELLEY, S. OpenAIR: an interactive auralization web resource and database. *In*: AUDIO ENGINEERING SOCIETY CONVENTION, 129., 2010, San Francisco. **Proceedings** [...]. New York: AES, 2010. Licença definida por item (Creative Commons). Disponível em: https://www.openair.hosted.york.ac.uk/. ' + ACCESS,
+    url: 'https://www.openair.hosted.york.ac.uk/',
+  },
+  muller2024: {
+    id: 'muller2024', cite: 'MÜLLER; WOLFF, 2024', sort: 'MULLER',
+    entry: 'MÜLLER, K.; WOLFF, T. **In-Car McVAMPIRE**: an in-car multichannel varying mouth position impulse response dataset. Versão 1.0. [S. l.]: Zenodo, 2024. Licença CC BY 4.0. DOI: 10.5281/zenodo.12806684. Disponível em: https://zenodo.org/records/12806684. ' + ACCESS,
+    url: 'https://zenodo.org/records/12806684',
+  },
+  lopezballester2025: {
+    id: 'lopezballester2025', cite: 'LOPEZ-BALLESTER et al., 2025', sort: 'LOPEZ',
+    entry: 'LOPEZ-BALLESTER, J. *et al.* **IR64-CAR**: a dataset of impulse responses captured with a spherical microphone array for automotive acoustic research. Versão 1.0. [S. l.]: Zenodo, 2025. Licença CC BY 4.0. DOI: 10.5281/zenodo.15168578. Disponível em: https://investigacion.ujaen.es/documentos/67f62fbfc9d0c3013599a965. ' + ACCESS,
+    url: 'https://investigacion.ujaen.es/documentos/67f62fbfc9d0c3013599a965',
+  },
+  ebrird: {
+    id: 'ebrird', cite: 'UNIVERSITY COLLEGE LONDON, [s. d.]', sort: 'UNIVERSITY COLLEGE',
+    entry: 'UNIVERSITY COLLEGE LONDON. **eBrIRD**: ELOSPHERES binaural room impulse response database. London: UCL, [s. d.]. Cenas: câmara anecoica, restaurante, cozinha e (em preparação) cabine de carro. Disponível em: https://www.phon.ucl.ac.uk/resource/ebrird. ' + ACCESS,
+    url: 'https://www.phon.ucl.ac.uk/resource/ebrird',
+  },
+  jeub2009: {
+    id: 'jeub2009', cite: 'JEUB; SCHÄFER; VARY, 2009', sort: 'JEUB',
+    entry: 'JEUB, M.; SCHÄFER, M.; VARY, P. A binaural room impulse response database for the evaluation of dereverberation algorithms. *In*: INTERNATIONAL CONFERENCE ON DIGITAL SIGNAL PROCESSING, 16., 2009, Santorini. **Proceedings** [...]. Piscataway: IEEE, 2009. Disponível em: https://www.iks.rwth-aachen.de/en/research/tools-downloads/databases/aachen-impulse-response-database. ' + ACCESS,
+    url: 'https://www.iks.rwth-aachen.de/en/research/tools-downloads/databases/aachen-impulse-response-database',
+  },
+  szoke2019: {
+    id: 'szoke2019', cite: 'SZÖKE et al., 2019', sort: 'SZOKE',
+    entry: 'SZÖKE, M. *et al.* Building and evaluation of a real room impulse response dataset. **IEEE Journal of Selected Topics in Signal Processing**, [s. l.], v. 13, n. 4, 2019. Licença CC BY 4.0. Disponível em: https://speech.fit.vut.cz/software/but-speech-fit-reverb-database. ' + ACCESS,
+    url: 'https://speech.fit.vut.cz/software/but-speech-fit-reverb-database',
+  },
+  dicarlo2021: {
+    id: 'dicarlo2021', cite: 'DI CARLO et al., 2021', sort: 'DI CARLO',
+    entry: 'DI CARLO, D. *et al.* dEchorate: a calibrated room impulse response dataset for echo-aware signal processing. **EURASIP Journal on Audio, Speech, and Music Processing**, [s. l.], 2021. DOI: 10.1186/s13636-021-00229-0.',
+  },
 }
 
 export const sortRefs = (ids: string[]): Ref[] =>
