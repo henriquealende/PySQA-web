@@ -73,7 +73,7 @@ The main workbench. Load WAV files, look at them in four ways, compute psychoaco
 | Roughness (Daniel & Weber, ECMA-418-2) | The harsh, rattling feeling of fast modulation | asper |
 | Fluctuation Strength | The slow wobble of modulation | vacil |
 | Tonality (ECMA-418-2) | How much a pure tone stands out of the noise | tu |
-| IPM (Impulse Prominence Metric) | How much impulsive events (clicks, bangs) stand out | dB |
+| IPM (Impulsive Prominence Metric) | How much impulsive events (clicks, bangs) stand out | dB |
 
 Two options matter for these numbers: **Field type** (*Free-field* or *Diffuse*) tells the loudness, sharpness and tonality models how the sound reached the listener, and **Mic calibration** (mV/Pa) turns the file from relative units into real pascals so levels read in dB SPL. Annoyance indices (SIL and Zwicker-Fastl) combine several metrics into one number in the Batch panel.
 
@@ -414,7 +414,7 @@ PySQA web/
 | Sharpness DIN 45692 | Done |
 | Roughness Daniel & Weber | Done |
 | Fluctuation Strength D&W | Done |
-| IPM (Impulse Prominence Metric) | Done |
+| IPM (Impulsive Prominence Metric) | Done |
 | Loudness ECMA-418-2 | Done (requires sottek_hearing_model) |
 | Roughness ECMA-418-2 | Done (requires sottek_hearing_model) |
 | Tonality ECMA-418-2 | Done (requires sottek_hearing_model) |

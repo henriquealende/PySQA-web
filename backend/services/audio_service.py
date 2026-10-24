@@ -772,8 +772,24 @@ def _metric_tonality(mono, sr, diffuse=False, fast=False):
                          + (f" ({exc})" if str(exc) else "") + "."}
 
 
+def _ipm_input_error(exc) -> str:
+    """Translated text of an IPMInputError (the module itself only knows English)."""
+    i = exc.info
+    if exc.reason == "too_short":
+        return msg(f"O trecho é curto demais para a IPM: ela precisa de pelo menos {i['min_samples']} amostras (este tem {i['samples']}).",
+                   f"The segment is too short for the IPM: it needs at least {i['min_samples']} samples (this one has {i['samples']}).")
+    if exc.reason == "sample_rate":
+        return msg(f"A IPM usa bandas de 1/3 de oitava até 10 kHz (a última chega a {i['top_hz'] / 1000:.1f} kHz) e precisa de taxa de amostragem "
+                   f"acima de {i['min_hz'] / 1000:.2f} kHz; este arquivo tem {i['fs']} Hz. Use um arquivo de 44,1 ou 48 kHz.",
+                   f"The IPM uses 1/3-octave bands up to 10 kHz (the last one reaches {i['top_hz'] / 1000:.1f} kHz) and needs a sample rate "
+                   f"above {i['min_hz'] / 1000:.2f} kHz; this file is {i['fs']} Hz. Use a 44.1 or 48 kHz file.")
+    return msg(f"O sinal tem {i['count']} valores inválidos (NaN ou infinito); a IPM não pode ser calculada.",
+               f"The signal has {i['count']} invalid values (NaN or infinity); the IPM cannot be computed.")
+
+
 def _metric_ipm(mono, sr):
-    mpi_calc = _MPI or __import__('psychoacoustics.mpi', fromlist=['IPM']).IPM()
+    mpi_module = __import__('psychoacoustics.mpi', fromlist=['IPM', 'IPMInputError'])
+    mpi_calc = _MPI or mpi_module.IPM()
     try:
         bark, levels = mpi_calc.calculateMPI(mono, sr)
         levels_arr = np.asarray(levels, dtype=float)
@@ -790,6 +806,8 @@ def _metric_ipm(mono, sr):
             "threshold": 5.0,
             "threshold_label": "Impulsive Threshold (5 dB)",
         }
+    except mpi_module.IPMInputError as e:
+        return {"error": _ipm_input_error(e)}
     except Exception as e:
         return {"error": str(e)}
 
