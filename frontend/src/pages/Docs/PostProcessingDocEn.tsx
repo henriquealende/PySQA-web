@@ -450,7 +450,7 @@ export default function PostProcessingDocEn() {
         <Section id="m-ipm" title="IPM – Impulsive Prominence Metric" level={3}>
           <P>
             <strong>What it is:</strong> a measure of how much <em>impulsive</em> sounds (clicks, bangs, compressor start-ups) stand out from the rest.
-            PySQA uses the model by Silveira and colleagues <Cite ids={['silveira2024', 'silveira2026']} />, which extends the Nordtest NT ACOU 112 method
+            PySQA uses the model by Silveira and colleagues, developed in the doctoral thesis of PySQA's author <Cite ids={['silveira2024tese', 'silveira2024', 'silveira2026']} />, which extends the Nordtest NT ACOU 112 method
             <Cite ids={['nordtest']} /> to 1/3-octave bands.
           </P>
           <UL>

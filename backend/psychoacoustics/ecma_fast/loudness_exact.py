@@ -9,7 +9,7 @@ step is the package's own `shm_loudness_ecma_from_comp`.
 
 Derived from sottek_hearing_model (https://github.com/acoustics-code-salford/sottek-hearing-model).
 Original copyright (C) Mike JB Lotinga, University of Salford (AGPL-3.0-only).
-Modified in October 2026 by Henrique for PySQA Web. Copyright (C) 2026 PySQA Web contributors.
+Modified in October 2026 by Henrique Alende da Silveira for PySQA Web. Copyright (C) 2026 Henrique Alende da Silveira and the PySQA Web contributors.
 Licensed under the GNU Affero General Public License v3.0 (see LICENSE), WITHOUT ANY WARRANTY.
 """
 from sottek_hearing_model.shm_loudness_ecma import shm_loudness_ecma_from_comp

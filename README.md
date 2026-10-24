@@ -443,12 +443,17 @@ The disk is ephemeral, so the browser keeps a copy of the uploaded files and res
 
 ## License
 
+Copyright (C) 2026 Henrique Alende da Silveira and the PySQA Web contributors.
+
 PySQA Web is free software, distributed under the terms of the **GNU Affero General Public License v3.0**
 (AGPL-3.0, see [LICENSE](LICENSE)). It includes code derived from the
 [Sottek Hearing Model](https://github.com/acoustics-code-salford/sottek-hearing-model) (AGPL-3.0-only,
 M. J. B. Lotinga, University of Salford): `backend/psychoacoustics/ecma_fast/` holds modified versions of its
 tonality and loudness functions. If you run a modified version as a network service, the AGPL requires you to offer its
 source code to the users of that service.
+
+The IPM (`backend/psychoacoustics/mpi.py`) is original work of Henrique Alende da Silveira's doctoral thesis (UFSC, 2024) and of the
+articles cited in the documentation; it is not derived from any third-party code.
 
 Third-party components keep their own licenses. They were checked on 2026-10-25 against the lock files and the installed
 packages, and none is under a license that conflicts with the AGPL:

@@ -5,7 +5,7 @@ reorganised to need far less memory and time. Results must match the package (se
 Derived from sottek_hearing_model (https://github.com/acoustics-code-salford/sottek-hearing-model), itself based on
 the RefMap code and on 'SottekTonality.m' by M. Torjussen.
 Original copyright (C) Mike JB Lotinga, University of Salford (AGPL-3.0-only).
-Modified in October 2026 by Henrique for PySQA Web. Copyright (C) 2026 PySQA Web contributors.
+Modified in October 2026 by Henrique Alende da Silveira for PySQA Web. Copyright (C) 2026 Henrique Alende da Silveira and the PySQA Web contributors.
 Licensed under the GNU Affero General Public License v3.0 (see LICENSE), WITHOUT ANY WARRANTY.
 
 The standard's stages are unchanged; only the organisation of the computation differs:

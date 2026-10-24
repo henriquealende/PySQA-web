@@ -4,6 +4,10 @@ IMPULSIVE PROMINENCE METRIC (MPI / IPM)
 Computes a per-band impulsiveness metric across 21 one-third-octave bands
 (100 Hz - 10 kHz) following the NT ACOU 112 formulation.
 
+Original work of Henrique Alende da Silveira, developed in the doctoral thesis "Qualidade sonora aplicada na análise de sinais
+impulsivos de refrigeradores" (UFSC, 2024) and in the articles listed under References.
+Copyright (C) Henrique Alende da Silveira. Part of PySQA Web, licensed under the GNU Affero General Public License v3.0 (see LICENSE).
+
 Algorithm overview
 ------------------
 1. The signal is band-pass filtered into 21 one-third-octave bands

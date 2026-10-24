@@ -450,7 +450,7 @@ export default function PostProcessingDoc() {
         <Section id="m-ipm" title="IPM – Impulsive Prominence Metric" level={3}>
           <P>
             <strong>O que é:</strong> uma medida de quanto sons <em>impulsivos</em> (estalos, batidas, partidas de compressor) se destacam do restante.
-            O PySQA usa o modelo de Silveira e colegas <Cite ids={['silveira2024', 'silveira2026']} />, que estende o método Nordtest NT ACOU 112
+            O PySQA usa o modelo de Silveira e colegas, desenvolvido na tese de doutorado do autor do PySQA <Cite ids={['silveira2024tese', 'silveira2024', 'silveira2026']} />, que estende o método Nordtest NT ACOU 112
             <Cite ids={['nordtest']} /> para bandas de 1/3 de oitava.
           </P>
           <UL>
