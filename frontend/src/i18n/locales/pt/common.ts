@@ -11,4 +11,7 @@ export default {
   'nav.micOpen': 'O microfone está aberto',
   'status.waking': 'O servidor não está respondendo, provavelmente está reiniciando. Isso costuma levar menos de um minuto, e seus arquivos voltam sozinhos.',
   'status.restoring': 'Restaurando seus arquivos depois da reinicialização do servidor ({done} de {total})…',
+  'footer.free': 'PySQA Web é software livre.',
+  'footer.license': 'Licença AGPL-3.0',
+  'footer.source': 'Código-fonte',
 } as Record<string, string>

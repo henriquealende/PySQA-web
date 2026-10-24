@@ -110,6 +110,11 @@ function AboutPt() {
           <li><strong>Casos de uso:</strong> contar como você usa o PySQA no ensino, na indústria ou na pesquisa.</li>
         </UL>
         <P>O código está em <Repo />.</P>
+        <P>
+          O PySQA é software livre, sob a licença GNU AGPL v3.0: você pode usar, estudar, modificar e redistribuir, desde que mantenha a mesma licença e,
+          se oferecer uma versão modificada como serviço na internet, disponibilize o código dela aos usuários. A tonalidade ECMA-418-2 usa código do
+          Sottek Hearing Model (Lotinga, Universidade de Salford), também AGPL.
+        </P>
         <Callout kind="tip" title="Encontrou algo estranho?">
           Um resultado que não bate, um botão confuso, um texto que não ficou claro: conte. É assim que a ferramenta melhora. Use o botão <strong>Reportar um bug</strong>, no fim da coluna da esquerda de qualquer página: o texto chega até nós junto com a tela, o arquivo aberto e o navegador (o áudio não é enviado).
         </Callout>
@@ -194,6 +199,11 @@ function AboutEn() {
           <li><strong>Use cases:</strong> tell us how you use PySQA in teaching, industry or research.</li>
         </UL>
         <P>The code is at <Repo />.</P>
+        <P>
+          PySQA is free software under the GNU AGPL v3.0: you can use, study, modify and redistribute it, as long as you keep the same license and,
+          if you offer a modified version as a web service, give its users the source code. ECMA-418-2 tonality uses code from the Sottek Hearing
+          Model (Lotinga, University of Salford), also AGPL.
+        </P>
         <Callout kind="tip" title="Found something odd?">
           A result that does not add up, a confusing button, a text that is not clear: tell us. That is how the tool gets better. Use the <strong>Report a bug</strong> button at the bottom of the left column on any page: your text reaches us together with the current page, the open file and your browser (the audio itself is not sent).
         </Callout>

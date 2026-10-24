@@ -260,3 +260,16 @@ PySQA web/
 Hosted on Render (`render.yaml`): one web service, Standard plan (2 GiB, 1 CPU). The build installs the backend,
 builds the frontend and FastAPI serves it; `/api/health` is the health check and `main` deploys automatically.
 The disk is ephemeral, so the browser keeps a copy of the uploaded files and restores them after a restart.
+
+## License
+
+PySQA Web is free software, distributed under the terms of the **GNU Affero General Public License v3.0**
+(AGPL-3.0, see [LICENSE](LICENSE)). It includes code derived from the
+[Sottek Hearing Model](https://github.com/acoustics-code-salford/sottek-hearing-model) (AGPL-3.0-only,
+M. J. B. Lotinga, University of Salford): `backend/psychoacoustics/ecma_fast/` is a modified version of its
+tonality function. If you run a modified version as a network service, the AGPL requires you to offer its
+source code to the users of that service.
+
+Third-party components keep their own licenses: MoSQITo (Apache-2.0), NumPy, SciPy, soundfile, h5py and
+Bottleneck (BSD), FastAPI, openpyxl and pyuff (MIT), tqdm (MPL-2.0 and MIT). The headphone library is built
+from the SBAF measurements (CC BY 4.0).

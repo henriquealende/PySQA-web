@@ -11,6 +11,9 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Activity, Mic, BarChart2, BookOpen, Headphones, Menu, X } from 'lucide-react'
 import clsx from 'clsx'
 
+// AGPL-3.0 section 13: whoever uses the hosted service must be able to get the source of what runs.
+const REPO = 'https://github.com/henriquealende/PySQA-web'
+
 const NAV = [
   { to: '/data-acquisition', label: 'nav.dataAcq',      Icon: Mic },
   { to: '/post-processing',  label: 'nav.postProc',     Icon: Activity },
@@ -159,6 +162,11 @@ export default function Layout() {
           </div>
         )}
       </main>
+      <footer className="shrink-0 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 px-4 py-1 bg-surface border-t border-border text-xs text-muted">
+        <span>{t('footer.free')}</span>
+        <a href={`${REPO}/blob/main/LICENSE`} target="_blank" rel="noreferrer" className="hover:text-teal underline">{t('footer.license')}</a>
+        <a href={REPO} target="_blank" rel="noreferrer" className="hover:text-teal underline">{t('footer.source')}</a>
+      </footer>
       <ToastContainer />
     </div>
   )

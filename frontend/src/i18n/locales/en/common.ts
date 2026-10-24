@@ -11,4 +11,7 @@ export default {
   'nav.micOpen': 'Microphone is open',
   'status.waking': 'The server is not responding — it is probably restarting. This usually takes under a minute, and your files will come back on their own.',
   'status.restoring': 'Restoring your files after a server restart ({done} of {total})…',
+  'footer.free': 'PySQA Web is free software.',
+  'footer.license': 'AGPL-3.0 license',
+  'footer.source': 'Source code',
 } as Record<string, string>
