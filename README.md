@@ -446,10 +446,23 @@ The disk is ephemeral, so the browser keeps a copy of the uploaded files and res
 PySQA Web is free software, distributed under the terms of the **GNU Affero General Public License v3.0**
 (AGPL-3.0, see [LICENSE](LICENSE)). It includes code derived from the
 [Sottek Hearing Model](https://github.com/acoustics-code-salford/sottek-hearing-model) (AGPL-3.0-only,
-M. J. B. Lotinga, University of Salford): `backend/psychoacoustics/ecma_fast/` is a modified version of its
-tonality function. If you run a modified version as a network service, the AGPL requires you to offer its
+M. J. B. Lotinga, University of Salford): `backend/psychoacoustics/ecma_fast/` holds modified versions of its
+tonality and loudness functions. If you run a modified version as a network service, the AGPL requires you to offer its
 source code to the users of that service.
 
-Third-party components keep their own licenses: MoSQITo (Apache-2.0), NumPy, SciPy, soundfile, h5py and
-Bottleneck (BSD), FastAPI, openpyxl and pyuff (MIT), tqdm (MPL-2.0 and MIT). The headphone library is built
-from the SBAF measurements (CC BY 4.0).
+Third-party components keep their own licenses. They were checked on 2026-10-25 against the lock files and the installed
+packages, and none is under a license that conflicts with the AGPL:
+
+- **Backend (Python).** MoSQITo and aiofiles (Apache-2.0); NumPy, SciPy, soundfile, h5py, Bottleneck, Starlette and Uvicorn
+  (BSD); FastAPI, Pydantic, openpyxl and pyuff (MIT); Matplotlib (PSF-based); tqdm (MPL-2.0 and MIT, used unmodified). The
+  Sottek Hearing Model is AGPL-3.0-only (above); it declares PyQt6 (GPL-3.0) as a dependency for its interactive plots, which
+  PySQA does not use, and the GPL-3.0 can be combined with the AGPL-3.0.
+- **Frontend (JavaScript).** React, React Router, Zustand, clsx, Tailwind CSS and Vite (MIT); lucide-react (ISC); Plotly.js in
+  its `plotly.js-cartesian-dist-min` build (MIT). Every package of `package-lock.json` that states a license has a permissive one (MIT,
+  ISC, BSD, Apache-2.0, Zlib, 0BSD, Unlicense, BlueOak-1.0.0, and CC-BY-4.0 for `caniuse-lite`, browser data used by the build tools
+  and not shipped). Of the three that state none, `xtend` and `stack-trace` carry an MIT text and `@mapbox/jsonlint-lines-primitives`
+  ships no license text (it is MIT upstream); all three come only through the full `plotly.js` tree (with `mapbox-gl`, BSD-3-Clause),
+  which is installed as an optional dependency of `react-plotly.js` but is not part of the bundle.
+- **Font.** Inter (SIL OFL 1.1), loaded from Google Fonts.
+- **Data.** The headphone library is built from the SBAF measurements (CC BY 4.0); the attribution is in
+  `backend/data/headphones/sbaf/NOTICE.txt`.
