@@ -792,7 +792,7 @@ def _metric_ipm(mono, sr):
         r = mpi_calc.analyze(mono, sr)
         top = int(np.argmax(r.mpi))
         return {
-            "global": round(r.global_db, 3),          # provisional: energy sum, the thesis gives no formula for its global value
+            "global": round(r.global_db, 3),          # amplitude sum of the bands with an event (0 when none); the thesis gives no formula for its global value
             "unit": "dB",
             "x_axis": r.z.tolist(),
             "x_label": "Bark HMS",

@@ -165,11 +165,25 @@ check("the metric dictionary has the new fields and 53 points", need <= set(d) a
 e = svc._metric_ipm(noise(0.2, 1), FS)
 check("a too-short segment returns a translated error, not a crash", "error" in e and "0.5" in e["error"])
 
-# 7. what the thesis leaves open -----------------------------------------------
-print("\n== 7. open points ==")
-known("global value is the energy sum of the bands; the thesis gives 16.6 to 77.9 dB (Table 41) with a formula not in the text",
-      True, f"noise {ipm.analyze(noise(5, 1), FS).global_db:.1f} dB, burst {float(ipm.analyze(b0, FS).global_db):.1f} dB")
+# 7. global value ---------------------------------------------------------------
+print("\n== 7. global value (amplitude sum of the bands with an event) ==")
+from scipy import signal as sp2  # noqa: E402
+from psychoacoustics.mpi import IPMResult  # noqa: E402
+g = {k: ipm.analyze(v, FS) for k, v in {"noise": noise(5, 1), "click": burst(0.01), "swell": burst(0.15), "weak": burst(0.01, level=0.03)}.items()}
+check("no event gives a global of exactly 0 dB", g["noise"].global_db == 0.0)
+check("a click has a higher global than a slow swell and than a weak click", g["click"].global_db > g["swell"].global_db and g["click"].global_db > g["weak"].global_db,
+      f"click {g['click'].global_db:.1f}, swell {g['swell'].global_db:.1f}, weak {g['weak'].global_db:.1f} dB")
+nb = sp2.sosfilt(sp2.butter(4, [900, 1100], "bandpass", fs=FS, output="sos"), burst(0.01))
+nb = nb / np.abs(nb).max() * 0.3 + noise(5, 9, 0.0005)
+rn = ipm.analyze(nb, FS)
+check("a click in one narrow band is less global than the same click over the whole spectrum (the spread counts)", rn.detected.sum() < g["click"].detected.sum() and rn.global_db < g["click"].global_db,
+      f"narrow {rn.global_db:.1f} dB ({int(rn.detected.sum())} bands), broadband {g['click'].global_db:.1f} dB ({int(g['click'].detected.sum())} bands)")
+check("louder click over the same floor raises the global", ipm.analyze(burst(0.01, level=1.0), FS).global_db > ipm.analyze(burst(0.01, level=0.1), FS).global_db)
+Y68 = np.array([1.2, 1.7, 2.3, 2.6, 2.8, 3.3, 3.9, 4.7, 5.4, 6.0, 6.3, 6.9, 7.1, 7.2, 7.3, 7.7, 7.9, 7.7, 7.3, 6.8, 6.3, 6.1])   # Figure 68, read from the plot
+fake = IPMResult(z=np.arange(22.0), freqs=np.arange(22.0), mpi=Y68, p=Y68, ldi=Y68, onset_rate=Y68, event_time=Y68, detected=np.ones(22, bool))
+check("the formula gives the 32.5 dB the thesis prints for Figure 68 (values read from the plot)", abs(fake.global_db - 32.5) < 0.5, f"{fake.global_db:.1f} dB")
+check("global is independent of gain", abs(ipm.analyze(burst(0.01) * 20, FS).global_db - g["click"].global_db) < 0.5)
+known("the scale is not the one of Table 41 (16.6 to 77.9 dB; this global goes 0 to about 45 dB): that table's formula is not in the thesis", True)
 known("the -6 dB offset and the 10-90 % rise reading of OR are assumptions of this version (thesis: Tables 23, 30 give OR/LDI = 33.3)", True)
-
 print(f"\n{len(fails)} failed" + (": " + "; ".join(fails) if fails else ""))
 sys.exit(1 if fails else 0)

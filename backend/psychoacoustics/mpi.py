@@ -25,8 +25,11 @@ is kept in ``mpi_legacy.py``. The steps are:
 
 What the thesis does not specify (and what this version decided)
 -----------------------------------------------------------------
-* The global value of Table 41 has no formula in the thesis; ``IPMResult.global_db`` keeps the energy sum of the previous
-  version and is **provisional**.
+* The global value of Table 41 has no formula in the thesis. ``IPMResult.global_db`` is a proposal of this version: the bands
+  that have an event add up like amplitudes, 20*log10(sum of 10^(MPI/20)), and a signal without event gives 0 dB. The amplitude
+  sum is the only form that reproduces a number printed in the thesis (32.5 dB for Figure 68, from the plotted values); counting
+  only the bands with an event keeps the quiet bands from adding a level of their own. It grows with how much of the spectrum
+  the impulse takes (one band with MPI 8 dB gives 8 dB, all 53 bands give about 42 dB). The scale is NOT the one of Table 41.
 * How OR and LDI are read from the level history: here, the 10-90 % rise time and the 10th percentile of the 250 ms before the peak.
 * How a steady band is told from an impulsive one: the robust z-score above; the previous version took the global maximum of
   every band, which flagged stationary noise more often the longer the record.
@@ -140,7 +143,15 @@ class IPMResult:
 
     @property
     def global_db(self) -> float:
-        """Energy sum of the bands, in dB. PROVISIONAL: the thesis does not give the formula of its global value."""
+        """Global impulsive prominence [dB]: the bands with an event add up as amplitudes, 20*log10(sum 10^(MPI/20)); 0 when none.
+        A proposal of this version (the thesis gives no formula for its global value); see the module notes."""
+        if not self.detected.any():
+            return 0.0
+        return float(20.0 * np.log10(np.sum(10.0 ** (self.mpi[self.detected] / 20.0))))
+
+    @property
+    def energy_sum_db(self) -> float:
+        """Energy sum of all the bands (the global value of the previous version), kept for comparison."""
         return float(10.0 * np.log10(np.sum(10.0 ** (self.mpi / 10.0))))
 
 

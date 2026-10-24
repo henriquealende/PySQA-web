@@ -10,6 +10,8 @@ Duas ressalvas. (1) Tenho a tese, não o código original (MATLAB ou Python) nem
 ponta a ponta; o que está marcado "verificado" foi conferido com os números impressos. (2) Onde digo "hipótese", é leitura minha de um
 gráfico ou de uma tabela e precisa da sua confirmação.
 
+> **Valor global (out/2026):** passou a ser a soma de amplitudes das bandas com evento, 20·log₁₀(Σ 10^(MPI/20)), 0 se não há evento (proposta nossa; reproduz o 32,5 dB da Fig. 68, mas não a escala da Tabela 41). O SIL do lote usa esse global com o coeficiente 0,13 ajustado na escala da tese; por isso o termo do IPM no SIL continua não comparável ao da tese.
+
 ## 1. O que bate
 
 | Item | Tese | Código | Verificação |
