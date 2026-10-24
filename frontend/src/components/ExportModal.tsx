@@ -24,7 +24,7 @@ export default function ExportModal({ sessionId, audioId, audioName, onClose }: 
   const [view] = useState(() => {
     const s = useStore.getState()
     return {
-      viewMode: s.viewMode, metricKey: s.metricKey, fieldType: s.fieldType, octaveWeighting: s.octaveWeighting,
+      viewMode: s.viewMode, metricKey: s.metricKey, fieldType: s.fieldType, precision: s.precision, octaveWeighting: s.octaveWeighting,
       spectrogramParams: s.spectrogramParams, envelopeParams: s.envelopeParams,
       section: s.sections[audioId] ?? null,
     }

@@ -100,7 +100,8 @@ those three metrics are disabled and all other features keep working.
 Tonality runs on `backend/psychoacoustics/ecma_fast/tonality_exact.py`, a reorganised copy of the package's function
 (AGPL-3.0, see License) that gives the same results (to about 1e-6) with about a sixth of the memory and a third of the time; if it fails
 for an unexpected reason, the package's own function answers instead. The same file has an approximate `shm_tonality_ecma_fast`
-(about twice as fast again; global tonality within 0.2%, tonal frequency within about 1 Hz), not used by the app yet.
+(about twice as fast again; global tonality within 0.2%, tonal frequency within about 1 Hz), chosen with the "Tonality precision"
+selector (Exact is the default; the API takes `precision: "exact" | "fast"`).
 `dev-tests/bench_tonality_ecma.py` records a
 reference from the package and compares any candidate with it (time, peak memory, relative difference).
 

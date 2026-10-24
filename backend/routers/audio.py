@@ -35,6 +35,7 @@ class AudioMeta(BaseModel):
 class MetricRequest(BaseModel):
     metric_key: str
     field_type: str = "free"   # "free" | "diffuse"
+    precision: str = "exact"   # "exact" | "fast": only Tonality ECMA-418-2 has a faster, approximate mode
     t0: Optional[float] = None  # analyse only [t0, t1] seconds of the file
     t1: Optional[float] = None
     job: Optional[str] = None   # the browser's name for this request: lets /api/health say where it is in the queue
@@ -44,6 +45,7 @@ class BatchRequest(BaseModel):
     audio_ids: List[str]
     metric_keys: List[str]
     field_type: str = "free"
+    precision: str = "exact"
     sections: Optional[Dict[str, List[float]]] = None   # audio_id → [t0, t1]: files that use only a section
 
 
@@ -212,7 +214,7 @@ def compute_metric(session_id: str, audio_id: str, body: MetricRequest, backgrou
     gone = lambda: anyio.from_thread.run(request.is_disconnected)
     try:
         result = svc.compute_metric(entry, body.metric_key, field_type=body.field_type, t0=body.t0, t1=body.t1,
-                                    cancelled=gone, job=job)
+                                    cancelled=gone, job=job, precision=body.precision)
         background_tasks.add_task(persist_session, session_id)
         return result
     except (limits.ResourceLimitError, limits.ServerBusyError, limits.RequestCancelled, svc.SectionError):
@@ -265,7 +267,7 @@ def batch_metrics(session_id: str, body: BatchRequest, background_tasks: Backgro
             continue
         for mk in body.metric_keys:
             try:
-                res = svc.compute_metric(entry, mk, field_type=body.field_type, t0=t0, t1=t1)
+                res = svc.compute_metric(entry, mk, field_type=body.field_type, t0=t0, t1=t1, precision=body.precision)
                 row[mk] = res.get("global")
             except (limits.ResourceLimitError, limits.ServerBusyError) as exc:
                 row[mk] = None

@@ -7,9 +7,11 @@ try:
 except ImportError:
     shm_tonality_ecma = None
 try:  # same results as the package with about a sixth of the memory (see ecma_fast/tonality_exact.py)
-    from psychoacoustics.ecma_fast.tonality_exact import shm_tonality_ecma as shm_tonality_ecma_lean
+    from psychoacoustics.ecma_fast.tonality_exact import (shm_tonality_ecma as shm_tonality_ecma_lean,
+                                                          shm_tonality_ecma_fast)
 except ImportError:
     shm_tonality_ecma_lean = None
+    shm_tonality_ecma_fast = None
 
 class TonalityECMA:
     """
@@ -323,7 +325,7 @@ class TonalityECMA:
 
         return T, Ts, Ttd, Tsv, fts, ftd, F, t, z
     
-    def tonalityECMA_Shm(self, timeData, samplingRate, field_type="free"):
+    def tonalityECMA_Shm(self, timeData, samplingRate, field_type="free", fast=False):
         shape = len(np.shape(timeData))
         if shape >= 2:
             timeData = timeData[:,0]
@@ -334,9 +336,10 @@ class TonalityECMA:
         if len(timeData) > 0:
             soundfield = 'free_frontal' if field_type == 'free' else 'diffuse'
             tonality_ecma = None
-            if shm_tonality_ecma_lean is not None:
+            lean = shm_tonality_ecma_fast if fast and shm_tonality_ecma_fast is not None else shm_tonality_ecma_lean
+            if lean is not None:
                 try:
-                    tonality_ecma = shm_tonality_ecma_lean(timeData, samplingRate, soundfield=soundfield)
+                    tonality_ecma = lean(timeData, samplingRate, soundfield=soundfield)
                 except ValueError:
                     raise  # e.g. signal too short: the package would refuse it in the same way
                 except Exception:

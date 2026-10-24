@@ -1,4 +1,4 @@
-import { AudioFile, WaveformData, SpectrumData, SpectrogramData, OctaveData, EnvelopeData, MetricResult, MetricKey, Section, ServerLoad, SpectrogramParams, EnvelopeParams, FieldType } from '../types'
+import { AudioFile, WaveformData, SpectrumData, SpectrogramData, OctaveData, EnvelopeData, MetricResult, MetricKey, Section, ServerLoad, SpectrogramParams, EnvelopeParams, FieldType, TonalityPrecision } from '../types'
 import { apiFetch, checkResponse, newClientId, SessionExpiredError, watched } from './http'
 import * as recovery from './recovery'
 import { cachedFetch, invalidateAudio } from './viewCache'
@@ -131,12 +131,14 @@ export function fetchMetric(
   metricKey: MetricKey,
   fieldType: FieldType = 'free',
   section?: Section | null,
-  opts?: { signal?: AbortSignal; job?: string },
+  opts?: { signal?: AbortSignal; job?: string; precision?: TonalityPrecision },
 ): Promise<MetricResult> {
-  const detail = `${metricKey}|${fieldType}|${section ? section.join('-') : ''}`
+  // only Tonality ECMA-418-2 has a fast mode; the others ignore it, so it must not split their cached results
+  const precision = metricKey === 'tonality_ecma' && opts?.precision === 'fast' ? 'fast' : 'exact'
+  const detail = `${metricKey}|${fieldType}|${section ? section.join('-') : ''}${precision === 'fast' ? '|fast' : ''}`
   return cachedFetch(audioId, cacheKey(sessionId, audioId, 'metric', detail),
     (s) => postJson<MetricResult>(sessionId, `${BASE}/${sessionId}/${audioId}/metrics`, {
-      metric_key: metricKey, field_type: fieldType,
+      metric_key: metricKey, field_type: fieldType, precision,
       ...(section ? { t0: section[0], t1: section[1] } : {}),
       ...(opts?.job ? { job: opts.job } : {}),
     }, s), opts?.signal)
@@ -158,6 +160,7 @@ export async function fetchBatch(
   metricKeys: MetricKey[],
   fieldType: FieldType = 'free',
   sections?: Record<string, Section>,      // audio_id → the part of that file to use (files not listed use all of it)
+  precision: TonalityPrecision = 'exact',
 ): Promise<{
   rows: any[]
   metric_keys: string[]
@@ -166,7 +169,7 @@ export async function fetchBatch(
   const res = await apiFetch(sessionId, `${BASE}/${sessionId}/batch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ audio_ids: audioIds, metric_keys: metricKeys, field_type: fieldType, ...(sections && Object.keys(sections).length ? { sections } : {}) }),
+    body: JSON.stringify({ audio_ids: audioIds, metric_keys: metricKeys, field_type: fieldType, precision, ...(sections && Object.keys(sections).length ? { sections } : {}) }),
   })
   await checkResponse(res)
   return res.json()

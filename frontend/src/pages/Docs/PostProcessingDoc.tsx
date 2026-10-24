@@ -427,6 +427,12 @@ export default function PostProcessingDoc() {
             abaixo de 1e-6) com cerca de um sexto da memória e um terço do tempo. Ainda é uma das métricas mais pesadas: num computador comum leva
             cerca de 1 s para cada segundo de áudio e usa cerca de 70 MB por segundo de áudio. Para arquivos longos, selecione um trecho.
           </P>
+          <P>
+            Na coluna da esquerda (e na barra do cálculo em lote) o seletor <strong>Precisão da tonalidade</strong> escolhe entre <strong>Exato</strong>, o padrão,
+            e <strong>Rápido</strong>. O Rápido usa uma transformada mais curta na janela de atraso e interpola o pico: leva cerca de metade do tempo, com o valor
+            global a até 0,2% do exato e a frequência do tom a cerca de 1 Hz. Os dois resultados ficam guardados separados, e a escolha vale também para a
+            exportação.
+          </P>
         </Section>
 
         <Section id="m-ipm" title="IPM – Impulsive Prominence Metric" level={3}>

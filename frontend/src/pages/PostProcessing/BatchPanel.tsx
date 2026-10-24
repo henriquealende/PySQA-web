@@ -5,6 +5,7 @@ import { useStore } from '../../store/useStore'
 import { fetchMetric, fetchServerLoad, isAbort, SessionExpiredError } from '../../api/audioApi'
 import { newClientId } from '../../api/http'
 import { MetricKey, FieldType } from '../../types'
+import TonalityPrecisionSelect from '../../components/TonalityPrecision'
 import { exportXlsx } from '../../api/exportApi'
 import { toast } from '../../store/useToast'
 import { useT } from '../../i18n'
@@ -77,7 +78,7 @@ function BatchProgress({ step, total, label, elapsed, eta, onCancel }: {
 
 export default function BatchPanel() {
   const t = useT()
-  const { sessionId, files, fieldType, setFieldType, sections } = useStore()
+  const { sessionId, files, fieldType, setFieldType, precision, sections } = useStore()
 
   // File selection
   const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set(files.map(f => f.audio_id)))
@@ -171,7 +172,7 @@ export default function BatchPanel() {
           if (ctrl.signal.aborted) throw new DOMException('cancelled', 'AbortError')
           setPLabel(`${f.name.replace(/\.wav$/i, '')} · ${keyLabel(m)}`)
           try {
-            const res = await fetchMetric(sessionId, f.audio_id, m, fieldType, sec, { signal: ctrl.signal, job: newClientId() })
+            const res = await fetchMetric(sessionId, f.audio_id, m, fieldType, sec, { signal: ctrl.signal, job: newClientId(), precision })
             row[m] = res.global ?? null
             if (res.section !== undefined) row.section = res.section
           } catch (e: any) {
@@ -335,6 +336,8 @@ export default function BatchPanel() {
                 </button>
               ))}
             </div>
+
+            {selected.includes('tonality_ecma') && <TonalityPrecisionSelect compact disabled={busy} />}
 
             {/* Compute */}
             <button onClick={compute}

@@ -527,11 +527,16 @@ def _calibrated_mono(entry: AudioEntry) -> np.ndarray:
 
 def compute_metric(entry: AudioEntry, metric_key: str, field_type: str = "free",
                    t0: Optional[float] = None, t1: Optional[float] = None,
-                   cancelled: Optional[Any] = None, job: str = "") -> Dict[str, Any]:
-    """Dispatch to the correct psychoacoustic computation (on the whole file, or on one section of it)."""
+                   cancelled: Optional[Any] = None, job: str = "", precision: str = "exact") -> Dict[str, Any]:
+    """Dispatch to the correct psychoacoustic computation (on the whole file, or on one section of it).
+
+    precision="fast" only matters for Tonality ECMA-418-2 (an approximate, faster calculation); every other
+    metric ignores it, so it never splits their cache.
+    """
     sec = _section(entry, t0, t1)
     cal_tag = f"cal{entry.calibration_pa:.6f}" if entry.calibration_pa else "raw"
-    cache_key = f"metric_{metric_key}_{field_type}_{cal_tag}"
+    fast = metric_key == "tonality_ecma" and str(precision).lower() == "fast"
+    cache_key = f"metric_{metric_key}_{field_type}_{cal_tag}" + ("_fast" if fast else "")
     if not sec.whole:
         cache_key += f"|s{sec.start}-{sec.end}"            # sample indices: the same section always hits the same entry
     if cache_key in entry._cache:
@@ -546,7 +551,7 @@ def compute_metric(entry: AudioEntry, metric_key: str, field_type: str = "free",
         mono = _calibrated_mono(part)
         sr   = part.sample_rate
         started = time.monotonic()
-        result = _dispatch_metric(mono, sr, metric_key, field_type=field_type)
+        result = _dispatch_metric(mono, sr, metric_key, field_type=field_type, fast=fast)
         limits.record_timing(metric_key, part.duration_s, time.monotonic() - started)
         if not sec.whole:
             result = _shift_time(result, sec.offset_s)
@@ -563,7 +568,7 @@ def _remember_section(entry: AudioEntry, new_key: str) -> None:
         entry._cache.pop(old, None)
 
 
-def _dispatch_metric(mono: np.ndarray, sr: int, key: str, field_type: str = "free") -> Dict[str, Any]:
+def _dispatch_metric(mono: np.ndarray, sr: int, key: str, field_type: str = "free", fast: bool = False) -> Dict[str, Any]:
     is_diffuse = field_type.lower() == "diffuse"
     if key == "loudness_zwk":
         return _metric_loudness_zwk(mono, sr, diffuse=is_diffuse)
@@ -578,7 +583,7 @@ def _dispatch_metric(mono: np.ndarray, sr: int, key: str, field_type: str = "fre
     if key == "fluctuation_strength":
         return _metric_fluctuation(mono, sr)
     if key == "tonality_ecma":
-        return _metric_tonality(mono, sr, diffuse=is_diffuse)
+        return _metric_tonality(mono, sr, diffuse=is_diffuse, fast=fast)
     if key == "ipm":
         return _metric_ipm(mono, sr)
     raise ValueError(msg(f"Métrica desconhecida: {key}", f"Unknown metric: {key}"))
@@ -731,16 +736,17 @@ def _metric_fluctuation(mono, sr):
     }
 
 
-def _metric_tonality(mono, sr, diffuse=False):
+def _metric_tonality(mono, sr, diffuse=False, fast=False):
     ton = _TON or __import__('psychoacoustics.tonality', fromlist=['TonalityECMA']).TonalityECMA()
 
     # ── Path 1: Sottek Hearing Model (ECMA-418-2 production) ─────────────────
     try:
         bark, global_val, specific, time_data = ton.tonalityECMA_Shm(
-            mono, sr, field_type="diffuse" if diffuse else "free")
+            mono, sr, field_type="diffuse" if diffuse else "free", fast=fast)
         out = {
             "global": round(float(global_val), 4),
             "unit": "tu",
+            "precision": "fast" if fast else "exact",
             "x_axis": bark.tolist() if hasattr(bark, "tolist") else list(bark),
             "x_label": "Bark HMS",
             "y_axis": specific.tolist() if hasattr(specific, "tolist") else list(specific),

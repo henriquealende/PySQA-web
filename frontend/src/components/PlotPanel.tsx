@@ -562,7 +562,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
   sessionId: string; audioId: string; metricKey: string; compareId: string|null; compareName: string; section: Section|null
 }) {
   const t = useT()
-  const { fieldType, files, setMetricKey } = useStore()
+  const { fieldType, precision, files, setMetricKey } = useStore()
   const secKey = sectionKey(section)
   const workSeconds = section ? section[1] - section[0] : (files.find(f => f.audio_id === audioId)?.duration_s ?? 0)
   // `job` is this request's name on the server (it tells where it is in the queue); `retry` asks again after a cancel
@@ -595,15 +595,15 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
     const name = newClientId()
     setJob(name); setCancelled(null)
     setData(null); setDataCmp(null); setErr('')
-    const primary = fetchMetric(sessionId, audioId, metricKey as any, fieldType, section, { signal: ctrl.signal, job: name }).then(d => { if (alive) setData(d) })
+    const primary = fetchMetric(sessionId, audioId, metricKey as any, fieldType, section, { signal: ctrl.signal, job: name, precision }).then(d => { if (alive) setData(d) })
     const compare = compareId
-      ? fetchMetric(sessionId, compareId, metricKey as any, fieldType, section, { signal: ctrl.signal }).then(d => { if (alive) setDataCmp(d) })
+      ? fetchMetric(sessionId, compareId, metricKey as any, fieldType, section, { signal: ctrl.signal, precision }).then(d => { if (alive) setDataCmp(d) })
       : Promise.resolve()
     Promise.all([primary, compare])
       .catch(e => { if (alive && !isAbort(e)) setErr(e instanceof SessionExpiredError ? '__session_expired__' : e.message) })
     return () => { alive = false; ctrl.abort() }       // leaving (or a new section) cancels what is still on its way
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, audioId, metricKey, fieldType, compareId, secKey, retry])
+  }, [sessionId, audioId, metricKey, fieldType, precision, compareId, secKey, retry])
 
   if (err === '__session_expired__') return <SessionExpiredMsg />
   if (err) return <ErrorMsg msg={err} />

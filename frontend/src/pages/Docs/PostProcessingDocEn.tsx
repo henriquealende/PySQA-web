@@ -427,6 +427,12 @@ export default function PostProcessingDocEn() {
             below 1e-6) with about a sixth of the memory and a third of the time. It is still one of the heaviest metrics: on an ordinary computer it takes
             about 1 s for each second of audio and uses about 70 MB per second of audio. For long files, select a segment.
           </P>
+          <P>
+            In the left column (and in the batch bar) the <strong>Tonality precision</strong> selector chooses between <strong>Exact</strong>, the default,
+            and <strong>Fast</strong>. Fast uses a shorter transform in the lag window and interpolates the peak: it takes about half the time, with the
+            overall value within 0.2% of the exact one and the tonal frequency within about 1 Hz. The two results are kept apart, and the choice also
+            applies to the export.
+          </P>
         </Section>
 
         <Section id="m-ipm" title="IPM – Impulsive Prominence Metric" level={3}>

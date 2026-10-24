@@ -9,6 +9,8 @@ export interface AudioFile {
 export type ViewMode = 'normal' | 'spectrogram' | 'octave' | 'envelope'
 
 export type FieldType = 'free' | 'diffuse'
+/** Tonality ECMA-418-2: the exact calculation, or a faster one that is a little approximate. */
+export type TonalityPrecision = 'exact' | 'fast'
 
 /** The part of a file to analyse, [start, end] in seconds; no section means the whole file. */
 export type Section = [number, number]
@@ -43,6 +45,7 @@ export interface EnvelopeParams {
 
 export interface MetricResult {
   global?: number
+  precision?: TonalityPrecision      // set by Tonality ECMA-418-2: how it was calculated
   unit?: string
   x_axis?: number[]
   x_label?: string

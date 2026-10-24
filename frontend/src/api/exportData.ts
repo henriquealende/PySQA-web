@@ -3,7 +3,7 @@
  * server endpoints the plots use (metrics are cached on the server, so this is cheap).
  */
 import type {
-  EnvelopeParams, FieldType, MetricKey, Section, SpectrogramParams, ViewMode,
+  EnvelopeParams, FieldType, TonalityPrecision, MetricKey, Section, SpectrogramParams, ViewMode,
   WaveformData, SpectrumData,
 } from '../types'
 import { metricLabel } from '../components/MetricSelector'
@@ -22,6 +22,7 @@ export interface ExportRequest {
   viewMode: ViewMode
   metricKey: MetricKey
   fieldType: FieldType
+  precision?: TonalityPrecision
   octaveWeighting: string
   spectrogramParams: SpectrogramParams
   envelopeParams: EnvelopeParams
@@ -78,7 +79,7 @@ async function buildSheets(req: ExportRequest): Promise<ExportData> {
   // A metric is open: its summary, its values by band and its time series
   if (req.viewMode === 'normal' && req.metricKey !== 'none') {
     const label = metricLabel(req.metricKey)
-    const r = await fetchMetric(sid, aid, req.metricKey, req.fieldType, section)
+    const r = await fetchMetric(sid, aid, req.metricKey, req.fieldType, section, { precision: req.precision })
     if (r.error) throw new Error(r.error)
     const sheets: Sheet[] = [{
       id: 'summary',

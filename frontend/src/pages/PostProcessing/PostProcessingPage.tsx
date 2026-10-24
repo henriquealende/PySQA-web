@@ -9,6 +9,7 @@ import { AudioFile, ViewMode, MetricKey, FieldType } from '../../types'
 import FileDropzone from '../../components/FileDropzone'
 import ImportCallout from '../../components/ImportCallout'
 import ChannelNotice from '../../components/ChannelNotice'
+import TonalityPrecisionSelect from '../../components/TonalityPrecision'
 import BugReportButton from '../../components/BugReportButton'
 import AudioList from '../../components/AudioList'
 import MetricSelector from '../../components/MetricSelector'
@@ -169,6 +170,8 @@ export default function PostProcessingPage() {
                 ))}
               </div>
             </div>
+
+            {metricKey === 'tonality_ecma' && <TonalityPrecisionSelect />}
 
             {files.length > 1 && selectedId && !showBatch && (
               <div className="border-t border-border pt-3 space-y-2">

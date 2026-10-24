@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { AudioFile, ViewMode, MetricKey, FieldType, Section, SpectrogramParams, EnvelopeParams } from '../types'
+import { AudioFile, ViewMode, MetricKey, FieldType, TonalityPrecision, Section, SpectrogramParams, EnvelopeParams } from '../types'
 import { forgetSession } from '../api/recovery'
 import { clearViewCache } from '../api/viewCache'
 
@@ -27,6 +27,7 @@ interface AppState {
   viewMode: ViewMode
   metricKey: MetricKey
   fieldType: FieldType
+  precision: TonalityPrecision
   octaveWeighting: string
   spectrogramParams: SpectrogramParams
   envelopeParams: EnvelopeParams
@@ -49,6 +50,7 @@ interface AppState {
   setViewMode: (m: ViewMode) => void
   setMetricKey: (k: MetricKey) => void
   setFieldType: (t: FieldType) => void
+  setPrecision: (p: TonalityPrecision) => void
   setOctaveWeighting: (w: string) => void
   setSpectrogramParams: (p: Partial<SpectrogramParams>) => void
   setEnvelopeParams: (p: Partial<EnvelopeParams>) => void
@@ -80,6 +82,7 @@ export const useStore = create<AppState>((set, get) => ({
   viewMode: 'normal',
   metricKey: 'none',
   fieldType: 'free',
+  precision: 'exact',
   octaveWeighting: 'Z',
   spectrogramParams: DEFAULT_SPECTROGRAM,
   envelopeParams: DEFAULT_ENVELOPE,
@@ -115,6 +118,7 @@ export const useStore = create<AppState>((set, get) => ({
   setViewMode: (viewMode) => set({ viewMode }),
   setMetricKey: (metricKey) => set({ metricKey }),
   setFieldType: (fieldType) => set({ fieldType }),
+  setPrecision: (precision) => set({ precision }),
   setOctaveWeighting: (octaveWeighting) => set({ octaveWeighting }),
   setSpectrogramParams: (p) => set((s) => ({ spectrogramParams: { ...s.spectrogramParams, ...p } })),
   setEnvelopeParams: (p) => set((s) => ({ envelopeParams: { ...s.envelopeParams, ...p } })),

@@ -28,7 +28,7 @@ function BugReportDialog({ onClose }: { onClose: () => void }) {
       const file = s.files.find((f) => f.audio_id === s.selectedId)
       const context = [
         file && `${file.name} (${file.channels} ch, ${file.sample_rate} Hz, ${file.duration_s.toFixed(1)} s)`,
-        `view=${s.viewMode}`, `metric=${s.metricKey}`, `field=${s.fieldType}`,
+        `view=${s.viewMode}`, `metric=${s.metricKey}`, `field=${s.fieldType}`, `tonality=${s.precision}`,
       ].filter(Boolean).join(' · ')
       await sendBugReport({
         message, contact: contact.trim() || undefined, page: pathname, context,
