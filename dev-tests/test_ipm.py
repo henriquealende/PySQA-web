@@ -74,13 +74,14 @@ T30 = [(1128.06, 33.84, 6.21), (1169.67, 35.09, 6.29), (1148.40, 34.45, 6.25), (
 ok, worst = True, 0.0
 for orate, ldi, p in T23 + T30:
     rise = ldi / orate
-    hist = np.concatenate([np.full(60, 20.0), 20.0 + np.linspace(0, ldi, max(int(round(rise / 0.01)), 2)), np.full(40, 20.0 + ldi)])
+    hist = np.concatenate([np.full(150, 20.0), 20.0 + np.linspace(0, ldi, max(int(round(rise / 0.01)), 2)),
+                           20.0 + ldi - np.linspace(0, ldi, 120)])    # stationary part, linear rise, then the decay of an impulse
     hist = hist + np.random.default_rng(0).standard_normal(len(hist)) * 0.1
     e = measure_event(hist, 0)
     worst = max(worst, abs(e["p"] - p)) if e else 99
     ok &= e is not None
 check("measure_event on synthetic rises reproduces the 12 P values of Tables 23 and 30 (within 0.8 dB: the 10 ms grid)", ok and worst < 0.8, f"max diff {worst:.2f} dB")
-a = measure_event(np.concatenate([np.full(60, 20.0), np.full(40, 70.0)]), 0)
+a = measure_event(np.concatenate([np.full(150, 20.0), np.full(1, 70.0), 70.0 - np.linspace(0, 50, 120)]), 0)
 check("a step (one block) gives the shortest rise (one block, 10 ms) and LDI 50 dB", a is not None and abs(a["ldi"] - 50) < 0.5 and abs(a["onset_rate"] - 50 / 0.010) < 1, f"{a}")
 
 # 3. behaviour -----------------------------------------------------------------
@@ -111,6 +112,38 @@ check("a steady tone, abrupt start or ramped: no event (the old version flagged 
 hum = noise(5, 8, 0.01) + 0.05 * np.sin(2 * np.pi * 100 * t)
 check("hum plus noise: no event", not ipm.analyze(hum, FS).detected.any())
 check("digital silence does not break it (no NaN, no event)", np.all(np.isfinite(ipm.analyze(np.zeros(2 * FS), FS).mpi)) and not ipm.analyze(np.zeros(2 * FS), FS).detected.any())
+
+# 3b. criteria of the event --------------------------------------------------
+print("\n== 3b. criteria: stationary level, decay, candidates, coherence ==")
+rg = np.random.default_rng(5)
+bg = 30.0 + rg.standard_normal(600) * 0.8
+hist = bg.copy(); hist[300:306] = 30.0 + np.array([6, 18, 30, 20, 10, 4])
+e = measure_event(hist, 0)
+check("LDI is the peak minus the stationary level (median of the surroundings), not the level just before", e is not None and abs(e["background"] - 30.0) < 0.4 and abs(e["ldi"] - 30.0) < 1.5, f"background {e and e['background']:.2f}, LDI {e and e['ldi']:.1f}")
+check("a clean event with context and a decay is marked reliable", e is not None and e["reliable"])
+step = bg.copy(); step[300:] += 25.0
+check("a step up that stays (machine switched on) is NOT an impulse", measure_event(step, 0) is None)
+step_ramp = bg.copy(); step_ramp[300:] += np.minimum(np.arange(300), 3) * 8.0
+check("a fast rise to a new steady level is NOT an impulse either", measure_event(step_ramp, 0) is None)
+two = bg.copy(); two[150:154] += np.array([8, 25, 12, 4]); two[420:424] += np.array([15, 40, 20, 6])
+e2 = measure_event(two, 0)
+check("with two events the most prominent one is kept (the second, 40 dB)", e2 is not None and abs(e2["t_peak"] - 4.215) < 0.03, f"t_peak {e2 and e2['t_peak']:.3f}")
+tiny = bg.copy(); tiny[300] += 2.0
+check("a bump under 3 dB LDI is no event", measure_event(tiny, 0) is None)
+late = bg[:305].copy(); late[300:305] += np.array([10, 30, 20, 8, 3])
+el = measure_event(late, 0)
+check("an event at the very end of the record is kept but not marked reliable (the decay cannot be checked)", el is not None and not el["reliable"], f"{el}")
+# a long background hum with a louder section far away: the surroundings (3 s) decide, not the whole record
+mixed = np.concatenate([30.0 + rg.standard_normal(1200) * 0.8, 50.0 + rg.standard_normal(1200) * 0.8]); mixed[600:604] += np.array([10, 30, 15, 5])
+em = measure_event(mixed, 0)
+check("a different level far from the event (3 s away) does not change its stationary level", em is not None and abs(em["background"] - 30.0) < 0.5, f"{em and round(em['background'], 1)}")
+# coherence of the bands: one band whose only peak is elsewhere is dropped
+rc = ipm.analyze(burst(0.01) + 0 * noise(5, 1), FS)
+check("all the bands of a click peak together (within 0.15 s of the median)", np.nanmax(np.abs(rc.event_time - np.nanmedian(rc.event_time))) <= 0.15)
+two_clicks = burst(0.01, at=1.0) + burst(0.01, at=3.2, seed=40) - noise(5, 3, 0.005)
+r2c = ipm.analyze(two_clicks, FS)
+check("two clicks in the same file: the global and the count follow one event (no mixture of the two)", r2c.detected.sum() <= 53 and np.nanmax(np.abs(r2c.event_time - np.nanmedian(r2c.event_time))) <= 0.15)
+check("the reliable bands are counted", rc.reliable_bands >= 40, f"{rc.reliable_bands} of {len(rc.z)}")
 
 # 4. invariances ---------------------------------------------------------------
 print("\n== 4. invariances ==")

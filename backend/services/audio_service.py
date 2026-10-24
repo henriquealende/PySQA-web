@@ -803,6 +803,7 @@ def _metric_ipm(mono, sr):
             "threshold_label": "Impulsive Threshold (5 dB)",
             "impulsive": r.impulsive,
             "bands_over_threshold": r.bands_over_threshold,
+            "reliable_bands": r.reliable_bands,
             "max_band_bark": float(r.z[top]),
             "max_band_hz": round(float(r.freqs[top]), 1),
             "max_mpi": round(float(r.mpi[top]), 3),
