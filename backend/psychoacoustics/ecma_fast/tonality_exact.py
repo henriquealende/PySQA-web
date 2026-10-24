@@ -12,7 +12,7 @@ The standard's stages are unchanged; only the organisation of the computation di
 
   * the autocorrelation and the lag-window FFT run on slices of time blocks (columns are independent);
   * only the autocorrelation rows that the lag window can read are kept (the rest was discarded anyway);
-  * a real FFT replaces the complex FFT (the input is real, so the lower half carries all the information);
+  * real FFTs (scipy.fft) of just the length needed, on data laid out contiguously along the transform;
   * the tonal frequency is the first bin whose spectrum rounded to 8 decimals is maximal, found from the few
     candidates near the maximum instead of rounding the whole spectrum.
 """
@@ -21,7 +21,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 import bottleneck as bn
 import numpy as np
-from sottek_hearing_model.shm_subs import (shm_auditory_filtbank, shm_basis_loudness, shm_in_check,
+import scipy.fft as sfft
+from scipy.signal import lfilter
+from scipy.special import comb
+from sottek_hearing_model.shm_subs import (shm_basis_loudness, shm_in_check,
                                            shm_outmid_ear_filter, shm_pre_proc, shm_resample,
                                            shm_signal_segment)
 from sottek_hearing_model.shm_tonality_ecma import shm_noise_red_lowpass
@@ -30,6 +33,7 @@ _NUM_THREADS = max(1, multiprocessing.cpu_count() - 1)
 _EPS = 1e-12
 _FS = 48e3
 _SLICE_ELEMS = 1 << 19            # elements per working slice (~4 MB of float64)
+_PAD = 8                          # fast mode: lag-window FFT length = _PAD x the window length
 _FFT_COLS = 96                    # columns per lag-window FFT slice (16384 x 96 complex = 25 MB)
 
 _DELTA_F0, _C = 81.9289, 0.1618
@@ -53,6 +57,28 @@ _AVG = np.vstack((np.hstack(([0, 0, 0], np.arange(5, 18), np.arange(22, 31), np.
 _CSZ = np.hstack((18.21 * np.ones(3), 12.14 * np.ones(13), 417.54 * np.ones(9), 962.68 * np.ones(28)))
 _DSZ = np.hstack((0.36 * np.ones(3), 0.36 * np.ones(13), 0.71 * np.ones(9), 0.69 * np.ones(28)))
 _I_INTERP = _BLOCK / _BLOCK.min()
+
+
+def _filterbank(signal, n_threads):
+    """Auditory filter bank, Section 5.1.4.2: the 53 half-Bark filters of the package, one band per thread."""
+    k = 5
+    e_i = [0, 1, 11, 11, 1]
+    out = np.zeros((signal.size, _N_BANDS), order='F')
+
+    def one(z):
+        tau = (1 / (2 ** (2 * k - 1))) * comb(2 * k - 2, k - 1) * (1 / _DFZ[z])
+        d = np.exp(-1. / (_FS * tau))
+        bp = np.exp((1j * 2 * np.pi * _BAND_FREQS[z] * np.arange(0, k + 2)) / _FS)
+        m_a = range(1, k + 1)
+        a_m = np.append(1, ((-d) ** m_a) * comb(k, m_a)) * bp[0:k + 1]
+        m_b = range(0, k)
+        i = range(1, k)
+        b_m = ((((1 - d) ** k) / np.sum(e_i[1:] * (d ** i))) * (d ** m_b) * e_i) * bp[0:k]
+        out[:, z] = 2 * np.real(lfilter(b_m, a_m, signal, axis=0))
+
+    with ThreadPoolExecutor(max_workers=n_threads) as ex:
+        list(ex.map(one, range(_N_BANDS)))
+    return out
 
 
 def _lag_window(z):
@@ -85,19 +111,23 @@ def _band_acf(d, signal_bands, rows):
     out = np.empty((keep, n_blocks))
     step = max(16, _SLICE_ELEMS // block)
     zero_from = int(0.75 * block)
+    # a transform of block + keep points has no wrap-around into the lags that are kept (the package pads to 2 x block)
+    n_fft = sfft.next_fast_len(block + keep, real=True)
     for c0 in range(0, n_blocks, step):
-        r = rect[:, c0:c0 + step]
-        unscaled = np.fft.irfft(np.abs(np.fft.rfft(r, n=2 * block, axis=0)) ** 2, n=2 * block, axis=0)
-        denom = (np.sqrt(np.flip(np.cumsum(np.flip(r, axis=0) ** 2, axis=0), axis=0)
-                         * np.flip(np.cumsum(r ** 2, axis=0), axis=0)) + _EPS)
-        acf = unscaled[:keep] / denom[:keep]
+        r = np.ascontiguousarray(rect[:, c0:c0 + step].T)             # one block per row: contiguous for the FFT
+        spec = sfft.rfft(r, n=n_fft, axis=1)
+        unscaled = sfft.irfft(spec.real ** 2 + spec.imag ** 2, n=n_fft, axis=1)[:, :keep]
+        sq = r ** 2
+        suffix = np.cumsum(sq[:, ::-1], axis=1)[:, ::-1][:, :keep]    # energy from sample m to the end
+        prefix = np.cumsum(sq, axis=1)[:, ::-1][:, :keep]             # energy up to sample N-1-m
+        acf = unscaled / (np.sqrt(suffix * prefix) + _EPS)
         if zero_from < keep:
-            acf[zero_from:keep] = 0
-        out[:, c0:c0 + step] = acf * basis[c0:c0 + step]
+            acf[:, zero_from:] = 0
+        out[:, c0:c0 + step] = (acf * basis[c0:c0 + step, None]).T
     return out
 
 
-def _band_components(z, acf_dupe, last_block):
+def _band_components(z, acf_dupe, last_block, fast=False):
     """Tonal loudness, noise loudness and tonal frequency of band z (Sections 6.2.3 to 6.2.8)."""
     m_start, m_end, num_win = _lag_window(z)
     i0, i1 = _AVG[0, z], _AVG[1, z]
@@ -119,29 +149,46 @@ def _band_components(z, acf_dupe, last_block):
 
     # ACF spectrum in the lag window (Equation 36), tonal loudness (Equation 37) and tonal frequency (38, 39)
     peak = np.empty(n_blocks)
-    kz_max = np.empty(n_blocks, dtype=np.intp)
+    freq_bins = np.empty(n_blocks)
     n_fft = 2 * _MAX_BLOCK
+    if fast:
+        # the window is short, so the transform only needs _PAD x its length (a shift only changes the phase);
+        # the peak is then refined by a parabola through the three bins around it
+        n_fft = min(n_fft, sfft.next_fast_len(max(256, _PAD * win.shape[0]), real=True))
     for c0 in range(0, n_blocks, _FFT_COLS):
         part = win[:, c0:c0 + _FFT_COLS]
-        w = np.zeros((height, part.shape[1]))
-        w[m_start:height] = part
-        mag = np.abs(np.fft.rfft(w, n=n_fft, axis=0))
+        if fast:
+            x = np.ascontiguousarray(part.T)
+        else:                                                  # the package transforms the window at its lag position
+            x = np.zeros((part.shape[1], height))
+            x[:, m_start:height] = part.T
+        mag = np.abs(sfft.rfft(x, n=n_fft, axis=1))
         mag[np.isnan(mag)] = 0.0
         mag[mag <= _EPS] = 0.0
-        top = mag.max(axis=0)
+        top = mag.max(axis=1)
+        rows_ = np.arange(mag.shape[0])
+        if fast:
+            first = np.argmax(mag, axis=1)
+            lo, hi = np.maximum(first - 1, 0), np.minimum(first + 1, mag.shape[1] - 1)
+            a, c = mag[rows_, lo], mag[rows_, hi]
+            curv = a - 2 * top + c
+            inside = (first > 0) & (first < mag.shape[1] - 1) & (curv < 0)
+            delta = np.where(inside, 0.5 * (a - c) / np.where(inside, curv, 1.0), 0.0)
+            peak[c0:c0 + _FFT_COLS] = top - np.where(inside, 0.25 * (a - c) * delta, 0.0)
+            freq_bins[c0:c0 + _FFT_COLS] = first + delta
+            continue
         peak[c0:c0 + _FFT_COLS] = top
-        first = np.argmax(mag >= top - 2e-8, axis=0)       # first bin that can reach the rounded maximum
-        cols = np.arange(mag.shape[1])
-        bad = np.round(mag[first, cols], 8) != np.round(top, 8)
-        for c in np.nonzero(bad)[0]:                       # rare: rounding moved the maximum, do it exactly
-            first[c] = np.argmax(np.round(mag[:, c], 8))
-        kz_max[c0:c0 + _FFT_COLS] = first
+        first = np.argmax(mag >= top[:, None] - 2e-8, axis=1)   # first bin that can reach the rounded maximum
+        bad = np.round(mag[rows_, first], 8) != np.round(top, 8)
+        for c in np.nonzero(bad)[0]:                            # rare: rounding moved the maximum, do it exactly
+            first[c] = np.argmax(np.round(mag[c], 8))
+        freq_bins[c0:c0 + _FFT_COLS] = first
 
     band_tonal = mean_acf[0, :].copy()
     cand = 2 * peak / (num_win / 2)
     mask = cand <= mean_acf[0, :]
     band_tonal[mask] = cand[mask]
-    band_freqs = kz_max * (_FS / (2 * _MAX_BLOCK))
+    band_freqs = freq_bins * (_FS / n_fft)
     band_loud = mean_acf[0, :].copy()
 
     if _I_INTERP[z] > 1:
@@ -169,8 +216,12 @@ def _band_components(z, acf_dupe, last_block):
     return z, band_tonal, band_noise, band_freqs
 
 
-def shm_tonality_ecma(p, samp_rate_in, axis=0, soundfield='free_frontal', wait_bar=False, out_plot=False):
-    """Drop-in replacement for sottek_hearing_model.shm_tonality_ecma (no plotting, no progress bar)."""
+def shm_tonality_ecma(p, samp_rate_in, axis=0, soundfield='free_frontal', wait_bar=False, out_plot=False,
+                      fast=False):
+    """Drop-in replacement for sottek_hearing_model.shm_tonality_ecma (no plotting, no progress bar).
+
+    fast=True trades a little accuracy for speed in the lag-window transform (shorter FFT, interpolated peak).
+    """
     p, chans_in, chans = shm_in_check(p, samp_rate_in, axis, soundfield, False, False)
     p_re = shm_resample(p, samp_rate_in)[0] if samp_rate_in != _FS else p
     pn = shm_pre_proc(p_re, _MAX_BLOCK, _HOP_MIN)
@@ -191,12 +242,12 @@ def shm_tonality_ecma(p, samp_rate_in, axis=0, soundfield='free_frontal', wait_b
     cal_T, cal_Tx, A, B = 2.8758615, 1 / 0.9999043734252, 35, 0.003
 
     for chan in range(chans_in):
-        pn_omz = shm_auditory_filtbank(pn_om[:, chan])
+        pn_omz = _filterbank(pn_om[:, chan], n_threads)
         with ThreadPoolExecutor(max_workers=n_threads) as ex:
             acf_dupe = list(ex.map(lambda d: _band_acf(d, pn_omz, rows), range(61)))
         del pn_omz
         with ThreadPoolExecutor(max_workers=n_threads) as ex:
-            for z, tl, nl, tf in ex.map(lambda z: _band_components(z, acf_dupe, end_block), range(_N_BANDS)):
+            for z, tl, nl, tf in ex.map(lambda z: _band_components(z, acf_dupe, end_block, fast), range(_N_BANDS)):
                 spec_tonal[:, z, chan] = tl
                 spec_noise[:, z, chan] = nl
                 spec_freqs[:, z, chan] = tf
@@ -234,3 +285,8 @@ def shm_tonality_ecma(p, samp_rate_in, axis=0, soundfield='free_frontal', wait_b
             'spec_noise_loudness': spec_noise, 'tonality_t': tonality_t, 'tonality_avg': tonality_avg,
             'tonality_t_freqs': tonality_t_freqs, 'band_centre_freqs': _BAND_FREQS, 'time_out': time_out,
             'soundfield': soundfield}
+
+
+def shm_tonality_ecma_fast(p, samp_rate_in, axis=0, soundfield='free_frontal', wait_bar=False, out_plot=False):
+    """Fast mode (approximate): see shm_tonality_ecma(fast=True)."""
+    return shm_tonality_ecma(p, samp_rate_in, axis=axis, soundfield=soundfield, fast=True)

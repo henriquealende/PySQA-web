@@ -24,7 +24,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REF_DIR = os.path.join(HERE, "ref_tonality")
 SR = 48000
 P0 = 20e-6
-KEYS = ("tonality_avg", "tonality_t", "time_out", "spec_tonality_avg", "spec_tonality_avg_freqs", "band_centre_freqs")
+KEYS = ("tonality_avg", "tonality_t", "time_out", "spec_tonality_avg", "spec_tonality_avg_freqs", "band_centre_freqs",
+        "tonality_t_freqs")
 CASES = ("tone1k", "noise", "tone_noise", "am_tone", "harmonics", "wav")  # "wav" only if PYSQA_BENCH_WAV is set
 
 
@@ -137,8 +138,22 @@ def main():
             R, C = np.load(ref), np.load(out)
             r["max_rel_diff"] = max(rel_diff(C[k], R[k]) for k in KEYS)
             r["global_rel_diff"] = rel_diff(C["tonality_avg"], R["tonality_avg"])
+            r["global_ref"] = round(float(np.ravel(R["tonality_avg"])[0]), 5)
+            r["global_cand"] = round(float(np.ravel(C["tonality_avg"])[0]), 5)
+            r["t_series_rel_diff"] = rel_diff(C["tonality_t"], R["tonality_t"])
+            r["spec_avg_rel_diff"] = rel_diff(C["spec_tonality_avg"], R["spec_tonality_avg"])
+            # frequency of the overall tonal component, in Hz, over the frames that count (t > 0.02, after 57 frames)
+            R_t, C_t = np.ravel(R["tonality_t"]), np.ravel(C["tonality_t"])
+            m = (R_t > 0.02) & (np.arange(R_t.size) >= 57)
+            r["tonal_freq_ref_Hz"] = round(float(np.mean(R["tonality_t_freqs"][m])), 2) if m.any() else None
+            r["tonal_freq_cand_Hz"] = round(float(np.mean(C["tonality_t_freqs"][m])), 2) if m.any() else None
         rows.append(r)
-        print(r, flush=True)
+        if mode == "compare":
+            print(f"{c:11s} {r['seconds']:5.1f}s {r['peak_mb'] - r['base_mb']:5.0f}MB  global {r['global_ref']} -> {r['global_cand']}"
+                  f" (diff {r['global_rel_diff']:.1e})  series {r['t_series_rel_diff']:.1e}  spec {r['spec_avg_rel_diff']:.1e}"
+                  f"  tonal Hz {r['tonal_freq_ref_Hz']} -> {r['tonal_freq_cand_Hz']}", flush=True)
+        else:
+            print(f"{c:11s} {r['seconds']:5.1f}s {r['peak_mb'] - r['base_mb']:5.0f}MB", flush=True)
     meta = {"duration_s": dur, "sr": SR, "numpy": np.__version__, "cores": os.cpu_count()}
     path = os.path.join(REF_DIR, f"{'baseline' if mode == 'record' else 'candidate'}_{tag}.json")
     json.dump({"meta": meta, "rows": rows}, open(path, "w"), indent=2)
