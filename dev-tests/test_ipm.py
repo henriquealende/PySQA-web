@@ -1,17 +1,11 @@
-"""Audit tests of the IPM (Impulsive Prominence Metric, backend/psychoacoustics/mpi.py).
+"""Tests of the IPM (backend/psychoacoustics/mpi.py, the rewrite of October 2026 that follows the thesis).
 
-Run with the backend venv from the backend folder:
+Run with the backend venv from the backend folder (about 1 minute):
 
     python ../dev-tests/test_ipm.py
 
-Two kinds of line:
-
-  PASS / FAIL    what the metric must do today (contract, formulas, invariances, a golden vector). A FAIL means a change in
-                 behaviour: either a bug, or an intended change that needs the golden vector and the thresholds updated.
-  KNOWN ISSUE    a limitation found in the audit (see docs/IPM_AUDITORIA.md); the ones about memory, error messages and invalid input
-                 were fixed without changing a value and are plain checks now (sections 5 and 7). The test asserts that the limitation is still
-                 there, so the suite stays green; when a fix removes it the line becomes FIXED and tells you to turn it into a
-                 plain check. Nothing here changes the metric: the numbers are the thesis' implementation as it is.
+The old version is described by test_ipm_legacy.py. Lines: PASS / FAIL, and KNOWN for what the thesis leaves open (still true,
+the suite stays green).
 """
 import os
 import sys
@@ -20,285 +14,162 @@ import tracemalloc
 import warnings
 
 import numpy as np
-from scipy import signal as sp
 
 warnings.filterwarnings("ignore")
 sys.path.insert(0, os.getcwd())
 from psychoacoustics import mpi  # noqa: E402
-from psychoacoustics.mpi import BARK_SCALE, CENTRE_FREQUENCIES as F, IPM  # noqa: E402
+from psychoacoustics.mpi import IPM, IPMInputError, measure_event  # noqa: E402
 
 FS = 48000
-WEIGHT = IPM._frequency_weighting()
-fails, still_open, fixed = [], [], []
-
-
-def _has(detail):
-    return not (detail is None or (isinstance(detail, str) and detail == ""))
+ipm = IPM()
+fails = []
 
 
 def check(name, ok, detail=""):
-    print(("PASS " if ok else "FAIL ") + name + (f" -> {detail}" if _has(detail) else ""))
+    print(f"{'PASS' if ok else 'FAIL'}  {name}" + (f"  -> {detail}" if detail != "" else ""))
     if not ok:
         fails.append(name)
 
 
-def known(name, defect_present, detail=""):
-    if defect_present:
-        print(f"KNOWN ISSUE {name}" + (f" -> {detail}" if _has(detail) else ""))
-        still_open.append(name)
-    else:
-        print(f"FIXED {name}: the limitation is gone, turn this into a plain check" + (f" -> {detail}" if _has(detail) else ""))
-        fixed.append(name)
+def known(name, still_true, detail=""):
+    print(f"{'KNOWN' if still_true else 'FIXED'}  {name}" + (f"  -> {detail}" if detail != "" else ""))
 
-
-# ── helpers ───────────────────────────────────────────────────────────────────
 
 def noise(dur, seed, rms=0.02, fs=FS):
     return np.random.default_rng(seed).standard_normal(int(dur * fs)) * rms
 
 
-def click(x, peak, t=None, ms=1.0, seed=5, fs=FS, sign=1):
-    """x plus a short Hann-shaped noise burst of the given peak (Pa) at t seconds (default: the middle)."""
-    x = x.copy()
-    n = int(ms * 1e-3 * fs)
-    b = np.random.default_rng(seed).standard_normal(n) * np.hanning(n)
-    b *= peak / np.max(np.abs(b))
-    i = int((len(x) / fs / 2 if t is None else t) * fs)
-    x[i:i + n] += sign * b
-    return x
+def burst(rise_s, at=2.0, dur=5.0, fs=FS, level=0.5, seed=3, floor=0.005):
+    """Noise burst that rises linearly in rise_s and decays in 50 ms, on a quiet noise floor."""
+    n = int(rise_s * fs)
+    env = np.zeros(int(dur * fs))
+    i0 = int(at * fs)
+    env[i0:i0 + n] = np.linspace(0, 1, max(n, 1))
+    tail = np.exp(-np.arange(int(0.3 * fs)) / (0.05 * fs))
+    env[i0 + n:i0 + n + len(tail)] = tail
+    return noise(dur, seed, floor, fs) + noise(dur, seed + 1, level, fs) * env
 
 
-def prom(x, fs=FS):
-    """Prominence P per band, before the weighting."""
-    return IPM._compute_prominence(IPM._bandpass_filter(np.asarray(x, float), fs), fs)
-
-
-def total(p):
-    """Energy sum in dB of the 21 values: what the server reports as the global IPM."""
-    return float(10 * np.log10(np.sum(10 ** (np.asarray(p) / 10))))
-
-
-t0 = time.perf_counter()
-BASE = noise(4, 1)                                  # 60 dB SPL white noise
-CLICKED = click(BASE, 2.0)                          # + a 1 ms click 40 dB above its RMS
-P_BASE, P_CLICK = prom(BASE), prom(CLICKED)
-
-# ── 1. contract ───────────────────────────────────────────────────────────────
+# 1. contract ------------------------------------------------------------------
 print("== 1. contract ==")
-x2 = noise(2, 11)
-bark, mp = IPM().calculateMPI(x2, FS)
-check("returns two arrays of 21 values", bark.shape == (21,) and mp.shape == (21,) and len(F) == 21, (bark.shape, mp.shape))
-check("values are finite floats", np.isfinite(mp).all() and np.isfinite(bark).all() and mp.dtype == float)
-check("the Bark axis increases with frequency", bool(np.all(np.diff(bark) > 0)))
-b0, m0 = IPM().calculateMPI(np.array([]), FS)
-check("empty input gives 21 zeros, not an error", np.array_equal(m0, np.zeros(21)) and b0.shape == (21,))
-other = noise(2, 12) * 5
-check("a stereo array uses the first channel only", np.array_equal(IPM().calculateMPI(np.c_[x2, other], FS)[1], mp))
-check("a Python list and int16 are accepted", np.allclose(IPM().calculateMPI(list(x2[:48000]), FS)[1], IPM().calculateMPI(x2[:48000], FS)[1]))
-xc = x2.copy()
-IPM().calculateMPI(xc, FS)
-check("the input is not modified", np.array_equal(xc, x2))
-check("two calls give identical results", np.array_equal(IPM().calculateMPI(x2, FS)[1], mp))
-for fs in (24000, 44100, 96000):
-    m = IPM().calculateMPI(noise(1.5, 3, fs=fs), fs)[1]
-    check(f"{fs} Hz is accepted", m.shape == (21,) and np.isfinite(m).all())
+x = burst(0.01)
+r = ipm.analyze(x, FS)
+check("53 bands at 48 kHz, Bark_HMS axis 0.5 ... 26.5", len(r.z) == 53 and r.z[0] == 0.5 and r.z[-1] == 26.5)
+check("centre frequencies from ECMA-418-2 (z = 15.5 gives 3.09 kHz)", abs(r.freqs[30] - 3088.2) < 1)
+bark, mpi_v = ipm.calculateMPI(x, FS)
+check("calculateMPI keeps the old interface: (bark, mpi)", np.array_equal(bark, r.z) and np.array_equal(mpi_v, r.mpi))
+check("empty signal gives zeros", np.all(ipm.calculateMPI(np.array([]), FS)[1] == 0))
+check("stereo uses the first channel", np.allclose(ipm.analyze(np.stack([x, 0 * x], axis=1), FS).mpi, r.mpi))
 
-# ── 2. formulas and a golden vector ───────────────────────────────────────────
-print("\n== 2. formulas and golden vector ==")
-bands = IPM._bandpass_filter(CLICKED, FS)
-band = bands[10]
-pk, _ = sp.find_peaks(band, prominence=5 * np.std(band))
-ip = pk[int(np.argmax(band[pk]))]
-win = band[max(0, ip - 4800): ip + 4800]
-spl = 20 * np.log10(np.abs(win) / 2e-5)
-delta = float(spl.max() - spl.mean())
-by_hand = 3 * np.log10(delta / (15 * 0.2)) + 2 * np.log10(delta)
-check("P of a band equals 3*log10(OR) + 2*log10(LDI) computed by hand (1 kHz band)", abs(prom(CLICKED)[10] - by_hand) < 1e-12, round(by_hand, 4))
-known("the onset-rate term carries no time information: with the fixed T = 0.2 s, P = 5*log10(LDI) - 3*log10(3) exactly",
-      abs(by_hand - (5 * np.log10(delta) - 3 * np.log10(3))) < 1e-12, f"LDI {delta:.1f} dB -> P {by_hand:.3f}")
-
-jnd = np.interp(np.linspace(100.0, 10080.0, 1981), mpi._JND_FREQS, mpi._JND_VALUES)
-w_formula = (3000.0 * np.log10((10.0 - jnd) / np.max(10.0 - jnd)))[mpi._WEIGHTING_INDICES]
-check("weighting equals the documented formula at its sparse indices", np.allclose(WEIGHT, w_formula, atol=1e-12))
-check("weighting is never positive, flat (-2.91 dB) up to 200 Hz, mildest near 3 kHz",
-      bool((WEIGHT <= 0).all()) and np.allclose(WEIGHT[:4], WEIGHT[0]) and int(np.argmax(WEIGHT)) == 15, f"{WEIGHT.min():.2f}..{WEIGHT.max():.3f} dB")
-jnd_c = np.interp(F, mpi._JND_FREQS, mpi._JND_VALUES)
-w_exact = 3000.0 * np.log10((10.0 - jnd_c) / np.max(10.0 - jnd))
-known("the weighting is read at indices of a 5.04 Hz grid that sit up to 4.2 % above the centre frequencies (effect <= 0.06 dB)",
-      float(np.abs(WEIGHT - w_exact).max()) > 0.01 and float(np.abs(WEIGHT - w_exact).max()) < 0.1, f"max {np.abs(WEIGHT - w_exact).max():.3f} dB")
-
-GOLDEN_P = [4.3018, 4.9493, 4.6964, 4.5862, 5.023, 5.3258, 5.4422, 5.573, 5.8232, 5.9454, 6.1144, 6.2415, 6.2522, 6.2815, 6.2633,
-            6.3817, 6.3124, 6.2913, 6.24, 6.5165, 6.6782]
-g = np.random.default_rng(123).standard_normal(3 * FS) * 0.02
-nb = np.random.default_rng(123)
-nb.standard_normal(3 * FS)
-burst = nb.standard_normal(48) * np.hanning(48)
-burst *= 2.0 / np.max(np.abs(burst))
-g[72000:72048] += burst
-check("golden vector: prominence of a seeded click in noise (regression guard for any refactor)",
-      np.allclose(prom(g), GOLDEN_P, atol=2e-3), np.round(np.abs(prom(g) - GOLDEN_P).max(), 5))
-
-# ── 3. invariances ────────────────────────────────────────────────────────────
-print("\n== 3. invariances ==")
-for gain in (1000.0, 0.001):
-    check(f"gain x{gain:g} does not change P (only level differences enter)", np.abs(prom(CLICKED * gain) - P_CLICK).max() < 1e-9)
-check("polarity: an inverted click changes P by less than 0.3", np.abs(prom(click(BASE, 2.0, sign=-1)) - P_CLICK).max() < 0.3,
-      round(float(np.abs(prom(click(BASE, 2.0, sign=-1)) - P_CLICK).max()), 3))
-glob = [total(prom(click(BASE, 2.0, t=tc))) for tc in (0.05, 0.3, 2.0, 3.7, 3.95)]
-check("the position of the click in the file moves the global by less than 0.3 dB (window truncated at the edges)", max(glob) - min(glob) < 0.3,
-      np.round(glob, 2))
-gfs = [total(prom(click(noise(4, 1, fs=fs), 2.0, fs=fs), fs)) for fs in (44100, 48000, 96000)]
-check("44.1, 48 and 96 kHz agree within 0.6 dB", max(gfs) - min(gfs) < 0.6, np.round(gfs, 2))
-x_two = CLICKED.copy()
-b2 = np.random.default_rng(9).standard_normal(48) * np.hanning(48)
-x_two[int(2.05 * FS):int(2.05 * FS) + 48] += b2 * 2.0 / np.max(np.abs(b2))
-check("a second click 50 ms after the first does not change the global (one event per band)", abs(total(prom(x_two)) - total(P_CLICK)) < 0.2)
-levels = [total(prom(click(BASE, 0.02 * 10 ** (c / 20)))) for c in (30, 40, 60, 80)]
-check("the global grows with the height of the click", all(np.diff(levels) > 0), np.round(levels, 2))
-
-# ── 4. what the server reports ────────────────────────────────────────────────
-print("\n== 4. what the server reports (_metric_ipm) ==")
-from services import audio_service as svc  # noqa: E402
-
-r = svc._metric_ipm(CLICKED, FS)
-y = np.asarray(r["y_axis"])
-check("21 points, unit dB, threshold 5", len(r["x_axis"]) == 21 and len(y) == 21 and r["unit"] == "dB" and r["threshold"] == 5.0)
-check("the global is the energy sum of the 21 weighted values", abs(r["global"] - total(y)) < 2e-3, r["global"])
-check("y_axis is P plus the weighting", np.allclose(y, P_CLICK + WEIGHT, atol=1e-9))
-check("a signal that cannot be filtered returns an error message, not an exception", "error" in svc._metric_ipm(noise(0.0006, 1), FS))
-
-# ── 5. band by band: same numbers, a fraction of the memory ───────────────────
-print("\n== 5. band by band: same numbers, a fraction of the memory ==")
-x10 = click(noise(10, 2), 2.0)
-all_bands = IPM._compute_prominence(IPM._bandpass_filter(x10, FS), FS) + WEIGHT         # the 21 band signals at once
-check("calculateMPI (one band at a time) is bit-identical to filtering all 21 bands at once", np.array_equal(IPM().calculateMPI(x10, FS)[1], all_bands))
-check("the same holds for 44.1 kHz and for a stereo array", np.array_equal(
-    IPM().calculateMPI(click(noise(4, 7, fs=44100), 2.0, fs=44100), 44100)[1],
-    IPM._compute_prominence(IPM._bandpass_filter(click(noise(4, 7, fs=44100), 2.0, fs=44100), 44100), 44100) + WEIGHT))
-tracemalloc.start()
-IPM._compute_prominence(IPM._bandpass_filter(x10, FS), FS)
-mem_all = tracemalloc.get_traced_memory()[1] / 1e6
-tracemalloc.stop()
-tracemalloc.start()
-IPM().calculateMPI(x10, FS)
-mem_now = tracemalloc.get_traced_memory()[1] / 1e6
-tracemalloc.stop()
-check("and calculateMPI needs at least 4x less memory for 10 s of audio", mem_all > 4 * mem_now, f"{mem_all:.0f} MB -> {mem_now:.0f} MB")
-check("the filters are designed once per sample rate (cached)", mpi._band_sos(FS) is mpi._band_sos(FS) and len(mpi._band_sos(FS)) == 21)
-
-# ── 6. known limitations found in the audit ───────────────────────────────────
-print("\n== 6. known limitations (docs/IPM_AUDITORIA.md) ==")
-zw = 13 * np.arctan(0.00076 * F) + 3.5 * np.arctan((F / 7500) ** 2)
-hms = (1 / 0.1618) * np.arcsinh(F * 0.1618 / 81.9289)
-known("the Bark axis is a straight line between two values, not the Bark of the centre frequencies (up to 3.5 Bark off)",
-      bool(np.allclose(np.diff(BARK_SCALE), np.diff(BARK_SCALE)[0])) and float(np.abs(BARK_SCALE - zw).max()) > 3.0,
-      f"max |axis - Zwicker| {np.abs(BARK_SCALE - zw).max():.2f} Bark, vs HMS {np.abs(BARK_SCALE - hms).max():.2f}")
-
-det = np.mean([(prom(noise(4, 20 + s)) != 0).mean() for s in range(5)])
-known("steady white noise passes the 5-sigma detector in every band (the global maximum of a band always has a large prominence)", det > 0.99,
-      f"{det * 100:.1f} % of bands")
-known("stationary noise sets a floor of P ~ 4.8 per band and a global of ~16.8 dB; digital silence gives 12.0 dB",
-      4.5 < float(np.median(P_BASE)) < 5.1 and 16.3 < total(P_BASE + WEIGHT) < 17.3 and abs(total(WEIGHT) - 12.0227) < 1e-3,
-      f"noise: median P {np.median(P_BASE):.2f}, global {total(P_BASE + WEIGHT):.2f} dB; silence: {total(WEIGHT):.2f} dB")
-known("a click 20 dB above the noise is invisible and +80 dB moves the global by under 3.5 dB (log of a dB difference compresses it)",
-      total(prom(click(BASE, 0.2)) + WEIGHT) - total(P_BASE + WEIGHT) < 0.2 and total(prom(click(BASE, 200.0)) + WEIGHT) - total(P_BASE + WEIGHT) < 3.5,
-      f"+20 dB: {total(prom(click(BASE, 0.2)) + WEIGHT) - total(P_BASE + WEIGHT):+.2f} dB, +80 dB: {total(prom(click(BASE, 200.0)) + WEIGHT) - total(P_BASE + WEIGHT):+.2f} dB")
-
-over = [(prom(noise(2, 300 + s)) > 5).any() for s in range(24)]
-known("the threshold of 5 is crossed by stationary noise: a quarter or more of 2 s noise records have a band with P above 5",
-      np.mean(over) >= 0.25, f"{np.mean(over) * 100:.0f} % of records")
-
-tone = 0.05 * np.sin(2 * np.pi * 1000.3 * np.arange(4 * FS) / FS + 0.7)
-tn = np.random.default_rng(3).standard_normal(4 * FS) * 1e-4
-edge = np.ones(4 * FS)
-ramp = np.sin(np.linspace(0, np.pi / 2, 9600)) ** 2
-edge[:9600], edge[-9600:] = ramp, ramp[::-1]
-p_abrupt, p_ramped = prom(tone + tn), prom(tone * edge + tn)
-bands_ab = IPM._bandpass_filter(tone + tn, FS)[9]
-pk9, _ = sp.find_peaks(bands_ab, prominence=5 * np.std(bands_ab))
-at_start = pk9.size and (pk9[np.argmax(bands_ab[pk9])] / FS) < 0.01
-known("the abrupt start of a file is detected as an impulse: a steady 1 kHz tone gives P ~ 7 in the neighbour bands, ~ 4.5 with 200 ms ramps",
-      bool(at_start) and p_abrupt[[9, 11]].min() > 6.0 and p_ramped[[9, 11]].max() < 5.5,
-      f"abrupt {np.round(p_abrupt[[9, 11]], 2)}, ramped {np.round(p_ramped[[9, 11]], 2)}, analysed peak at t = {pk9[np.argmax(bands_ab[pk9])] / FS:.3f} s")
-
-# ── 7. edge cases that work ───────────────────────────────────────────────────
-print("\n== 7. edge cases ==")
-check("digital silence gives the weighting alone (P = 0 in every band)", np.allclose(IPM().calculateMPI(np.zeros(FS), FS)[1], WEIGHT))
-check("100 samples and 42 ms are accepted", all(IPM().calculateMPI(np.random.default_rng(0).standard_normal(n), FS)[1].shape == (21,) for n in (100, 2000)))
-check("a DC offset of 1 Pa does not matter", np.abs(prom(noise(2, 1) + 1.0) - prom(noise(2, 1))).max() < 0.05,
-      round(float(np.abs(prom(noise(2, 1) + 1.0) - prom(noise(2, 1))).max()), 4))
-
-# invalid input: a clear reason instead of a scipy message, nothing swallowed
-def reason(fn):
-    try:
-        fn()
-    except mpi.IPMInputError as e:
-        return e.reason
-    except Exception as e:  # any other exception is a bug of the validation
-        return f"unexpected {type(e).__name__}"
-    return "no error"
-
-
-check("39 samples are refused as too short, 40 are accepted",
-      reason(lambda: IPM().calculateMPI(np.ones(39), FS)) == "too_short" and IPM().calculateMPI(np.random.default_rng(0).standard_normal(40), FS)[1].shape == (21,))
-check("16 and 22.05 kHz are refused for the sample rate, 22.5 kHz is accepted",
-      reason(lambda: IPM().calculateMPI(noise(2, 1, fs=16000), 16000)) == "sample_rate" and reason(lambda: IPM().calculateMPI(noise(2, 1, fs=22050), 22050)) == "sample_rate"
-      and IPM().calculateMPI(noise(1, 1, fs=22500), 22500)[1].shape == (21,))
-check("NaN and infinity are refused instead of swallowed",
-      reason(lambda: IPM().calculateMPI(np.r_[noise(1, 1), np.nan, noise(1, 2)], FS)) == "not_finite" and reason(lambda: IPM().calculateMPI(np.r_[noise(1, 1), np.inf], FS)) == "not_finite")
-check("IPMInputError is a ValueError (older callers keep working)", issubclass(mpi.IPMInputError, ValueError))
-
-from utils.lang import set_lang  # noqa: E402
-
-msgs = {}
-for lang in ("pt", "en"):
-    set_lang(lang)
-    msgs[lang] = (svc._metric_ipm(np.ones(30), FS)["error"], svc._metric_ipm(noise(2, 1, fs=16000), 16000)["error"], svc._metric_ipm(np.r_[noise(1, 1), np.nan], FS)["error"])
-set_lang("en")
-check("the server answers in the user's language with the numbers that matter",
-      "40 amostras" in msgs["pt"][0] and "40 samples" in msgs["en"][0] and "22.45 kHz" in msgs["pt"][1] and "16000 Hz" in msgs["en"][1]
-      and "inv" in msgs["pt"][2] and "invalid" in msgs["en"][2], msgs["en"][1][:70])
-
-# ── 8. the thesis as reference (numbers printed in it; no audio needed) ──────
-print("\n== 8. thesis tables as reference (Silveira, 2024) ==")
-# Table 23 and Table 30: (OR [dB/s], LDI [dB], P [dB]) of the MPI per critical band; Table 1: the same for NT ACOU 112 (the standard, whole signal)
+# 2. weighting and prominence formula (thesis tables) --------------------------
+print("\n== 2. thesis tables ==")
+T24 = [(250, -2.9), (500, -1.1), (1000, -0.5), (2000, -0.2), (3000, 0.0), (4000, -0.3), (8000, -1.4)]
+w = IPM.weighting(np.array([f for f, _ in T24]))
+check("weighting reproduces Table 24 within 0.1 dB (8 kHz is the weakest point)", all(abs(w[i] - v) < 0.12 for i, (_, v) in enumerate(T24)),
+      f"max diff {max(abs(w[i] - v) for i, (_, v) in enumerate(T24)):.3f} dB")
 T23 = [(548.78, 16.46, 4.65), (1543.16, 46.29, 6.90)]
 T30 = [(1128.06, 33.84, 6.21), (1169.67, 35.09, 6.29), (1148.40, 34.45, 6.25), (1117.22, 33.52, 6.19), (755.41, 22.66, 5.34),
        (732.86, 21.98, 5.28), (878.13, 26.34, 5.67), (834.86, 25.04, 5.56), (945.33, 28.36, 5.83), (1138.90, 34.17, 6.23)]
-T1 = [(1117.3, 78.2, 12.9), (2417.3, 72.5, 13.8), (2457.0, 73.7, 13.9)]
-p_code = lambda ldi: 3 * np.log10(ldi / (15 * mpi._EVENT_DURATION_S)) + 2 * np.log10(ldi)     # what _band_prominence computes
-check("Table 1 (NT ACOU 112): P = 3*log10(OR) + 2*log10(LDI), no offset (the thesis truncates 13.87 to 13.8)", all(abs(3 * np.log10(o) + 2 * np.log10(l) - p) < 0.1 for o, l, p in T1))
-check("Tables 23 and 30: the code's P(LDI) reproduces all 12 values printed in the thesis (within the rounding)",
-      all(abs(p_code(l) - p) < 0.015 for _, l, p in T23 + T30), f"max |diff| {max(abs(p_code(l) - p) for _, l, p in T23 + T30):.4f} dB")
-check("Tables 23 and 30: the thesis' P equals 3*log10(OR) + 2*log10(LDI) - 6 (a 6 dB offset the standard does not have)",
-      all(abs(3 * np.log10(o) + 2 * np.log10(l) - 6 - p) < 0.015 for o, l, p in T23 + T30))
-ratio = [o / l for o, l, _ in T23 + T30]
-known("in every MPI row of the thesis OR/LDI = 33.33 (onset fixed at 30 ms, so P depends on LDI only); in Table 1, measured, it is 14.3, 33.3 and 33.3",
-      max(abs(r - 33.333) for r in ratio) < 0.02 and abs(T1[0][0] / T1[0][1] - 14.29) < 0.1, f"{min(ratio):.3f}..{max(ratio):.3f}")
+# a level history with a linear rise of known LDI and rise time must give the P of the thesis tables
+ok, worst = True, 0.0
+for orate, ldi, p in T23 + T30:
+    rise = ldi / orate
+    hist = np.concatenate([np.full(60, 20.0), 20.0 + np.linspace(0, ldi, max(int(round(rise / 0.01)), 2)), np.full(40, 20.0 + ldi)])
+    hist = hist + np.random.default_rng(0).standard_normal(len(hist)) * 0.1
+    e = measure_event(hist, 0)
+    worst = max(worst, abs(e["p"] - p)) if e else 99
+    ok &= e is not None
+check("measure_event on synthetic rises reproduces the 12 P values of Tables 23 and 30 (within 0.8 dB: the 10 ms grid)", ok and worst < 0.8, f"max diff {worst:.2f} dB")
+a = measure_event(np.concatenate([np.full(60, 20.0), np.full(40, 70.0)]), 0)
+check("a step (one block) gives the shortest rise (one block, 10 ms) and LDI 50 dB", a is not None and abs(a["ldi"] - 50) < 0.5 and abs(a["onset_rate"] - 50 / 0.010) < 1, f"{a}")
 
-T24 = [(4, -2.9), (7, -1.1), (10, -0.5), (13, -0.2), (15, 0.0), (16, -0.3), (19, -1.4)]    # (band index of 250, 500, 1000, 2000, ~3000, 4000, 8000 Hz; weighting [dB])
-check("the weighting reproduces Table 24 of the thesis within 0.1 dB", all(abs(WEIGHT[i] - w) < 0.1 for i, w in T24),
-      f"max |diff| {max(abs(WEIGHT[i] - w) for i, w in T24):.3f} dB")
+# 3. behaviour -----------------------------------------------------------------
+print("\n== 3. behaviour ==")
+for dur in (5, 30):
+    rr = ipm.analyze(noise(dur, 7), FS)
+    check(f"steady noise of {dur} s: no event, not impulsive", not rr.detected.any() and not rr.impulsive, f"max MPI {rr.mpi.max():.2f}")
+flag = sum(ipm.analyze(noise(10, 100 + s), FS).impulsive for s in range(12))
+check("white noise 10 s, 12 records: none flagged impulsive (the old version flagged 8%)", flag == 0, f"{flag}/12")
 
-# Figure 68: the MPI of a cracking noise read from the plot (22 critical bands); the text says its global value is 32.5 dB
-Y68 = np.array([1.2, 1.7, 2.3, 2.6, 2.8, 3.3, 3.9, 4.7, 5.4, 6.0, 6.3, 6.9, 7.1, 7.2, 7.3, 7.7, 7.9, 7.7, 7.3, 6.8, 6.3, 6.1])
-thesis_like = 20 * np.log10(np.sum(10 ** (Y68 / 20)))       # amplitude sum
-app_global = total(Y68)                                     # what the server computes (energy sum)
-known("the global IPM of the server (energy sum) does not give the 32.5 dB the thesis prints for Figure 68; an amplitude sum of the plotted values gives it",
-      abs(thesis_like - 32.5) < 0.5 and app_global < 21, f"amplitude sum {thesis_like:.1f} dB, energy sum {app_global:.1f} dB (values read from the plot)")
-spread = [total(P_BASE + WEIGHT), total(P_CLICK + WEIGHT), total(prom(click(BASE, 200.0)) + WEIGHT), total(WEIGHT), total(p_abrupt + WEIGHT)]
-known("the thesis' global MPI spans 16.6 to 77.9 dB (Table 41); the server's stays within 8 dB for silence, noise, a tone and clicks up to +80 dB",
-      max(spread) - min(spread) < 8.0, f"server: {min(spread):.1f}..{max(spread):.1f} dB")
+mp = {}
+for ms in (1, 10, 50, 150):
+    rr = ipm.analyze(burst(ms / 1000), FS)
+    mp[ms] = float(rr.mpi.max())
+    check(f"burst with {ms} ms rise: detected, time of the peak near {2 + ms / 1000:.3f} s",
+          rr.detected.sum() >= 40 and abs(rr.strongest_event_time - (2 + ms / 1000)) < 0.06 + ms / 2000,
+          f"bands {int(rr.detected.sum())}, peak at {rr.strongest_event_time:.3f} s")
+check("faster onset gives higher MPI (1 ms > 10 ms > 50 ms > 150 ms): the old version could not tell them apart",
+      mp[1] >= mp[10] > mp[50] > mp[150], f"{mp}")
+check("fast burst is impulsive (MPI > 5), a slow 150 ms swell is not clearly so", mp[10] > 5 and mp[150] < mp[10])
+lev = [float(ipm.analyze(burst(0.01, level=l), FS).mpi.max()) for l in (0.1, 0.2, 0.5, 1.0)]
+check("a louder click over the same floor is more prominent (LDI grows)", all(b > a for a, b in zip(lev, lev[1:])), f"{[round(v, 2) for v in lev]}")
 
-bp = os.path.join(os.getcwd(), "..", "frontend", "src", "pages", "PostProcessing", "BatchPanel.tsx")
-if os.path.exists(bp):
-    src = open(bp, encoding="utf-8").read()
-    m = __import__("re").search(r"return (-?[\d.]+) \+ ([\d.]+)\*Number\(N\) \+ ([\d.]+)\*Number\(S\) \+ ([\d.]+)\*Number\(R\) \+ ([\d.]+)\*Number\(I\)", src)
-    app_sil = tuple(float(v) for v in m.groups()) if m else None
-    thesis_eq32 = (-26.86, 5.44, 13.29, 7.75, 0.13)
-    known("the SIL model of the Batch panel is not Equation 32 of the thesis (constant -25.95 vs -26.86 and loudness 10.24 vs 5.44); S, R and MPI coefficients are the same",
-          app_sil is not None and app_sil != thesis_eq32 and app_sil[2:] == thesis_eq32[2:], f"app {app_sil} vs thesis {thesis_eq32}")
+t = np.arange(5 * FS) / FS
+tone = 0.1 * np.sin(2 * np.pi * 1000 * t)
+check("a steady tone, abrupt start or ramped: no event (the old version flagged it at t = 0)",
+      not ipm.analyze(tone, FS).detected.any() and not ipm.analyze(tone * np.minimum(1, np.minimum(t, 5 - t) / 0.2), FS).detected.any())
+hum = noise(5, 8, 0.01) + 0.05 * np.sin(2 * np.pi * 100 * t)
+check("hum plus noise: no event", not ipm.analyze(hum, FS).detected.any())
+check("digital silence does not break it (no NaN, no event)", np.all(np.isfinite(ipm.analyze(np.zeros(2 * FS), FS).mpi)) and not ipm.analyze(np.zeros(2 * FS), FS).detected.any())
 
-print(f"\n{len(fails)} failed, {len(still_open)} known limitations still present, {len(fixed)} fixed ({time.perf_counter() - t0:.0f} s)")
-print("FAILS:", fails)
+# 4. invariances ---------------------------------------------------------------
+print("\n== 4. invariances ==")
+b0 = burst(0.01)
+base = ipm.analyze(b0, FS).mpi
+check("gain does not change the MPI (only level differences count)", np.allclose(ipm.analyze(b0 * 37.0, FS).mpi, base, atol=0.05))
+check("polarity does not change the MPI", np.allclose(ipm.analyze(-b0, FS).mpi, base, atol=0.01))
+shift = ipm.analyze(np.concatenate([noise(1.0, 21, 0.005), b0]), FS)
+check("moving the event 1 s later moves its time by 1 s and keeps the value", abs(shift.strongest_event_time - ipm.analyze(b0, FS).strongest_event_time - 1.0) < 0.02 and abs(shift.mpi.max() - base.max()) < 0.6,
+      f"max {shift.mpi.max():.2f} vs {base.max():.2f}")
+for fs2 in (44100, 96000):
+    from scipy import signal as sp
+    g = np.gcd(fs2, FS)
+    x2 = sp.resample_poly(b0, fs2 // g, FS // g)
+    r2 = ipm.analyze(x2, fs2)
+    check(f"same event at {fs2} Hz gives the same time and a similar MPI", abs(r2.strongest_event_time - 2.01) < 0.05 and abs(r2.mpi.max() - base.max()) < 1.0,
+          f"max {r2.mpi.max():.2f} vs {base.max():.2f}, t {r2.strongest_event_time:.3f}")
+n16 = ipm.analyze(sp.resample_poly(noise(3, 5), 1, 3), 16000)
+check("16 kHz file: bands above the Nyquist frequency are left out, the rest is analysed", 30 < len(n16.z) < 53, f"{len(n16.z)} bands")
+
+# 5. errors and cost -----------------------------------------------------------
+print("\n== 5. errors and cost ==")
+
+
+def raises(sig, fs, reason):
+    try:
+        ipm.analyze(sig, fs)
+    except IPMInputError as e:
+        return e.reason == reason and bool(str(e))
+    return False
+
+
+check("shorter than 0.5 s is refused with a clear reason", raises(noise(0.3, 1), FS, "too_short"))
+check("sample rate under 16 kHz is refused", raises(noise(1, 1, fs=8000), 8000, "sample_rate"))
+bad = noise(1, 1).copy(); bad[10] = np.nan
+check("NaN is refused", raises(bad, FS, "not_finite"))
+x60 = noise(60, 2)
+tracemalloc.start()
+ipm.analyze(x60, FS)
+peak = tracemalloc.get_traced_memory()[1] / 1e6
+tracemalloc.stop()
+check("memory beyond the input stays small (60 s, under 20 MB)", peak < 20, f"{peak:.1f} MB")
+t0 = time.perf_counter(); ipm.analyze(noise(30, 3), FS); dt = time.perf_counter() - t0
+check("30 s of audio in under 20 s on this machine", dt < 20, f"{dt:.1f} s")
+
+# 6. server --------------------------------------------------------------------
+print("\n== 6. server dictionary ==")
+from services import audio_service as svc  # noqa: E402
+d = svc._metric_ipm(b0, FS)
+need = {"global", "unit", "x_axis", "y_axis", "threshold", "impulsive", "bands_over_threshold", "max_band_hz", "max_mpi", "event_time_s"}
+check("the metric dictionary has the new fields and 53 points", need <= set(d) and len(d["x_axis"]) == 53 and d["impulsive"] is True, f"{sorted(set(d) ^ need)[:4]}")
+e = svc._metric_ipm(noise(0.2, 1), FS)
+check("a too-short segment returns a translated error, not a crash", "error" in e and "0.5" in e["error"])
+
+# 7. what the thesis leaves open -----------------------------------------------
+print("\n== 7. open points ==")
+known("global value is the energy sum of the bands; the thesis gives 16.6 to 77.9 dB (Table 41) with a formula not in the text",
+      True, f"noise {ipm.analyze(noise(5, 1), FS).global_db:.1f} dB, burst {float(ipm.analyze(b0, FS).global_db):.1f} dB")
+known("the -6 dB offset and the 10-90 % rise reading of OR are assumptions of this version (thesis: Tables 23, 30 give OR/LDI = 33.3)", True)
+
+print(f"\n{len(fails)} failed" + (": " + "; ".join(fails) if fails else ""))
 sys.exit(1 if fails else 0)

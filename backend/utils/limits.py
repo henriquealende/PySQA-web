@@ -170,7 +170,7 @@ COST: Dict[str, Tuple[float, float]] = {
     "spectrogram":          (4.0,   3.1),
     "octave":               (3.0,   1.8),
     "envelope":             (3.0,   3.5),
-    "ipm":                  (1.0,   1.3),      # on Render, band by band: +12 MB at 10 s, +65 at 60 s, +132 at 120 s (it was +942 at 120 s with 9.5)
+    "ipm":                  (2.0,   0.5),      # PROVISIONAL (local, tracemalloc: +5 MB at 60 s, +11 at 240 s; the 48 kHz copy is 0.4 MB/s). Measure on Render
     "sharpness_din":        (5.0,   1.2),      # stationary loudness only; on Render 100 s raised the peak by ~105 MB (it was 51, the time-varying cost)
     "roughness_dw":         (5.0,   0.8),      # on Render: +11 MB at 30 s, +44 at 60 s, +88 at 120 s, +175 at 240 s
     "fluctuation_strength": (2.0,   5.5),
@@ -191,6 +191,7 @@ TIME: Dict[str, Tuple[float, float]] = {
     "tonality_ecma_fast":   (1.4, 1.5),        # 4.1 s for 2 s, 15.6 s for 10 s (Fast)
     "roughness_dw":         (1.0, 2.5),        # 23 s for 10 s, 144 s for 60 s; far slower beyond that (120 s took over 15 minutes)
     "fluctuation_strength": (1.0, 0.3),        # 70 s for 240 s
+    "ipm":                  (0.5,   0.45),     # PROVISIONAL: 0.13 s per second of audio on a desktop CPU, assumed ~3.5x slower on Render. Measure on Render
 }
 
 # (Portuguese, English) names shown inside the refusal messages; use label(kind) to pick one.

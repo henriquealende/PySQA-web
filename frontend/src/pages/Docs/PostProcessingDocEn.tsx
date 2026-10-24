@@ -451,16 +451,18 @@ export default function PostProcessingDocEn() {
           <P>
             <strong>What it is:</strong> a measure of how much <em>impulsive</em> sounds (clicks, bangs, compressor start-ups) stand out from the rest.
             PySQA uses the model by Silveira and colleagues, developed in the doctoral thesis of PySQA's author <Cite ids={['silveira2024tese', 'silveira2024', 'silveira2026']} />, which extends the Nordtest NT ACOU 112 method
-            <Cite ids={['nordtest']} /> to 1/3-octave bands.
+            <Cite ids={['nordtest']} /> to critical bands.
           </P>
           <UL>
-            <li>The signal is split into 21 1/3-octave bands (100 Hz to 10 kHz).</li>
-            <li>In each band, the most prominent peak is located and a 200 ms window around it is analyzed.</li>
-            <li>The prominence is <em>P = 3·log₁₀(onset rate) + 2·log₁₀(level difference)</em>, as in NT ACOU 112.</li>
-            <li>A psychoacoustic weighting curve, derived from perception thresholds, is added to the prominences of each band.</li>
-            <li>The <strong>global value</strong> sums the bands in energy: 10·log₁₀(Σ 10<sup>y/10</sup>), in dB.</li>
+            <li>The signal goes to 48 kHz and through the <strong>53 auditory filters of ECMA-418-2</strong> (0.5 to 26.5 Bark<sub>HMS</sub>, half-Bark step); the envelope of each band is the magnitude of the complex output.</li>
+            <li>The level history of each band uses 10 ms blocks. The highest peak is the impulse; its <strong>onset</strong> gives the level difference (LDI) and the onset rate (OR, in dB/s, from the 10 to 90 % rise time).</li>
+            <li>A peak counts as an event only when it stands out of the band's own variation (6 robust deviations). Steady noise, hum and a continuous tone give no event, whatever the length.</li>
+            <li>The prominence is <em>P = 3·log₁₀(OR) + 2·log₁₀(LDI) − 6</em>, as in NT ACOU 112 and the tables of the thesis; a band without event has P = 0.</li>
+            <li>A psychoacoustic weighting curve, derived from perception thresholds (Table 24 of the thesis), is added to each band. <strong>MPI &gt; 5 dB in some band</strong> marks the signal as impulsive.</li>
+            <li>The <strong>global value</strong> still sums the bands in energy: 10·log₁₀(Σ 10<sup>y/10</sup>), in dB. It is provisional: the thesis gives no formula for its own global value (16.6 to 77.9 dB), so this number is not comparable to the thesis one.</li>
           </UL>
-          <P>The chart shows the IPM per band (in Bark<sub>HMS</sub>) and a dashed line at the <strong>impulsiveness threshold of 5 dB</strong>.</P>
+          <P>The chart shows the IPM per band (in Bark<sub>HMS</sub>) and a dashed line at the <strong>impulsiveness threshold of 5 dB</strong>. It needs at least 0.5 s of audio and a sample rate of 16 kHz or more.
+            The previous version (21 1/3-octave bands, without measuring the event onset) was replaced in October 2026 and stays in the code as <code>mpi_legacy.py</code>.</P>
         </Section>
       </Section>
 
@@ -536,7 +538,7 @@ export default function PostProcessingDocEn() {
             ['Loudness ISO 532-1', '2.4', 'about 28 s'],
             ['Roughness (Daniel and Weber)', '2.4', 'about 30 s'],
             ['Fluctuation strength', '0.3', 'the whole file (up to 240 s)'],
-            ['IPM', '0.09', 'the whole file (up to 240 s)'],
+            ['IPM', 'about 0.45 (estimated)', 'about 130 s (estimated)'],
             ['Sharpness DIN 45692', '0.04', 'the whole file (up to 240 s)'],
             ['Spectrum, spectrogram, 1/3-octave and envelope', 'under 0.05', 'the whole file (up to 240 s)'],
           ]}

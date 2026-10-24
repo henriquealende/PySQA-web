@@ -25,11 +25,12 @@ import bottleneck as bn
 import numpy as np
 import scipy.fft as sfft
 from scipy.signal import lfilter
-from scipy.special import comb
 from sottek_hearing_model.shm_subs import (shm_basis_loudness, shm_in_check,
                                            shm_outmid_ear_filter, shm_pre_proc, shm_resample,
                                            shm_signal_segment)
 from sottek_hearing_model.shm_tonality_ecma import shm_noise_red_lowpass
+
+from psychoacoustics.ecma_fast.auditory_filterbank import filter_coefficients
 
 def _read(path):
     try:
@@ -105,19 +106,10 @@ _I_INTERP = _BLOCK / _BLOCK.min()
 
 def _filterbank(signal, n_threads):
     """Auditory filter bank, Section 5.1.4.2: the 53 half-Bark filters of the package, one band per thread."""
-    k = 5
-    e_i = [0, 1, 11, 11, 1]
     out = np.zeros((signal.size, _N_BANDS), order='F')
 
     def one(z):
-        tau = (1 / (2 ** (2 * k - 1))) * comb(2 * k - 2, k - 1) * (1 / _DFZ[z])
-        d = np.exp(-1. / (_FS * tau))
-        bp = np.exp((1j * 2 * np.pi * _BAND_FREQS[z] * np.arange(0, k + 2)) / _FS)
-        m_a = range(1, k + 1)
-        a_m = np.append(1, ((-d) ** m_a) * comb(k, m_a)) * bp[0:k + 1]
-        m_b = range(0, k)
-        i = range(1, k)
-        b_m = ((((1 - d) ** k) / np.sum(e_i[1:] * (d ** i))) * (d ** m_b) * e_i) * bp[0:k]
+        b_m, a_m = filter_coefficients(z)
         out[:, z] = 2 * np.real(lfilter(b_m, a_m, signal, axis=0))
 
     with ThreadPoolExecutor(max_workers=n_threads) as ex:

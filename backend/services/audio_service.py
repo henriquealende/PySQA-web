@@ -776,13 +776,11 @@ def _ipm_input_error(exc) -> str:
     """Translated text of an IPMInputError (the module itself only knows English)."""
     i = exc.info
     if exc.reason == "too_short":
-        return msg(f"O trecho é curto demais para a IPM: ela precisa de pelo menos {i['min_samples']} amostras (este tem {i['samples']}).",
-                   f"The segment is too short for the IPM: it needs at least {i['min_samples']} samples (this one has {i['samples']}).")
+        return msg(f"O trecho é curto demais para a IPM: ela precisa de pelo menos {i['min_s']:.1f} s (este tem {i['seconds']:.2f} s).",
+                   f"The segment is too short for the IPM: it needs at least {i['min_s']:.1f} s (this one has {i['seconds']:.2f} s).")
     if exc.reason == "sample_rate":
-        return msg(f"A IPM usa bandas de 1/3 de oitava até 10 kHz (a última chega a {i['top_hz'] / 1000:.1f} kHz) e precisa de taxa de amostragem "
-                   f"acima de {i['min_hz'] / 1000:.2f} kHz; este arquivo tem {i['fs']} Hz. Use um arquivo de 44,1 ou 48 kHz.",
-                   f"The IPM uses 1/3-octave bands up to 10 kHz (the last one reaches {i['top_hz'] / 1000:.1f} kHz) and needs a sample rate "
-                   f"above {i['min_hz'] / 1000:.2f} kHz; this file is {i['fs']} Hz. Use a 44.1 or 48 kHz file.")
+        return msg(f"A IPM precisa de taxa de amostragem de pelo menos {i['min_hz']} Hz; este arquivo tem {i['fs']} Hz. Use um arquivo de 44,1 ou 48 kHz.",
+                   f"The IPM needs a sample rate of at least {i['min_hz']} Hz; this file is {i['fs']} Hz. Use a 44.1 or 48 kHz file.")
     return msg(f"O sinal tem {i['count']} valores inválidos (NaN ou infinito); a IPM não pode ser calculada.",
                f"The signal has {i['count']} invalid values (NaN or infinity); the IPM cannot be computed.")
 
@@ -791,20 +789,24 @@ def _metric_ipm(mono, sr):
     mpi_module = __import__('psychoacoustics.mpi', fromlist=['IPM', 'IPMInputError'])
     mpi_calc = _MPI or mpi_module.IPM()
     try:
-        bark, levels = mpi_calc.calculateMPI(mono, sr)
-        levels_arr = np.asarray(levels, dtype=float)
-        # Global: energy-sum in dB (same formula as Python app)
-        global_val = float(10.0 * np.log10(np.sum(10.0 ** (levels_arr / 10.0))))
+        r = mpi_calc.analyze(mono, sr)
+        top = int(np.argmax(r.mpi))
         return {
-            "global": round(global_val, 3),
+            "global": round(r.global_db, 3),          # provisional: energy sum, the thesis gives no formula for its global value
             "unit": "dB",
-            "x_axis": bark.tolist(),
+            "x_axis": r.z.tolist(),
             "x_label": "Bark HMS",
-            "y_axis": levels_arr.tolist(),
+            "y_axis": r.mpi.tolist(),
             "y_label": "IPM [dB/Bark HMS]",
             "plot_type": "line",
-            "threshold": 5.0,
+            "threshold": mpi_module.THRESHOLD_DB,
             "threshold_label": "Impulsive Threshold (5 dB)",
+            "impulsive": r.impulsive,
+            "bands_over_threshold": r.bands_over_threshold,
+            "max_band_bark": float(r.z[top]),
+            "max_band_hz": round(float(r.freqs[top]), 1),
+            "max_mpi": round(float(r.mpi[top]), 3),
+            "event_time_s": None if not r.detected.any() else round(r.strongest_event_time, 3),
         }
     except mpi_module.IPMInputError as e:
         return {"error": _ipm_input_error(e)}

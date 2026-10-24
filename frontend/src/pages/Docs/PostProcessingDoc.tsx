@@ -451,16 +451,18 @@ export default function PostProcessingDoc() {
           <P>
             <strong>O que é:</strong> uma medida de quanto sons <em>impulsivos</em> (estalos, batidas, partidas de compressor) se destacam do restante.
             O PySQA usa o modelo de Silveira e colegas, desenvolvido na tese de doutorado do autor do PySQA <Cite ids={['silveira2024tese', 'silveira2024', 'silveira2026']} />, que estende o método Nordtest NT ACOU 112
-            <Cite ids={['nordtest']} /> para bandas de 1/3 de oitava.
+            <Cite ids={['nordtest']} /> para as bandas críticas.
           </P>
           <UL>
-            <li>O sinal é dividido em 21 bandas de 1/3 de oitava (100 Hz a 10 kHz).</li>
-            <li>Em cada banda, localiza-se o pico mais proeminente e analisa-se uma janela de 200 ms ao redor dele.</li>
-            <li>A proeminência é <em>P = 3·log₁₀(taxa de subida) + 2·log₁₀(diferença de nível)</em>, como no NT ACOU 112.</li>
-            <li>Uma curva de ponderação psicoacústica, derivada de limiares de percepção, é somada às proeminências de cada banda.</li>
-            <li>O <strong>valor global</strong> soma as bandas em energia: 10·log₁₀(Σ 10<sup>y/10</sup>), em dB.</li>
+            <li>O sinal vai para 48 kHz e passa pelos <strong>53 filtros auditivos da ECMA-418-2</strong> (0,5 a 26,5 Bark<sub>HMS</sub>, passo de meio Bark); o envelope de cada banda é o módulo da saída complexa.</li>
+            <li>O histórico de nível de cada banda usa blocos de 10 ms. O pico mais alto é o impulso; o <strong>início</strong> dele dá a diferença de nível (LDI) e a taxa de subida (OR, em dB/s, pelo tempo de subida de 10 a 90 %).</li>
+            <li>Só vale como evento o pico que se destaca da própria variação da banda (6 desvios robustos). Ruído estacionário, zumbido e tom contínuo não geram evento, qualquer que seja a duração.</li>
+            <li>A proeminência é <em>P = 3·log₁₀(OR) + 2·log₁₀(LDI) − 6</em>, como no NT ACOU 112 e nas tabelas da tese; a banda sem evento tem P = 0.</li>
+            <li>Uma curva de ponderação psicoacústica, derivada de limiares de percepção (Tabela 24 da tese), é somada a cada banda. <strong>MPI &gt; 5 dB em alguma banda</strong> indica sinal impulsivo.</li>
+            <li>O <strong>valor global</strong> ainda soma as bandas em energia: 10·log₁₀(Σ 10<sup>y/10</sup>), em dB. É provisório: a tese não traz a fórmula do global dela (16,6 a 77,9 dB), então este número não é comparável ao da tese.</li>
           </UL>
-          <P>O gráfico mostra o IPM por banda (em Bark<sub>HMS</sub>) e uma linha tracejada no <strong>limiar de impulsividade de 5 dB</strong>.</P>
+          <P>O gráfico mostra o IPM por banda (em Bark<sub>HMS</sub>) e uma linha tracejada no <strong>limiar de impulsividade de 5 dB</strong>. Precisa de pelo menos 0,5 s de áudio e taxa de amostragem de 16 kHz ou mais.
+            A versão anterior (21 bandas de 1/3 de oitava, sem medir o início do evento) foi substituída em outubro de 2026 e continua no código como <code>mpi_legacy.py</code>.</P>
         </Section>
       </Section>
 
@@ -536,7 +538,7 @@ export default function PostProcessingDoc() {
             ['Loudness ISO 532-1', '2,4', 'cerca de 28 s'],
             ['Roughness (Daniel e Weber)', '2,4', 'cerca de 30 s'],
             ['Fluctuation strength', '0,3', 'o arquivo inteiro (até 240 s)'],
-            ['IPM', '0,09', 'o arquivo inteiro (até 240 s)'],
+            ['IPM', 'cerca de 0,45 (estimado)', 'cerca de 130 s (estimado)'],
             ['Sharpness DIN 45692', '0,04', 'o arquivo inteiro (até 240 s)'],
             ['Espectro, espectrograma, 1/3 de oitava e envelope', 'menos de 0,05', 'o arquivo inteiro (até 240 s)'],
           ]}
