@@ -16,7 +16,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 import services.audio_service as svc
-from auralization import assets, chain as chain_mod, headphone as hp_mod, hrtf as hrtf_mod, level as level_mod, noise as noise_mod, rir as rir_mod, rir_synth
+from auralization import assets, chain as chain_mod, headphone as hp_mod, hrtf as hrtf_mod, level as level_mod, library as hp_library, noise as noise_mod, rir as rir_mod, rir_synth
 from auralization.rir import RirError, read_rir
 from auralization.sofa_io import HrtfSet, SofaError, read_sofa
 from services.session_store import add_entry, check_session_id, get_entry
@@ -211,6 +211,18 @@ def catalog():
     return _CATALOG
 
 
+@router.get("/headphones/library")
+def headphone_library():
+    """The built-in headphone responses (SBAF, CC BY 4.0): source, measuring rigs and the list of entries."""
+    idx = hp_library.index()
+    return {
+        "source": idx["source"],
+        "rigs": idx["rigs"],
+        "items": [{"id": hp_library.PREFIX + i["id"], "brand": i["brand"], "model": i["model"], "rig": i["rig"],
+                   "channels": i["channels"], "label": hp_library.label(i)} for i in idx["items"]],
+    }
+
+
 @router.post("/assets", response_model=AssetMeta)
 async def upload_asset(session_id: str = Form(...), kind: str = Form("hrtf"), file: UploadFile = File(...)):
     check_session_id(session_id)
@@ -349,7 +361,7 @@ def headphone_response(body: HeadphoneResponseRequest):
     check_session_id(body.session_id)
     hp = assets.get_headphone(body.session_id, body.asset)
     if hp is None:
-        raise HTTPException(400, msg("A resposta do fone não está mais no servidor. Envie o arquivo de novo.", "The headphone response is no longer on the server. Upload the file again."))
+        raise HTTPException(400, msg("A resposta do fone não foi encontrada. Envie o arquivo de novo ou escolha um da biblioteca.", "The headphone response was not found. Upload the file again or pick one from the library."))
     freq, measured, corr = hp_mod.correction_db(hp, body.fs, body.mode, body.max_boost_db)
     fir = hp_mod.min_phase_fir(freq, corr, body.fs)
     return {

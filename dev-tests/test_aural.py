@@ -461,6 +461,31 @@ check("headphone csv: two columns separated by spaces, no header (SBAF files)", 
 hsp2 = HP.read_headphone_csv(("\n".join(f"{a:.2f}   {b:.2f}" for a, b in zip(_f, _db))).encode(), "wide.txt")
 check("headphone csv: several blanks between the columns", hsp2.n_points == 300)
 
+# ── Built-in headphone library (SBAF) ────────────────────────────────────────
+from auralization import library as LIB, assets as AS
+
+_idx = LIB.index()["items"]
+check("library: 122 entries, 100 models, unique ids", len(_idx) == 122 and len({(i["brand"], i["model"]) for i in _idx}) == 100 and len({i["id"] for i in _idx}) == 122, (len(_idx), len({i["id"] for i in _idx})))
+check("library: the 227 measurement files of the source are all there", sum(len(i["files"]) for i in _idx) == 227 and all((LIB.FOLDER / f).exists() for i in _idx for f in i["files"]))
+_all_ok = True
+for _i in _idx:
+    _hp = LIB.load(_i["id"])
+    _all_ok = _all_ok and _hp is not None and _hp.n_points == 696 and 20 <= _hp.freq[0] < 21 and _hp.freq[-1] > 19000
+check("library: every entry loads (696 points from 20 Hz to 20 kHz)", _all_ok)
+_both = next(i for i in _idx if len(i["files"]) == 2)
+_one = next(i for i in _idx if len(i["files"]) == 1)
+_hl = HP.read_headphone_csv((LIB.FOLDER / _both["files"][0]).read_bytes(), "l")
+_hr = HP.read_headphone_csv((LIB.FOLDER / _both["files"][1]).read_bytes(), "r")
+check("library: the two channels are averaged in dB", np.allclose(LIB.load(_both["id"]).db, (_hl.db + _hr.db) / 2, atol=1e-9))
+_h1 = HP.read_headphone_csv((LIB.FOLDER / _one["files"][0]).read_bytes(), "one")
+check("library: an entry with one channel is that channel", np.allclose(LIB.load(_one["id"]).db, _h1.db, atol=1e-9))
+check("library: an unknown id, or one that tries to leave the folder, gives nothing", LIB.load("sbaf:none:Nothing") is None and LIB.load("../../main.py") is None)
+check("assets: a lib: id is resolved without a session file", AS.get_headphone("any-session", "lib:" + _both["id"]) is not None and AS.get_headphone("any-session", "lib:sbaf:none:Nothing") is None)
+_notice = (LIB.FOLDER / "NOTICE.txt").read_text(encoding="utf-8")
+check("library: the notice states the licence, the source and the commit", "Creative Commons Attribution 4.0" in _notice and "github.com/superbestaudiofriends" in _notice and "7b33e41be47ccb57a59e1a88c48b367eb7329494" in _notice)
+_res = C.render(xs_h, 48000, C.Chain(hrtf=C.HrtfStep(enabled=False), headphone=C.HeadphoneStep(mode="compensate", asset="lib:" + _both["id"])), lambda a: None, None, lambda a: AS.get_headphone("s", a))
+check("chain headphone: a library entry compensates like an uploaded file", _res.data.shape == (9600 + 2048 - 1, 2))
+
 # ── API (a real server, like the other dev-tests) ─────────────────────────────
 import http.client
 import json
@@ -701,6 +726,20 @@ try:
     check("api: with no noise chosen the curves are still returned (to compare the colours)", st == 200 and nsp2["selected"] == "none" and len(nsp2["noises"]["brown"]) == len(nsp2["freq"]))
     st, nsp3 = srv.json("POST", "/api/auralization/noise/spectrum", {**nreq, "audio_id": "nothere"})
     check("api: noise spectrum of an unknown audio answers 404", st == 404)
+
+    # ── Library over the API ──
+    st, lib = srv.json("GET", "/api/auralization/headphones/library")
+    check("api: the library lists 122 entries with the source and its licence", st == 200 and len(lib["items"]) == 122 and lib["source"]["license"] == "CC BY 4.0" and all(i["id"].startswith("lib:") for i in lib["items"]), lib if st != 200 else "")
+    lid = next(i["id"] for i in lib["items"] if "HD600" in i["id"])
+    st, lr = srv.json("POST", "/api/auralization/headphone/response", {"session_id": S, "asset": lid, "mode": "compensate", "max_boost_db": 12})
+    flat_l = st == 200 and max(abs(v) for f_, v in zip(lr["freq"], lr["result_db"]) if 100 <= f_ <= 10000) < 1.5
+    check("api: a library entry gives a response for the plot, flat after compensation", flat_l, lr if st != 200 else "")
+    st, rlib = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"headphone": {"mode": "compensate", "asset": lid, "max_boost_db": 12}}})
+    check("api: render with a library headphone", st == 200 and rlib["channels"] == 2, rlib)
+    st, rno = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"headphone": {"mode": "compensate", "asset": "lib:sbaf:none:Nothing"}}})
+    check("api: an unknown library id answers 400 with a message", st == 400 and "headphone" in rno["detail"], rno)
+    st, rtr = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"headphone": {"mode": "compensate", "asset": "lib:../../main.py"}}})
+    check("api: an id that tries to leave the library answers 400", st == 400, rtr)
 finally:
     srv.stop()
 

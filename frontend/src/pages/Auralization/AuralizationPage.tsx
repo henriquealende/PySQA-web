@@ -23,6 +23,9 @@ import ScenesBar from './ScenesBar'
 
 const STEPS: StepId[] = ['environment', 'hrtf', 'noise', 'headphone', 'level']
 
+/** "Sennheiser HD600" from a library id such as lib:sbaf:cEAR32:Sennheiser-HD600 */
+const libName = (id: string) => id.split(':').slice(3).join(':').replace(/-/g, ' ')
+
 /**
  * A card of the chain. The source card is only a summary (the source is chosen in the left column); the others are tabs:
  * they show what was set and, when selected, open their settings below.
@@ -94,7 +97,7 @@ export default function AuralizationPage() {
       setAssets(list)
       if (hrtf.asset !== SPHERE_ID && !list.some((a) => a.asset_id === hrtf.asset)) setHrtf({ asset: SPHERE_ID })
       if (env.asset && !list.some((a) => a.asset_id === env.asset)) setEnv({ type: 'none', asset: null })
-      if (headphone.asset && !list.some((a) => a.asset_id === headphone.asset)) setHeadphone({ mode: 'off', asset: null })
+      if (headphone.asset && !headphone.asset.startsWith('lib:') && !list.some((a) => a.asset_id === headphone.asset)) setHeadphone({ mode: 'off', asset: null })
     })
     void fetchCatalog().then(setCatalog).catch(() => undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -250,7 +253,7 @@ export default function AuralizationPage() {
           </StepCard>
           <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
           <StepCard n={5} title={t('aur.chain.headphone')} step="headphone" selected={step === 'headphone'} onSelect={() => setStep('headphone')} configured={hpEff.mode !== 'off'}>
-            <span className="font-semibold block truncate">{hpEff.mode === 'off' ? t('aur.hp.mode.off') : assets.find((a) => a.asset_id === hpEff.asset)?.name ?? '—'}</span>
+            <span className="font-semibold block truncate">{hpEff.mode === 'off' ? t('aur.hp.mode.off') : hpEff.asset?.startsWith('lib:') ? libName(hpEff.asset) : assets.find((a) => a.asset_id === hpEff.asset)?.name ?? '—'}</span>
             {hpEff.mode !== 'off' && <span className="text-muted">{t(`aur.hp.mode.${hpEff.mode}`)}</span>}
           </StepCard>
           <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />

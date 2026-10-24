@@ -268,11 +268,26 @@ export default function AuralizationDoc() {
           O PySQA aceita CSV ou TXT com cabeçalho opcional, separado por vírgula, ponto e vírgula (com vírgula decimal) ou tabulação, cobrindo ao menos 200 Hz a 8 kHz. Se houver
           várias colunas, usa a chamada <K>raw</K> e, na falta dela, a <K>smoothed</K>. O arquivo precisa ter entre 8 e 20 000 linhas.
         </P>
+        <h3 className="text-base font-semibold text-white mt-2">Biblioteca embutida (SBAF)</h3>
+        <P>
+          O PySQA traz <strong>100 modelos de fone</strong> (122 entradas, uma por acoplador de medição) da base do SBAF <Cite ids={['sbaf']} />, publicada com licença CC BY 4.0. Escolha um
+          em <K>Arquivo</K> (use o campo de filtro para achar a marca ou o modelo); a atribuição aparece na tela. Os arquivos são os originais, sem alteração, e ficam na pasta
+          <K>backend/data/headphones/sbaf</K> com um aviso de origem, de licença e do commit.
+        </P>
+        <Callout kind="warn" title="Leia antes de usar a biblioteca">
+          <ul className="list-disc pl-4 flex flex-col gap-1">
+            <li>As medições <strong>já vêm compensadas pela curva SBAF</strong> (uma reta é tida como “neutra”), não são medições brutas e <strong>não são a curva Harman</strong>. Compensar leva o fone a essa resposta neutra.</li>
+            <li>A maioria dos modelos é de linha <strong>hi-fi</strong> (Sennheiser HD600 e HD800, Focal, Audeze, HiFiMan, AKG K7XX, Grado, ZMF…); há poucos fones comuns de consumo. A fonte não é atualizada desde julho de 2021.</li>
+            <li>Há três tipos de acoplador: <strong>placa plana</strong> (sem orelha externa, 91 entradas) e <strong>miniDSP EARS</strong> (com orelha, 31 entradas). Não compare números de acopladores diferentes.</li>
+            <li>Os dois canais (esquerdo e direito) são somados em média, em dB; 17 entradas têm só um canal. Uma medição é de um exemplar do fone, não do modelo em geral.</li>
+            <li>A licença CC BY 4.0 consta no README do repositório; o GitHub não mostra um arquivo LICENSE separado.</li>
+          </ul>
+        </Callout>
         <Table
           head={['Origem das medições', 'Licença', 'Situação']}
           widths={['34%', '30%', '36%']}
           rows={[
-            [<>SBAF <Cite ids={['sbaf']} /></>, 'CC BY 4.0', 'Confirmada. Duas colunas (Hz, dB) separadas por espaço, sem cabeçalho, suavizadas em 1/6 de oitava e normalizadas em 500 a 1500 Hz; um arquivo por canal; medidas em um miniDSP EARS ou num acoplador de placa plana. O PySQA lê esse formato.'],
+            [<>SBAF <Cite ids={['sbaf']} /></>, 'CC BY 4.0', 'Confirmada e embutida (100 modelos). Duas colunas (Hz, dB) separadas por espaço, sem cabeçalho, suavizadas em 1/6 de oitava e normalizadas em 500 a 1500 Hz; um arquivo por canal; medidas em um miniDSP EARS ou num acoplador de placa plana. O PySQA também lê esse formato nos seus arquivos.'],
             [<>COAT <Cite ids={['coat']} /></>, 'CC BY 4.0', 'Confirmada. Funções de transferência de fone medidas no ouvido de 27 pessoas (DT770 Pro, HD650 e ER-4PT), em SOFA. O PySQA ainda não lê SOFA de fone.'],
             [<>OPRA <Cite ids={['opra']} /></>, 'Código MIT; dados CC BY-SA 4.0', 'Confirmada. Traz filtros de equalização, não a resposta medida: não alimenta este bloco diretamente.'],
             [<>AutoEq <Cite ids={['pasanen']} /></>, 'Código MIT; dados por fonte (oratory1990, crinacle, Rtings, InnerFidelity)', 'A confirmar, fonte por fonte: o README não diz nada sobre a licença das medições. Reúne também curvas-alvo, como a Harman.'],
@@ -280,7 +295,7 @@ export default function AuralizationDoc() {
           ]}
         />
         <P>
-          O PySQA <strong>não embute nenhuma medição</strong>: baixe o arquivo na fonte, confira a licença, cite a fonte no seu trabalho e envie o CSV. Todas essas bases medem
+          Só a biblioteca SBAF vem embutida; das demais fontes, baixe o arquivo, confira a licença, cite a fonte no seu trabalho e envie o CSV. Todas essas bases medem
           em acoplador ou cabeça artificial, e o resultado depende do equipamento de medição: não compare números de bases diferentes sem checar isso.
         </P>
       </Section>

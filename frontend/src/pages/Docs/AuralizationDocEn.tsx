@@ -268,11 +268,26 @@ export default function AuralizationDocEn() {
           PySQA accepts CSV or TXT with an optional header, separated by comma, semicolon (with a decimal comma) or tab, covering at least 200 Hz to 8 kHz. With several columns it uses the
           one called <K>raw</K> and, failing that, <K>smoothed</K>. The file needs between 8 and 20,000 rows.
         </P>
+        <h3 className="text-base font-semibold text-white mt-2">Built-in library (SBAF)</h3>
+        <P>
+          PySQA ships <strong>100 headphone models</strong> (122 entries, one per measuring coupler) from the SBAF database <Cite ids={['sbaf']} />, published under CC BY 4.0. Pick one under
+          <K>File</K> (use the filter field to find the brand or model); the attribution is shown on screen. The files are the originals, unchanged, in the folder
+          <K>backend/data/headphones/sbaf</K> with a notice of source, licence and commit.
+        </P>
+        <Callout kind="warn" title="Read before using the library">
+          <ul className="list-disc pl-4 flex flex-col gap-1">
+            <li>The measurements are <strong>already compensated with the SBAF curve</strong> (a straight line is taken as “neutral”), they are not raw measurements and <strong>they are not the Harman curve</strong>. Compensating takes the headphone to that neutral response.</li>
+            <li>Most models are <strong>hi-fi</strong> headphones (Sennheiser HD600 and HD800, Focal, Audeze, HiFiMan, AKG K7XX, Grado, ZMF…); there are few ordinary consumer headphones. The source has not been updated since July 2021.</li>
+            <li>There are two kinds of coupler: <strong>flat plate</strong> (no outer ear, 91 entries) and <strong>miniDSP EARS</strong> (with an ear, 31 entries). Do not compare numbers from different couplers.</li>
+            <li>The two channels (left and right) are averaged, in dB; 17 entries have only one channel. A measurement is of one unit of the headphone, not of the model in general.</li>
+            <li>The CC BY 4.0 licence is stated in the repository’s README; GitHub shows no separate LICENSE file.</li>
+          </ul>
+        </Callout>
         <Table
           head={['Source of measurements', 'Licence', 'Status']}
           widths={['34%', '30%', '36%']}
           rows={[
-            [<>SBAF <Cite ids={['sbaf']} /></>, 'CC BY 4.0', 'Confirmed. Two columns (Hz, dB) separated by blanks, no header, 1/6-octave smoothed and normalised at 500 to 1500 Hz; one file per channel; measured on a miniDSP EARS or a flat-plate coupler. PySQA reads this format.'],
+            [<>SBAF <Cite ids={['sbaf']} /></>, 'CC BY 4.0', 'Confirmed and built in (100 models). Two columns (Hz, dB) separated by blanks, no header, 1/6-octave smoothed and normalised at 500 to 1500 Hz; one file per channel; measured on a miniDSP EARS or a flat-plate coupler. PySQA also reads this format in your own files.'],
             [<>COAT <Cite ids={['coat']} /></>, 'CC BY 4.0', 'Confirmed. Headphone transfer functions measured at the ear of 27 people (DT770 Pro, HD650 and ER-4PT), in SOFA. PySQA does not read headphone SOFA yet.'],
             [<>OPRA <Cite ids={['opra']} /></>, 'Code MIT; data CC BY-SA 4.0', 'Confirmed. Holds equalisation filters, not the measured response: it does not feed this block directly.'],
             [<>AutoEq <Cite ids={['pasanen']} /></>, 'Code MIT; data per source (oratory1990, crinacle, Rtings, InnerFidelity)', 'To be confirmed, source by source: the README says nothing about the licence of the measurements. It also gathers target curves, such as Harman.'],
@@ -280,7 +295,7 @@ export default function AuralizationDocEn() {
           ]}
         />
         <P>
-          PySQA <strong>embeds no measurement</strong>: download the file at its source, check the licence, cite the source in your work and upload the CSV. All of these measure on a coupler or an
+          Only the SBAF library is built in; for the other sources, download the file, check the licence, cite the source in your work and upload the CSV. All of these measure on a coupler or an
           artificial head, and the result depends on the measuring equipment: do not compare numbers from different databases without checking that.
         </P>
       </Section>

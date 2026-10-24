@@ -141,7 +141,7 @@ export default {
   'aur.hp.remove': 'Remove this measurement',
   'aur.hp.uploaded': '{name} loaded',
   'aur.hp.info': '{n} points · {lo} Hz to {hi} Hz',
-  'aur.hp.noAsset': 'Upload the CSV with the frequency response of your headphone (for example, an AutoEq measurement).',
+  'aur.hp.noAsset': 'Pick a headphone from the library or upload the CSV with the frequency response of your headphone.',
   'aur.hp.boost': 'Maximum boost',
   'aur.hp.loading': 'Calculating the filter…',
   'aur.hp.measured': 'Measured headphone',
@@ -174,4 +174,8 @@ export default {
   'aur.noise.plot.y': 'Level [dB]',
   'aur.noise.plot.note': 'Levels in 1/3-octave bands (0 dB = RMS of a full-scale sine), with the signal already in the chosen room and position. The three noise colours are shown at the chosen signal-to-noise ratio; the selected one is the solid line. In these bands white noise rises 3 dB per octave, pink is flat and brown falls 3 dB per octave.',
   'aur.noise.plot.noSource': 'Pick a source audio to see the signal and noise curves.',
+  'aur.hp.search': 'Filter by brand or model',
+  'aur.hp.yours': 'Your files',
+  'aur.hp.library': 'SBAF library ({n} entries)',
+  'aur.hp.libInfo': 'Measured on: {rig}. The two ears are averaged (dB). It is already compensated with the SBAF curve: not a raw measurement and not the Harman curve. Source:',
 }

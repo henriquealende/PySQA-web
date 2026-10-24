@@ -1,0 +1,13 @@
+SBAF headphone measurements (superbestaudiofriends)
+
+Source:    https://github.com/superbestaudiofriends/headphone-measurements-frequency-response
+Commit:    7b33e41be47ccb57a59e1a88c48b367eb7329494 (branch master, last pushed 2021-07-21)
+Retrieved: 2026-10-23
+Licence:   Creative Commons Attribution 4.0 International (https://creativecommons.org/licenses/by/4.0/legalcode),
+           as stated in the README of the repository (SOURCE_README.md here). The GitHub repository has no separate LICENSE file.
+
+The .txt files are copied unchanged. The measurements are 1/6-octave smoothed and normalised to 500-1500 Hz, and they are already
+compensated with the SBAF curve (a straight line is "perceptually neutral"), which is not the Harman curve. They are used in PySQA
+as the frequency response of the headphone in the Audio Preparation page (Headphone block). The two channels (L and R) are averaged.
+
+Attribution to give when you use them: SBAF headphone measurements, superbestaudiofriends.org / Changstar.com, CC BY 4.0.

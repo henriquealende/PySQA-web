@@ -141,8 +141,8 @@
       "license_status": "verified",
       "ref": "sbaf",
       "url": "https://github.com/superbestaudiofriends/headphone-measurements-frequency-response",
-      "embedded": false,
-      "note": "Two columns (Hz, dB) separated by blanks, no header, 1/6-octave smoothed and normalised to 500-1500 Hz; one file per channel; measured on a miniDSP EARS or a flat-plate coupler. The format PySQA reads. The number of headphones was not counted."
+      "embedded": true,
+      "note": "Built in: 100 models (122 entries by measuring rig, 227 files, 2.3 MB) in backend/data/headphones/sbaf, unchanged, with the notice. Two columns (Hz, dB), 1/6-octave smoothed, normalised to 500-1500 Hz and already compensated with the SBAF curve. Mostly hi-fi headphones; last update of the source: July 2021. The CC BY 4.0 licence is stated in its README (the repository has no LICENSE file)."
     },
     {
       "id": "coat",

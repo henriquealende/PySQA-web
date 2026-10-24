@@ -61,6 +61,21 @@ export interface NoiseSpectrum {
   snr_db: number
 }
 
+export interface HeadphoneLibraryItem {
+  id: string                // starts with lib:
+  brand: string
+  model: string
+  rig: string               // measuring rig code, for example cFPC21
+  channels: string[]
+  label: string
+}
+
+export interface HeadphoneLibrary {
+  source: { name: string; license: string; url: string; ref: string }
+  rigs: Record<string, { pt: string; en: string }>
+  items: HeadphoneLibraryItem[]
+}
+
 export interface HeadphoneResponse {
   freq: number[]
   measured_db: number[]
@@ -240,6 +255,12 @@ export async function fetchNoiseSpectrum(
   return res.json()
 }
 
+export async function fetchHeadphoneLibrary(): Promise<HeadphoneLibrary> {
+  const res = await fetch(`${BASE}/headphones/library`)
+  await checkResponse(res)
+  return res.json()
+}
+
 export async function fetchRirInfo(sessionId: string, assetId: string, signal?: AbortSignal): Promise<RirInfo> {
   const res = await fetch(`${BASE}/${sessionId}/assets/${assetId}/info`, { signal })
   await checkResponse(res)
@@ -285,6 +306,6 @@ export async function renderToSession(sessionId: string, audioId: string, h: Hrt
   })
   await checkResponse(res)
   const result: RenderResult = await res.json()
-  if (h.asset === SPHERE_ID && env.type === 'none' && hp.mode === 'off') await recovery.recordDerived(sessionId, result, `${BASE}/render`, body, [audioId])
+  if (h.asset === SPHERE_ID && env.type === 'none' && (hp.mode === 'off' || hp.asset?.startsWith('lib:'))) await recovery.recordDerived(sessionId, result, `${BASE}/render`, body, [audioId])
   return result
 }

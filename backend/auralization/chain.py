@@ -224,8 +224,8 @@ def render(mono: np.ndarray, fs: int, chain: Chain, resolve_hrtf: HrtfResolver,
     if hp.mode != "off":
         hset = resolve_headphone(hp.asset) if (resolve_headphone and hp.asset) else None
         if hset is None:
-            raise ChainError(msg("A resposta do fone não está mais no servidor. Envie o arquivo de novo.",
-                                 "The headphone response is no longer on the server. Upload the file again."))
+            raise ChainError(msg("A resposta do fone não foi encontrada. Envie o arquivo de novo ou escolha um da biblioteca.",
+                                 "The headphone response was not found. Upload the file again or pick one from the library."))
         try:
             fir = headphone_mod.design(hset, fs, hp.mode, hp.max_boost_db)
         except headphone_mod.HeadphoneError as exc:

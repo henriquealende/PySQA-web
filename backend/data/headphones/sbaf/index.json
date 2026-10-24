@@ -1,0 +1,1828 @@
+{
+ "source": {
+  "name": "SBAF headphone measurements (superbestaudiofriends)",
+  "license": "CC BY 4.0",
+  "url": "https://github.com/superbestaudiofriends/headphone-measurements-frequency-response",
+  "ref": "sbaf"
+ },
+ "rigs": {
+  "cFPC21": {
+   "pt": "placa plana (cFPC21)",
+   "en": "flat-plate coupler (cFPC21)"
+  },
+  "cEAR32": {
+   "pt": "miniDSP EARS, sem parafusos, compensação 3.2 (cEAR32)",
+   "en": "miniDSP EARS, screws removed, compensation 3.2 (cEAR32)"
+  },
+  "cEAR30": {
+   "pt": "miniDSP EARS de fábrica, compensação 3.02 (cEAR30)",
+   "en": "miniDSP EARS as shipped, compensation 3.02 (cEAR30)"
+  },
+  "cEARS32": {
+   "pt": "variante do miniDSP EARS (cEARS32), não descrita no README",
+   "en": "miniDSP EARS variant (cEARS32), not described in the README"
+  },
+  "cEARS30": {
+   "pt": "variante do miniDSP EARS (cEARS30), não descrita no README",
+   "en": "miniDSP EARS variant (cEARS30), not described in the README"
+  }
+ },
+ "items": [
+  {
+   "id": "sbaf:cFPC21:AKG-K181",
+   "brand": "AKG",
+   "model": "K181",
+   "rig": "cFPC21",
+   "channels": [
+    "L"
+   ],
+   "files": [
+    "cFPC21-AKG-K181-L.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:AKG-K553",
+   "brand": "AKG",
+   "model": "K553",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-AKG-K553-L.txt",
+    "cFPC21-AKG-K553-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:AKG-K7XX",
+   "brand": "AKG",
+   "model": "K7XX",
+   "rig": "cFPC21",
+   "channels": [
+    "R"
+   ],
+   "files": [
+    "cFPC21-AKG-K7XX-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:AKG-K812",
+   "brand": "AKG",
+   "model": "K812",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-AKG-K812-L.txt",
+    "cFPC21-AKG-K812-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:AKG-K8XX",
+   "brand": "AKG",
+   "model": "K8XX",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-AKG-K8XX-L.txt",
+    "cFPC21-AKG-K8XX-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Audeze-LCD-X",
+   "brand": "Audeze",
+   "model": "LCD X",
+   "rig": "cFPC21",
+   "channels": [
+    "L"
+   ],
+   "files": [
+    "cFPC21-Audeze-LCD-X-L.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR30:Audeze-LCD2C",
+   "brand": "Audeze",
+   "model": "LCD2C",
+   "rig": "cEAR30",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR30-Audeze-LCD2C-L.txt",
+    "cEAR30-Audeze-LCD2C-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Audeze-LCD2R2-preFazor",
+   "brand": "Audeze",
+   "model": "LCD2R2 preFazor",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Audeze-LCD2R2-preFazor-L.txt",
+    "cFPC21-Audeze-LCD2R2-preFazor-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:Audeze-LCD3",
+   "brand": "Audeze",
+   "model": "LCD3",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-Audeze-LCD3-L.txt",
+    "cEAR32-Audeze-LCD3-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Audeze-LCD3-2019",
+   "brand": "Audeze",
+   "model": "LCD3 2019",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Audeze-LCD3-2019-L.txt",
+    "cFPC21-Audeze-LCD3-2019-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Audeze-LCD3-Fazor",
+   "brand": "Audeze",
+   "model": "LCD3 Fazor",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Audeze-LCD3-Fazor-L.txt",
+    "cFPC21-Audeze-LCD3-Fazor-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Audeze-Sine",
+   "brand": "Audeze",
+   "model": "Sine",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Audeze-Sine-L.txt",
+    "cFPC21-Audeze-Sine-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Audeze-SineDX",
+   "brand": "Audeze",
+   "model": "SineDX",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Audeze-SineDX-L.txt",
+    "cFPC21-Audeze-SineDX-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:AudioTechnica-AD2000",
+   "brand": "AudioTechnica",
+   "model": "AD2000",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-AudioTechnica-AD2000-L.txt",
+    "cFPC21-AudioTechnica-AD2000-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:AudioTechnica-ES10",
+   "brand": "AudioTechnica",
+   "model": "ES10",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-AudioTechnica-ES10-L.txt",
+    "cFPC21-AudioTechnica-ES10-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:AudioTechnica-M50",
+   "brand": "AudioTechnica",
+   "model": "M50",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-AudioTechnica-M50-L.txt",
+    "cFPC21-AudioTechnica-M50-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:AudioTechnica-R70X",
+   "brand": "AudioTechnica",
+   "model": "R70X",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-AudioTechnica-R70X-L.txt",
+    "cFPC21-AudioTechnica-R70X-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:Aurorus-Borealis",
+   "brand": "Aurorus",
+   "model": "Borealis",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-Aurorus-Borealis-L.txt",
+    "cEAR32-Aurorus-Borealis-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Aurorus-Borealis",
+   "brand": "Aurorus",
+   "model": "Borealis",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Aurorus-Borealis-L.txt",
+    "cFPC21-Aurorus-Borealis-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Beyer-AmironHome",
+   "brand": "Beyer",
+   "model": "AmironHome",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Beyer-AmironHome-L.txt",
+    "cFPC21-Beyer-AmironHome-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Beyer-CustomOnePro",
+   "brand": "Beyer",
+   "model": "CustomOnePro",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Beyer-CustomOnePro-L.txt",
+    "cFPC21-Beyer-CustomOnePro-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:DanClark-AeonFlow2C-MedFelt",
+   "brand": "DanClark",
+   "model": "AeonFlow2C MedFelt",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-DanClark-AeonFlow2C-MedFelt-L.txt",
+    "cEAR32-DanClark-AeonFlow2C-MedFelt-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:DanClark-AFC2C-MedFelt",
+   "brand": "DanClark",
+   "model": "AFC2C MedFelt",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-DanClark-AFC2C-MedFeltL.txt",
+    "cFPC21-DanClark-AFC2C-MedFeltR.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:DanClark-AlphaDog",
+   "brand": "DanClark",
+   "model": "AlphaDog",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-DanClark-AlphaDog-L.txt",
+    "cFPC21-DanClark-AlphaDog-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR30:DanClark-Ether",
+   "brand": "DanClark",
+   "model": "Ether",
+   "rig": "cEAR30",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR30-DanClark-Ether-L.txt",
+    "cEAR30-DanClark-Ether-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:DanClark-Ether2",
+   "brand": "DanClark",
+   "model": "Ether2",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-DanClark-Ether2-L.txt",
+    "cEAR32-DanClark-Ether2-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:DanClark-Ether2",
+   "brand": "DanClark",
+   "model": "Ether2",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-DanClark-Ether2-L.txt",
+    "cFPC21-DanClark-Ether2-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:DanClark-EtherC",
+   "brand": "DanClark",
+   "model": "EtherC",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-DanClark-EtherC-L.txt",
+    "cFPC21-DanClark-EtherC-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:DanClark-EtherFlow",
+   "brand": "DanClark",
+   "model": "EtherFlow",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-DanClark-EtherFlow-L.txt",
+    "cEAR32-DanClark-EtherFlow-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:DanClark-EtherFlow",
+   "brand": "DanClark",
+   "model": "EtherFlow",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-DanClark-EtherFlow-L.txt",
+    "cFPC21-DanClark-EtherFlow-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Denon-D7200",
+   "brand": "Denon",
+   "model": "D7200",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Denon-D7200-L.txt",
+    "cFPC21-Denon-D7200-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:Drop-Panda",
+   "brand": "Drop",
+   "model": "Panda",
+   "rig": "cEAR32",
+   "channels": [
+    "L"
+   ],
+   "files": [
+    "cEAR32-Drop-Panda-L.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Drop-Panda",
+   "brand": "Drop",
+   "model": "Panda",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Drop-Panda-L.txt",
+    "cFPC21-Drop-Panda-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:EMU-Purpleheart",
+   "brand": "EMU",
+   "model": "Purpleheart",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-EMU-Purpleheart-L.txt",
+    "cFPC21-EMU-Purpleheart-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Enigma-DharmaD1000",
+   "brand": "Enigma",
+   "model": "DharmaD1000",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Enigma-DharmaD1000-L.txt",
+    "cFPC21-Enigma-DharmaD1000-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEARS32:FinalAudio-D8000Pro",
+   "brand": "FinalAudio",
+   "model": "D8000Pro",
+   "rig": "cEARS32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEARS32-FinalAudio-D8000Pro-L.txt",
+    "cEARS32-FinalAudio-D8000Pro-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:FinalAudio-D8000Pro",
+   "brand": "FinalAudio",
+   "model": "D8000Pro",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-FinalAudio-D8000Pro-L.txt",
+    "cFPC21-FinalAudio-D8000Pro-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Focal-Clear",
+   "brand": "Focal",
+   "model": "Clear",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Focal-Clear-L.txt",
+    "cFPC21-Focal-Clear-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEARS32:Focal-ClearMg",
+   "brand": "Focal",
+   "model": "ClearMg",
+   "rig": "cEARS32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEARS32-Focal-ClearMg-L.txt",
+    "cEARS32-Focal-ClearMg-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Focal-Elear",
+   "brand": "Focal",
+   "model": "Elear",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Focal-Elear-L.txt",
+    "cFPC21-Focal-Elear-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:Focal-Elegia",
+   "brand": "Focal",
+   "model": "Elegia",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-Focal-Elegia-L.txt",
+    "cEAR32-Focal-Elegia-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Focal-Elegia",
+   "brand": "Focal",
+   "model": "Elegia",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Focal-Elegia-L.txt",
+    "cFPC21-Focal-Elegia-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR30:Focal-Elex",
+   "brand": "Focal",
+   "model": "Elex",
+   "rig": "cEAR30",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR30-Focal-Elex-L.txt",
+    "cEAR30-Focal-Elex-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:Focal-Elex",
+   "brand": "Focal",
+   "model": "Elex",
+   "rig": "cEAR32",
+   "channels": [
+    "L"
+   ],
+   "files": [
+    "cEAR32-Focal-Elex-L.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Focal-Elex",
+   "brand": "Focal",
+   "model": "Elex",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Focal-Elex-L.txt",
+    "cFPC21-Focal-Elex-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:Focal-Stellia",
+   "brand": "Focal",
+   "model": "Stellia",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-Focal-Stellia-L.txt",
+    "cEAR32-Focal-Stellia-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Focal-Stellia",
+   "brand": "Focal",
+   "model": "Stellia",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Focal-Stellia-L.txt",
+    "cFPC21-Focal-Stellia-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:Focal-Utopia",
+   "brand": "Focal",
+   "model": "Utopia",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-Focal-Utopia-L.txt",
+    "cEAR32-Focal-Utopia-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Focal-Utopia",
+   "brand": "Focal",
+   "model": "Utopia",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Focal-Utopia-L.txt",
+    "cFPC21-Focal-Utopia-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Fostex-THX00-Ebony",
+   "brand": "Fostex",
+   "model": "THX00 Ebony",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Fostex-THX00-Ebony-L.txt",
+    "cFPC21-Fostex-THX00-Ebony-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Fostex-X00-Mahogeny",
+   "brand": "Fostex",
+   "model": "X00 Mahogeny",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Fostex-X00-Mahogeny-L.txt",
+    "cFPC21-Fostex-X00-Mahogeny-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Fostex-X00-Purpleheart",
+   "brand": "Fostex",
+   "model": "X00 Purpleheart",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Fostex-X00-Purpleheart-L.txt",
+    "cFPC21-Fostex-X00-Purpleheart-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Grado-HF3",
+   "brand": "Grado",
+   "model": "HF3",
+   "rig": "cFPC21",
+   "channels": [
+    "R"
+   ],
+   "files": [
+    "cFPC21-Grado-HF3-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Grado-HF3-TTVJDXPads",
+   "brand": "Grado",
+   "model": "HF3 TTVJDXPads",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Grado-HF3-TTVJDXPads-L.txt",
+    "cFPC21-Grado-HF3-TTVJDXPads-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Grado-RS1e",
+   "brand": "Grado",
+   "model": "RS1e",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Grado-RS1e-L.txt",
+    "cFPC21-Grado-RS1e-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Grado-RS2e",
+   "brand": "Grado",
+   "model": "RS2e",
+   "rig": "cFPC21",
+   "channels": [
+    "R"
+   ],
+   "files": [
+    "cFPC21-Grado-RS2e-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Grado-RS2e-TTVJDXPads",
+   "brand": "Grado",
+   "model": "RS2e TTVJDXPads",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Grado-RS2e-TTVJDXPads-L.txt",
+    "cFPC21-Grado-RS2e-TTVJDXPads-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Grado-SR325X",
+   "brand": "Grado",
+   "model": "SR325X",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Grado-SR325X-L.txt",
+    "cFPC21-Grado-SR325X-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Grado-SR60-stockcomfy",
+   "brand": "Grado",
+   "model": "SR60 stockcomfy",
+   "rig": "cFPC21",
+   "channels": [
+    "L"
+   ],
+   "files": [
+    "cFPC21-Grado-SR60-stockcomfy-L.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:HiFiMan-HE1000",
+   "brand": "HiFiMan",
+   "model": "HE1000",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-HiFiMan-HE1000-L.txt",
+    "cFPC21-HiFiMan-HE1000-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:HiFiMan-HE350",
+   "brand": "HiFiMan",
+   "model": "HE350",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-HiFiMan-HE350-L.txt",
+    "cFPC21-HiFiMan-HE350-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:HiFiMan-HE4",
+   "brand": "HiFiMan",
+   "model": "HE4",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-HiFiMan-HE4-L.txt",
+    "cFPC21-HiFiMan-HE4-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:HiFiMan-HE400I",
+   "brand": "HiFiMan",
+   "model": "HE400I",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-HiFiMan-HE400I-L.txt",
+    "cFPC21-HiFiMan-HE400I-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:HiFiMan-HE400S",
+   "brand": "HiFiMan",
+   "model": "HE400S",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-HiFiMan-HE400S-L.txt",
+    "cFPC21-HiFiMan-HE400S-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:HiFiMan-HE4XX",
+   "brand": "HiFiMan",
+   "model": "HE4XX",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-HiFiMan-HE4XX-L.txt",
+    "cFPC21-HiFiMan-HE4XX-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:HiFiMan-HE5",
+   "brand": "HiFiMan",
+   "model": "HE5",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-HiFiMan-HE5-L.txt",
+    "cFPC21-HiFiMan-HE5-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:HiFiMan-HE500",
+   "brand": "HiFiMan",
+   "model": "HE500",
+   "rig": "cFPC21",
+   "channels": [
+    "L"
+   ],
+   "files": [
+    "cFPC21-HiFiMan-HE500-L.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:HiFiMan-HE560",
+   "brand": "HiFiMan",
+   "model": "HE560",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-HiFiMan-HE560-L.txt",
+    "cFPC21-HiFiMan-HE560-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:HiFiMan-HEX",
+   "brand": "HiFiMan",
+   "model": "HEX",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-HiFiMan-HEX-L.txt",
+    "cFPC21-HiFiMan-HEX-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:HiFiMan-Sundara",
+   "brand": "HiFiMan",
+   "model": "Sundara",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-HiFiMan-Sundara-L.txt",
+    "cFPC21-HiFiMan-Sundara-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:HiFiMan-Susvara",
+   "brand": "HiFiMan",
+   "model": "Susvara",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-HiFiMan-Susvara-L.txt",
+    "cFPC21-HiFiMan-Susvara-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Kennerton-Magister",
+   "brand": "Kennerton",
+   "model": "Magister",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Kennerton-Magister-L.txt",
+    "cFPC21-Kennerton-Magister-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Klipsch-HeritageHP3",
+   "brand": "Klipsch",
+   "model": "HeritageHP3",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Klipsch-HeritageHP3-L.txt",
+    "cFPC21-Klipsch-HeritageHP3-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR30:Koss-ESP950",
+   "brand": "Koss",
+   "model": "ESP950",
+   "rig": "cEAR30",
+   "channels": [
+    "L"
+   ],
+   "files": [
+    "cEAR30-Koss-ESP950-L.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Koss-ESP950",
+   "brand": "Koss",
+   "model": "ESP950",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Koss-ESP950-L.txt",
+    "cFPC21-Koss-ESP950-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR30:Koss-ESP95X",
+   "brand": "Koss",
+   "model": "ESP95X",
+   "rig": "cEAR30",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR30-Koss-ESP95X-L.txt",
+    "cEAR30-Koss-ESP95X-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Koss-ESP95X",
+   "brand": "Koss",
+   "model": "ESP95X",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Koss-ESP95X-L.txt",
+    "cFPC21-Koss-ESP95X-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:LFF-CodeX",
+   "brand": "LFF",
+   "model": "CodeX",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-LFF-CodeX-L.txt",
+    "cFPC21-LFF-CodeX-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:Meze-Empyrean",
+   "brand": "Meze",
+   "model": "Empyrean",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-Meze-Empyrean-L.txt",
+    "cEAR32-Meze-Empyrean-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Meze-Empyrean",
+   "brand": "Meze",
+   "model": "Empyrean",
+   "rig": "cFPC21",
+   "channels": [
+    "L"
+   ],
+   "files": [
+    "cFPC21-Meze-Empyrean-L.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Monoprice-HiFiDJ",
+   "brand": "Monoprice",
+   "model": "HiFiDJ",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Monoprice-HiFiDJ-L.txt",
+    "cFPC21-Monoprice-HiFiDJ-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Monoprice-M1060",
+   "brand": "Monoprice",
+   "model": "M1060",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Monoprice-M1060-L.txt",
+    "cFPC21-Monoprice-M1060-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Nickerfield-FostexT50RP",
+   "brand": "Nickerfield",
+   "model": "FostexT50RP",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Nickerfield-FostexT50RP-L.txt",
+    "cFPC21-Nickerfield-FostexT50RP-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Noontec-Hammo",
+   "brand": "Noontec",
+   "model": "Hammo",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Noontec-Hammo-L.txt",
+    "cFPC21-Noontec-Hammo-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:NVX-XPT100",
+   "brand": "NVX",
+   "model": "XPT100",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-NVX-XPT100-L.txt",
+    "cFPC21-NVX-XPT100-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Oppo-PM2",
+   "brand": "Oppo",
+   "model": "PM2",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Oppo-PM2-L.txt",
+    "cFPC21-Oppo-PM2-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Oppo-PM3",
+   "brand": "Oppo",
+   "model": "PM3",
+   "rig": "cFPC21",
+   "channels": [
+    "R"
+   ],
+   "files": [
+    "cFPC21-Oppo-PM3-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:RossonAudio-RAD0",
+   "brand": "RossonAudio",
+   "model": "RAD0",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-RossonAudio-RAD0-L.txt",
+    "cEAR32-RossonAudio-RAD0-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:RossonAudio-RAD0",
+   "brand": "RossonAudio",
+   "model": "RAD0",
+   "rig": "cFPC21",
+   "channels": [
+    "L"
+   ],
+   "files": [
+    "cFPC21-RossonAudio-RAD0-L.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Sennheiser-HD439",
+   "brand": "Sennheiser",
+   "model": "HD439",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Sennheiser-HD439-L.txt",
+    "cFPC21-Sennheiser-HD439-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Sennheiser-HD558",
+   "brand": "Sennheiser",
+   "model": "HD558",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Sennheiser-HD558-L.txt",
+    "cFPC21-Sennheiser-HD558-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:Sennheiser-HD58X",
+   "brand": "Sennheiser",
+   "model": "HD58X",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-Sennheiser-HD58X-L.txt",
+    "cEAR32-Sennheiser-HD58X-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Sennheiser-HD58X",
+   "brand": "Sennheiser",
+   "model": "HD58X",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Sennheiser-HD58X-L.txt",
+    "cFPC21-Sennheiser-HD58X-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR30:Sennheiser-HD600",
+   "brand": "Sennheiser",
+   "model": "HD600",
+   "rig": "cEAR30",
+   "channels": [
+    "L"
+   ],
+   "files": [
+    "cEAR30-Sennheiser-HD600-L.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:Sennheiser-HD600",
+   "brand": "Sennheiser",
+   "model": "HD600",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-Sennheiser-HD600-L.txt",
+    "cEAR32-Sennheiser-HD600-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Sennheiser-HD660S",
+   "brand": "Sennheiser",
+   "model": "HD660S",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Sennheiser-HD660S-L.txt",
+    "cFPC21-Sennheiser-HD660S-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:Sennheiser-HD700",
+   "brand": "Sennheiser",
+   "model": "HD700",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-Sennheiser-HD700-L.txt",
+    "cEAR32-Sennheiser-HD700-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Sennheiser-HD700",
+   "brand": "Sennheiser",
+   "model": "HD700",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Sennheiser-HD700-L.txt",
+    "cFPC21-Sennheiser-HD700-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR30:Sennheiser-HD800",
+   "brand": "Sennheiser",
+   "model": "HD800",
+   "rig": "cEAR30",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR30-Sennheiser-HD800-L.txt",
+    "cEAR30-Sennheiser-HD800-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEARS30:Sennheiser-HD800",
+   "brand": "Sennheiser",
+   "model": "HD800",
+   "rig": "cEARS30",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEARS30-Sennheiser-HD800-L.txt",
+    "cEARS30-Sennheiser-HD800-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Sennheiser-HD800",
+   "brand": "Sennheiser",
+   "model": "HD800",
+   "rig": "cFPC21",
+   "channels": [
+    "L"
+   ],
+   "files": [
+    "cFPC21-Sennheiser-HD800-L.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Sennheiser-HD800S",
+   "brand": "Sennheiser",
+   "model": "HD800S",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Sennheiser-HD800S-L.txt",
+    "cFPC21-Sennheiser-HD800S-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEARS32:Sennheiser-HD800SA",
+   "brand": "Sennheiser",
+   "model": "HD800SA",
+   "rig": "cEARS32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEARS32-Sennheiser-HD800SA-L.txt",
+    "cEARS32-Sennheiser-HD800SA-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Sennheiser-HD800SA",
+   "brand": "Sennheiser",
+   "model": "HD800SA",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Sennheiser-HD800SA-L.txt",
+    "cFPC21-Sennheiser-HD800SA-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Sennheiser-HD8XX",
+   "brand": "Sennheiser",
+   "model": "HD8XX",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Sennheiser-HD8XX-L.txt",
+    "cFPC21-Sennheiser-HD8XX-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Sony-MA900",
+   "brand": "Sony",
+   "model": "MA900",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Sony-MA900-L.txt",
+    "cFPC21-Sony-MA900-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Sony-Z1R",
+   "brand": "Sony",
+   "model": "Z1R",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Sony-Z1R-L.txt",
+    "cFPC21-Sony-Z1R-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Sony-Z7",
+   "brand": "Sony",
+   "model": "Z7",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Sony-Z7-L.txt",
+    "cFPC21-Sony-Z7-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:STAX-2170",
+   "brand": "STAX",
+   "model": "2170",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-STAX-2170-L.txt",
+    "cFPC21-STAX-2170-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:Takstar-Pro80",
+   "brand": "Takstar",
+   "model": "Pro80",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-Takstar-Pro80-L.txt",
+    "cFPC21-Takstar-Pro80-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR30:Verum-One",
+   "brand": "Verum",
+   "model": "One",
+   "rig": "cEAR30",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR30-Verum-One-L.txt",
+    "cEAR30-Verum-One-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR30:ZMF-Aeolus",
+   "brand": "ZMF",
+   "model": "Aeolus",
+   "rig": "cEAR30",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR30-ZMF-Aeolus-L.txt",
+    "cEAR30-ZMF-Aeolus-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:ZMF-Aeolus",
+   "brand": "ZMF",
+   "model": "Aeolus",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-ZMF-Aeolus-L.txt",
+    "cEAR32-ZMF-Aeolus-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:ZMF-Aeolus",
+   "brand": "ZMF",
+   "model": "Aeolus",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-ZMF-Aeolus-L.txt",
+    "cFPC21-ZMF-Aeolus-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:ZMF-Atticus-OriPads",
+   "brand": "ZMF",
+   "model": "Atticus OriPads",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-ZMF-Atticus-OriPads-L.txt",
+    "cFPC21-ZMF-Atticus-OriPads-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:ZMF-Atticus-stockPads",
+   "brand": "ZMF",
+   "model": "Atticus stockPads",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-ZMF-Atticus-stockPads-L.txt",
+    "cFPC21-ZMF-Atticus-stockPads-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:ZMF-Auteur",
+   "brand": "ZMF",
+   "model": "Auteur",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-ZMF-Auteur-L.txt",
+    "cFPC21-ZMF-Auteur-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:ZMF-Eikon",
+   "brand": "ZMF",
+   "model": "Eikon",
+   "rig": "cFPC21",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cFPC21-ZMF-Eikon-L.txt",
+    "cFPC21-ZMF-Eikon-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:ZMF-VeriteClosed",
+   "brand": "ZMF",
+   "model": "VeriteClosed",
+   "rig": "cFPC21",
+   "channels": [
+    "L"
+   ],
+   "files": [
+    "cFPC21-ZMF-VeriteClosed-L.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:ZMF-VeriteClosed-Univ",
+   "brand": "ZMF",
+   "model": "VeriteClosed Univ",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-ZMF-VeriteClosed-Univ-L.txt",
+    "cEAR32-ZMF-VeriteClosed-Univ-R.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cFPC21:ZMF-VeriteOpen",
+   "brand": "ZMF",
+   "model": "VeriteOpen",
+   "rig": "cFPC21",
+   "channels": [
+    "L"
+   ],
+   "files": [
+    "cFPC21-ZMF-VeriteOpen-L.txt"
+   ],
+   "n_points": 696
+  },
+  {
+   "id": "sbaf:cEAR32:ZMF-VeriteOpen-Univ",
+   "brand": "ZMF",
+   "model": "VeriteOpen Univ",
+   "rig": "cEAR32",
+   "channels": [
+    "L",
+    "R"
+   ],
+   "files": [
+    "cEAR32-ZMF-VeriteOpen-Univ-L.txt",
+    "cEAR32-ZMF-VeriteOpen-Univ-R.txt"
+   ],
+   "n_points": 696
+  }
+ ]
+}

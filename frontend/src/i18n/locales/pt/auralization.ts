@@ -141,7 +141,7 @@ export default {
   'aur.hp.remove': 'Remover esta medição',
   'aur.hp.uploaded': '{name} carregado',
   'aur.hp.info': '{n} pontos · {lo} Hz a {hi} Hz',
-  'aur.hp.noAsset': 'Envie o CSV com a resposta em frequência do seu fone (por exemplo, uma medição do AutoEq).',
+  'aur.hp.noAsset': 'Escolha um fone da biblioteca ou envie o CSV com a resposta em frequência do seu fone.',
   'aur.hp.boost': 'Reforço máximo',
   'aur.hp.loading': 'Calculando o filtro…',
   'aur.hp.measured': 'Fone medido',
@@ -174,4 +174,8 @@ export default {
   'aur.noise.plot.y': 'Nível [dB]',
   'aur.noise.plot.note': 'Níveis em bandas de 1/3 de oitava (0 dB = valor eficaz de um seno em escala máxima), com o sinal já na sala e na posição escolhidas. As três cores de ruído aparecem na relação sinal-ruído escolhida; a selecionada é a linha cheia. A inclinação do ruído branco sobe 3 dB por oitava nestas bandas, a do rosa é plana e a do marrom cai 3 dB por oitava.',
   'aur.noise.plot.noSource': 'Escolha um áudio de origem para ver as curvas do sinal e do ruído.',
+  'aur.hp.search': 'Filtrar por marca ou modelo',
+  'aur.hp.yours': 'Seus arquivos',
+  'aur.hp.library': 'Biblioteca SBAF ({n} entradas)',
+  'aur.hp.libInfo': 'Medido em: {rig}. As duas orelhas foram somadas em média (dB). Já vem compensado pela curva SBAF, não é medição bruta e não é a curva Harman. Fonte:',
 }

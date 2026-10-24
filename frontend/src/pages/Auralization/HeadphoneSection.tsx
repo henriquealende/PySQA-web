@@ -4,9 +4,9 @@ import clsx from 'clsx'
 import { useStore } from '../../store/useStore'
 import { useAuralStore } from '../../store/useAuralStore'
 import { toast } from '../../store/useToast'
-import { useT } from '../../i18n'
+import { useLang, useT } from '../../i18n'
 import { isAbort } from '../../api/audioApi'
-import { deleteAsset, fetchHeadphoneResponse, HeadphoneMode, HeadphoneResponse, uploadHeadphone } from '../../api/auralizationApi'
+import { deleteAsset, fetchHeadphoneLibrary, fetchHeadphoneResponse, HeadphoneLibrary, HeadphoneMode, HeadphoneResponse, uploadHeadphone } from '../../api/auralizationApi'
 import HeadphonePlot from './HeadphonePlot'
 
 const MODES: HeadphoneMode[] = ['off', 'compensate', 'simulate']
@@ -14,15 +14,23 @@ const MODES: HeadphoneMode[] = ['off', 'compensate', 'simulate']
 /** Headphone block: compensate a measured headphone (so it sounds flat) or simulate it. Applied after the room, the head and the noise. */
 export default function HeadphoneSection() {
   const t = useT()
+  const lang = useLang((s) => s.lang)
   const sessionId = useStore((s) => s.sessionId)
   const files = useStore((s) => s.files)
   const { sourceId, headphone, assets, setHeadphone, setAssets } = useAuralStore()
   const [busy, setBusy] = useState(false)
   const [data, setData] = useState<HeadphoneResponse | null>(null)
+  const [lib, setLib] = useState<HeadphoneLibrary | null>(null)
+  const [filter, setFilter] = useState('')
   const input = useRef<HTMLInputElement>(null)
   const fs = files.find((f) => f.audio_id === sourceId)?.sample_rate ?? 48000
   const list = assets.filter((a) => a.kind === 'headphone')
   const current = list.find((a) => a.asset_id === headphone.asset)
+  const inLibrary = headphone.asset?.startsWith('lib:') ?? false
+  const libItem = lib?.items.find((i) => i.id === headphone.asset)
+  const shown = lib?.items.filter((i) => i.id === headphone.asset || i.label.toLowerCase().includes(filter.trim().toLowerCase())) ?? []
+
+  useEffect(() => { void fetchHeadphoneLibrary().then(setLib).catch(() => undefined) }, [])
 
   useEffect(() => {
     if (headphone.mode === 'off' || !headphone.asset) { setData(null); return }
@@ -54,7 +62,7 @@ export default function HeadphoneSection() {
   }
 
   const remove = async () => {
-    if (!headphone.asset) return
+    if (!headphone.asset || inLibrary) return
     await deleteAsset(sessionId, headphone.asset)
     setAssets(assets.filter((a) => a.asset_id !== headphone.asset))
     setHeadphone({ mode: 'off', asset: null })
@@ -79,12 +87,17 @@ export default function HeadphoneSection() {
         <>
           <div className="flex flex-wrap items-center gap-2">
             <label className="text-xs text-muted" htmlFor="aur-hp-file">{t('aur.env.file')}</label>
+            <input
+              type="search" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={t('aur.hp.search')} aria-label={t('aur.hp.search')}
+              className="w-44 bg-dark border border-field rounded px-2 py-1 text-xs focus:border-teal"
+            />
             <select
               id="aur-hp-file" value={headphone.asset ?? ''} onChange={(e) => setHeadphone({ asset: e.target.value || null })}
-              className="bg-dark border border-field rounded px-2 py-1 text-xs focus:border-teal focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal"
+              className="max-w-[320px] bg-dark border border-field rounded px-2 py-1 text-xs focus:border-teal focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal"
             >
               <option value="">—</option>
-              {list.map((a) => <option key={a.asset_id} value={a.asset_id}>{a.name}</option>)}
+              {list.length > 0 && <optgroup label={t('aur.hp.yours')}>{list.map((a) => <option key={a.asset_id} value={a.asset_id}>{a.name}</option>)}</optgroup>}
+              {lib && <optgroup label={t('aur.hp.library', { n: shown.length })}>{shown.map((i) => <option key={i.id} value={i.id}>{i.label} · {i.rig}</option>)}</optgroup>}
             </select>
             <input ref={input} type="file" accept=".csv,.txt" className="hidden" onChange={(e) => void handleFile(e.target.files?.[0])} />
             <button
@@ -93,13 +106,19 @@ export default function HeadphoneSection() {
             >
               <Upload size={13} aria-hidden="true" /> {busy ? t('aur.hrtf.reading') : t('aur.hp.upload')}
             </button>
-            {headphone.asset && (
+            {headphone.asset && !inLibrary && (
               <button onClick={() => void remove()} aria-label={t('aur.hp.remove')} className="text-muted hover:text-red-400 p-1">
                 <Trash2 size={14} />
               </button>
             )}
             {current && <span className="text-[11px] text-muted">{t('aur.hp.info', { n: current.n_points, lo: Math.round(current.f_min), hi: Math.round(current.f_max) })}</span>}
           </div>
+          {libItem && lib && (
+            <p className="text-[11px] text-muted">
+              {t('aur.hp.libInfo', { rig: lib.rigs[libItem.rig]?.[lang] ?? libItem.rig })}{' '}
+              <a href={lib.source.url} target="_blank" rel="noopener noreferrer" className="text-teal underline">{lib.source.name}</a> ({lib.source.license}).
+            </p>
+          )}
           {!headphone.asset && <p className="text-xs text-muted">{t('aur.hp.noAsset')}</p>}
 
           {headphone.asset && (

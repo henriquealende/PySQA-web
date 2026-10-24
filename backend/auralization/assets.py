@@ -13,6 +13,7 @@ from services import session_store
 from utils import limits
 from utils.lang import msg
 
+from . import library
 from .headphone import HeadphoneSet
 from .hrtf import SPHERE_ID, sphere_set
 from .rir import RirSet
@@ -67,6 +68,8 @@ def get_rir(session_id: str, asset_id: str) -> Optional[RirSet]:
 
 
 def get_headphone(session_id: str, asset_id: str) -> Optional[HeadphoneSet]:
+    if asset_id.startswith(library.PREFIX):                 # an entry of the built-in library, not a file of the session
+        return library.load(asset_id[len(library.PREFIX):])
     with _lock:
         a = _assets.get(session_id, {}).get(asset_id)
     return a if isinstance(a, HeadphoneSet) else None
