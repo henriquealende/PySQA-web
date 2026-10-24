@@ -428,6 +428,39 @@ try:
 except C.ChainError:
     check("chain level: an unknown weighting is refused", True)
 
+# ── Noise spectrum (1/3-octave levels) and the space-separated CSV ───────────
+fc3, lv3 = NZ.third_octave_levels(np.sin(2 * np.pi * 1000 * np.arange(96000) / 48000), 48000)
+i1k = int(np.argmin(np.abs(fc3 - 1000)))
+check("third-octave: a full-scale 1 kHz sine reads 0 dB in the 1 kHz band and much less elsewhere",
+      abs(lv3[i1k]) < 0.4 and float(np.max(np.delete(lv3, [i1k - 1, i1k, i1k + 1]))) < -25, (lv3[i1k], float(np.max(np.delete(lv3, [i1k - 1, i1k, i1k + 1])))))
+check("third-octave: the bands stop at 0.45 fs (44.1 kHz gives 20 kHz, 16 kHz gives fewer)", NZ.third_octave_levels(np.random.default_rng(1).standard_normal(48000), 44100)[0][-1] == 16000.0 and NZ.third_octave_levels(np.random.default_rng(1).standard_normal(48000), 16000)[0][-1] <= 6300.0)
+
+
+def band_slope(color):
+    x = NZ.coloured_noise(48000 * 10, 48000, color, 3)
+    c, l = NZ.third_octave_levels(x, 48000)
+    sel = (c >= 100) & (c <= 10000)
+    return float(np.polyfit(np.log2(c[sel]), l[sel], 1)[0])      # dB per octave
+
+
+check("third-octave: white noise rises 3 dB per octave in 1/3-octave bands", abs(band_slope("white") - 3.0) < 0.5, band_slope("white"))
+check("third-octave: pink noise is flat in 1/3-octave bands", abs(band_slope("pink")) < 0.5, band_slope("pink"))
+check("third-octave: brown noise falls 3 dB per octave in 1/3-octave bands", abs(band_slope("brown") + 3.0) < 0.5, band_slope("brown"))
+wn = NZ.coloured_noise(48000 * 6, 48000, "white", 5)
+cw, lw = NZ.third_octave_levels(wn, 48000)
+covered = (cw[-1] * 2 ** (1 / 6) - cw[0] / 2 ** (1 / 6)) / 24000.0          # the bands stop at the 16 kHz band at 48 kHz, so the white noise above it is not counted
+check("third-octave: the bands of white noise add up to the share of its total level that they cover (0.3 dB)", abs(10 * np.log10(np.sum(10 ** (lw / 10))) - (10 * np.log10(1.0 / 0.5) + 10 * np.log10(covered))) < 0.3, 10 * np.log10(np.sum(10 ** (lw / 10))))
+sigx = np.stack([_sine(500, 0.3), _sine(500, 0.3)], axis=1)
+nc = NZ.noise_component(sigx, 48000, "pink", 12.0)
+check("noise component: its SNR against the signal is the one asked for", abs(20 * np.log10(np.sqrt(np.mean(sigx ** 2)) / np.sqrt(np.mean(nc ** 2))) - 12.0) < 0.01)
+check("noise component: mix_snr is the signal plus that component", np.allclose(NZ.mix_snr(sigx, 48000, "pink", 12.0), sigx + nc))
+
+space = ("\n".join(f"{a:.2f} {b:.2f}" for a, b in zip(_f, _db))).encode()
+hsp = HP.read_headphone_csv(space, "cEAR32-Test-Headphone-L.txt")
+check("headphone csv: two columns separated by spaces, no header (SBAF files)", hsp.n_points == 300 and abs(hsp.db[10] - _db[10]) < 0.01)
+hsp2 = HP.read_headphone_csv(("\n".join(f"{a:.2f}   {b:.2f}" for a, b in zip(_f, _db))).encode(), "wide.txt")
+check("headphone csv: several blanks between the columns", hsp2.n_points == 300)
+
 # ── API (a real server, like the other dev-tests) ─────────────────────────────
 import http.client
 import json
@@ -655,6 +688,19 @@ try:
     check("api: a target level out of range answers 422", st == 422)
     st, ob2 = srv.json("POST", "/api/auralization/render", {"session_id": S, "audio_id": aid, "blocks": {"level": {"mode": "spl", "weighting": "C"}}})
     check("api: a weighting other than A or Z answers 422", st == 422)
+
+    # ── Noise spectrum over the API ──
+    nreq = {"session_id": S, "audio_id": aid, "blocks": {"hrtf": {"azimuth": 30}, "noise": {"type": "pink", "snr_db": 10}}}
+    st, nsp = srv.json("POST", "/api/auralization/noise/spectrum", nreq)
+    ok_shape = st == 200 and len(nsp["freq"]) == len(nsp["signal_db"]) >= 25 and set(nsp["noises"]) == {"white", "pink", "brown"} and all(len(v) == len(nsp["freq"]) for v in nsp["noises"].values())
+    check("api: noise spectrum gives the signal and the three noise colours in 1/3-octave bands", ok_shape and nsp["selected"] == "pink", nsp if st != 200 else "")
+    p_sig = 10 * np.log10(np.sum(10 ** (np.array(nsp["signal_db"]) / 10)))
+    p_noi = 10 * np.log10(np.sum(10 ** (np.array(nsp["noises"]["pink"]) / 10)))
+    check("api: the bands of the selected noise sit about 10 dB under the signal in total (the SNR asked for)", abs((p_sig - p_noi) - 10.0) < 1.5, p_sig - p_noi)
+    st, nsp2 = srv.json("POST", "/api/auralization/noise/spectrum", {**nreq, "blocks": {"noise": {"type": "none", "snr_db": 10}}})
+    check("api: with no noise chosen the curves are still returned (to compare the colours)", st == 200 and nsp2["selected"] == "none" and len(nsp2["noises"]["brown"]) == len(nsp2["freq"]))
+    st, nsp3 = srv.json("POST", "/api/auralization/noise/spectrum", {**nreq, "audio_id": "nothere"})
+    check("api: noise spectrum of an unknown audio answers 404", st == 404)
 finally:
     srv.stop()
 

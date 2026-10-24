@@ -168,4 +168,10 @@ export default {
   'aur.lv.warning': 'The equipment value is your own assumption unless you measured it with an artificial ear or coupler. Without that, the real level at the ear may be different. The preview computes the gain on the first 12 s only.',
   'aur.step.on': 'on',
   'aur.step.hint': 'Click a step to see and adjust what was set in it. The source is chosen in the left column.',
+  'aur.noise.plot.loading': 'Calculating the curves…',
+  'aur.noise.plot.signal': 'Signal',
+  'aur.noise.plot.noise': 'Noise',
+  'aur.noise.plot.y': 'Level [dB]',
+  'aur.noise.plot.note': 'Levels in 1/3-octave bands (0 dB = RMS of a full-scale sine), with the signal already in the chosen room and position. The three noise colours are shown at the chosen signal-to-noise ratio; the selected one is the solid line. In these bands white noise rises 3 dB per octave, pink is flat and brown falls 3 dB per octave.',
+  'aur.noise.plot.noSource': 'Pick a source audio to see the signal and noise curves.',
 }

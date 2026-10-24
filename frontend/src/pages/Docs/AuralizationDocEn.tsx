@@ -233,7 +233,7 @@ export default function AuralizationDocEn() {
         <P>
           The SNR is the ratio of the RMS value of the signal to that of the noise, computed over the <strong>whole file and both ears</strong>, silent stretches
           included. The noise is generated with a fixed seed: the same settings always give the same file. The noise types are synthetic; they are not
-          recordings of cars or aircraft.
+          recordings of cars or aircraft. The block’s plot shows, in 1/3-octave bands, the signal (already in the chosen room and position) and the three noise colours at the chosen SNR, so the ratio can be read band by band: in 1/3-octave bands white noise rises 3 dB per octave, pink is flat and brown falls 3 dB per octave.
         </P>
       </Section>
 
@@ -272,10 +272,17 @@ export default function AuralizationDocEn() {
           head={['Source of measurements', 'Licence', 'Status']}
           widths={['34%', '30%', '36%']}
           rows={[
-            [<>AutoEq <Cite ids={['pasanen']} /></>, 'Code MIT; data per source (oratory1990, crinacle, Rtings, InnerFidelity)', 'To be confirmed, source by source. PySQA embeds no measurement.'],
+            [<>SBAF <Cite ids={['sbaf']} /></>, 'CC BY 4.0', 'Confirmed. Two columns (Hz, dB) separated by blanks, no header, 1/6-octave smoothed and normalised at 500 to 1500 Hz; one file per channel; measured on a miniDSP EARS or a flat-plate coupler. PySQA reads this format.'],
+            [<>COAT <Cite ids={['coat']} /></>, 'CC BY 4.0', 'Confirmed. Headphone transfer functions measured at the ear of 27 people (DT770 Pro, HD650 and ER-4PT), in SOFA. PySQA does not read headphone SOFA yet.'],
+            [<>OPRA <Cite ids={['opra']} /></>, 'Code MIT; data CC BY-SA 4.0', 'Confirmed. Holds equalisation filters, not the measured response: it does not feed this block directly.'],
+            [<>AutoEq <Cite ids={['pasanen']} /></>, 'Code MIT; data per source (oratory1990, crinacle, Rtings, InnerFidelity)', 'To be confirmed, source by source: the README says nothing about the licence of the measurements. It also gathers target curves, such as Harman.'],
+            ['squig.link / CrinGraph, RTINGS', 'Per site; no terms found', 'To be confirmed. I found no official bulk download or terms of use.'],
           ]}
         />
-        <P>Check the licence of each measurement you use and cite the source in your work.</P>
+        <P>
+          PySQA <strong>embeds no measurement</strong>: download the file at its source, check the licence, cite the source in your work and upload the CSV. All of these measure on a coupler or an
+          artificial head, and the result depends on the measuring equipment: do not compare numbers from different databases without checking that.
+        </P>
       </Section>
 
       <Section id="nivel" title="Playback level (dB SPL)">

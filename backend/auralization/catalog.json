@@ -21,7 +21,7 @@
       "ref": "kearney2024",
       "url": "https://zenodo.org/records/10886409",
       "embedded": false,
-      "note": "20 subjects, SOFA, 44.1/48/96 kHz. Cite the original dataset when used or modified."
+      "note": "20 subjects, SOFA, 44.1/48/96 kHz. Cite the original dataset when used or modified. The record may also hold headphone filters (not checked)."
     },
     {
       "id": "ari",
@@ -54,7 +54,7 @@
       "ref": "pasanen",
       "url": "https://github.com/jaakkopasanen/AutoEq",
       "embedded": false,
-      "note": "The MIT licence covers the code. oratory1990, crinacle, Rtings and InnerFidelity data need a licence check each."
+      "note": "Aggregator of oratory1990, crinacle, InnerFidelity, Rtings and legacy headphone.com measurements, plus target curves (for example harman_over-ear_2018.csv). The code is MIT; the README says nothing about the licence of the measurements, so each source needs its own check."
     },
     {
       "id": "ebrird",
@@ -132,6 +132,72 @@
       "url": "https://www.openair.hosted.york.ac.uk/",
       "embedded": false,
       "note": "Read the licence at the bottom of each item page."
+    },
+    {
+      "id": "sbaf",
+      "kind": "headphone",
+      "name": "SBAF headphone measurements (superbestaudiofriends)",
+      "license": "CC BY 4.0",
+      "license_status": "verified",
+      "ref": "sbaf",
+      "url": "https://github.com/superbestaudiofriends/headphone-measurements-frequency-response",
+      "embedded": false,
+      "note": "Two columns (Hz, dB) separated by blanks, no header, 1/6-octave smoothed and normalised to 500-1500 Hz; one file per channel; measured on a miniDSP EARS or a flat-plate coupler. The format PySQA reads. The number of headphones was not counted."
+    },
+    {
+      "id": "coat",
+      "kind": "headphone",
+      "name": "COAT (HpTF of three headphones on 27 listeners)",
+      "license": "CC BY 4.0",
+      "license_status": "verified",
+      "ref": "coat",
+      "url": "https://zenodo.org/records/4556707",
+      "embedded": false,
+      "note": "Headphone transfer functions measured at the ear (Beyerdynamic DT770 Pro, Sennheiser HD650, Etymotic ER-4PT) at Aachen and Oldenburg, in SOFA; about 130 MB for the HpTFs. PySQA does not read HpTF SOFA files yet."
+    },
+    {
+      "id": "opra",
+      "kind": "headphone",
+      "name": "OPRA (Roon)",
+      "license": "code MIT; data CC BY-SA 4.0",
+      "license_status": "verified",
+      "ref": "opra",
+      "url": "https://github.com/opra-project/OPRA",
+      "embedded": false,
+      "note": "Community catalogue of products and EQ compensation curves (started from AutoEq data). It holds equalisation settings, which are not a measured response, so it does not feed this block directly. Share-alike."
+    },
+    {
+      "id": "squiglink",
+      "kind": "headphone",
+      "name": "squig.link / CrinGraph (crinacle and others)",
+      "license": "per site",
+      "license_status": "to_confirm",
+      "ref": "pasanen",
+      "url": "https://documentation.squig.link/",
+      "embedded": false,
+      "note": "Open-source graph tool used by many measurers. No official bulk CSV was found; the data licence depends on each site."
+    },
+    {
+      "id": "rtings",
+      "kind": "headphone",
+      "name": "RTINGS (raw frequency response)",
+      "license": "no terms found",
+      "license_status": "to_confirm",
+      "ref": "pasanen",
+      "url": "https://www.rtings.com/headphones/tests/sound-quality/raw-frequency-response",
+      "embedded": false,
+      "note": "Graphs on the site; no download option or usage terms were found."
+    },
+    {
+      "id": "harman-target",
+      "kind": "headphone",
+      "name": "Harman target curves",
+      "license": "published research",
+      "license_status": "to_confirm",
+      "ref": "pasanen",
+      "url": "https://github.com/jaakkopasanen/AutoEq",
+      "embedded": false,
+      "note": "Target curves of the Harman research (Olive, Welti and others); AutoEq publishes them as CSV. The terms for redistributing the numbers were not confirmed, so PySQA compensates to a flat target only."
     }
   ],
   "scenes_note": {

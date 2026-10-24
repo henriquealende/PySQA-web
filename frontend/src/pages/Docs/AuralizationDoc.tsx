@@ -233,7 +233,7 @@ export default function AuralizationDoc() {
         <P>
           A SNR é a razão entre o valor RMS do sinal e o do ruído, calculados sobre o <strong>arquivo inteiro e as duas orelhas</strong>, com os trechos de
           silêncio incluídos. O ruído é gerado com semente fixa: a mesma configuração dá sempre o mesmo arquivo. Os tipos de ruído são sintéticos; não são
-          gravações de carros ou aviões.
+          gravações de carros ou aviões. O gráfico do bloco mostra, em bandas de 1/3 de oitava, o sinal (já na sala e na posição escolhidas) e as três cores de ruído na SNR escolhida, para ler a relação banda a banda: em bandas de 1/3 de oitava o ruído branco sobe 3 dB por oitava, o rosa é plano e o marrom cai 3 dB por oitava.
         </P>
       </Section>
 
@@ -272,10 +272,17 @@ export default function AuralizationDoc() {
           head={['Origem das medições', 'Licença', 'Situação']}
           widths={['34%', '30%', '36%']}
           rows={[
-            [<>AutoEq <Cite ids={['pasanen']} /></>, 'Código MIT; dados por fonte (oratory1990, crinacle, Rtings, InnerFidelity)', 'A confirmar, fonte por fonte. O PySQA não embute nenhuma medição.'],
+            [<>SBAF <Cite ids={['sbaf']} /></>, 'CC BY 4.0', 'Confirmada. Duas colunas (Hz, dB) separadas por espaço, sem cabeçalho, suavizadas em 1/6 de oitava e normalizadas em 500 a 1500 Hz; um arquivo por canal; medidas em um miniDSP EARS ou num acoplador de placa plana. O PySQA lê esse formato.'],
+            [<>COAT <Cite ids={['coat']} /></>, 'CC BY 4.0', 'Confirmada. Funções de transferência de fone medidas no ouvido de 27 pessoas (DT770 Pro, HD650 e ER-4PT), em SOFA. O PySQA ainda não lê SOFA de fone.'],
+            [<>OPRA <Cite ids={['opra']} /></>, 'Código MIT; dados CC BY-SA 4.0', 'Confirmada. Traz filtros de equalização, não a resposta medida: não alimenta este bloco diretamente.'],
+            [<>AutoEq <Cite ids={['pasanen']} /></>, 'Código MIT; dados por fonte (oratory1990, crinacle, Rtings, InnerFidelity)', 'A confirmar, fonte por fonte: o README não diz nada sobre a licença das medições. Reúne também curvas-alvo, como a Harman.'],
+            ['squig.link / CrinGraph, RTINGS', 'Por site; sem termos achados', 'A confirmar. Não achei download em lote oficial nem termos de uso.'],
           ]}
         />
-        <P>Confira a licença de cada medição que usar e cite a fonte no seu trabalho.</P>
+        <P>
+          O PySQA <strong>não embute nenhuma medição</strong>: baixe o arquivo na fonte, confira a licença, cite a fonte no seu trabalho e envie o CSV. Todas essas bases medem
+          em acoplador ou cabeça artificial, e o resultado depende do equipamento de medição: não compare números de bases diferentes sem checar isso.
+        </P>
       </Section>
 
       <Section id="nivel" title="Nível de reprodução (dB SPL)">

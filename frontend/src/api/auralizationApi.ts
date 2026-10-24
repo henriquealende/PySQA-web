@@ -53,6 +53,14 @@ export interface LevelParams {
 
 export const NO_LEVEL: LevelParams = { mode: 'off', target_db_spl: 60, fs_db_spl: 100, weighting: 'A' }
 
+export interface NoiseSpectrum {
+  freq: number[]
+  signal_db: number[]
+  noises: Record<'white' | 'pink' | 'brown', number[]>
+  selected: NoiseType
+  snr_db: number
+}
+
 export interface HeadphoneResponse {
   freq: number[]
   measured_db: number[]
@@ -218,6 +226,18 @@ export async function fetchRoomPreview(
   })
   await checkResponse(res)
   return URL.createObjectURL(await res.blob())
+}
+
+/** 1/3-octave levels of the signal (room and head applied, before the noise) and of each noise colour at the chosen SNR. */
+export async function fetchNoiseSpectrum(
+  sessionId: string, audioId: string, h: HrtfParams, env: EnvParams, noise: NoiseParams, signal?: AbortSignal,
+): Promise<NoiseSpectrum> {
+  const res = await apiFetch(sessionId, `${BASE}/noise/spectrum`, {
+    method: 'POST', headers: json, signal,
+    body: JSON.stringify({ session_id: sessionId, audio_id: audioId, t0: 0, blocks: { hrtf: { enabled: env.type !== 'brir', ...h }, environment: env, noise } }),
+  })
+  await checkResponse(res)
+  return res.json()
 }
 
 export async function fetchRirInfo(sessionId: string, assetId: string, signal?: AbortSignal): Promise<RirInfo> {

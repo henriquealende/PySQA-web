@@ -59,7 +59,8 @@ def read_headphone_csv(data: bytes, name: str) -> HeadphoneSet:
         raise HeadphoneError(msg(f"{name} tem linhas demais (máximo {MAX_ROWS}).", f"{name} has too many rows (maximum {MAX_ROWS})."))
 
     probe = lines[min(1, len(lines) - 1)]
-    sep = ";" if ";" in probe else ("\t" if "\t" in probe else ",")       # a semicolon means the decimal mark may be a comma
+    # a semicolon means the decimal mark may be a comma; with no separator at all, columns are split on blanks
+    sep = ";" if ";" in probe else ("\t" if "\t" in probe else ("," if "," in probe else None))
     def cells(line: str):
         parts = [c.strip() for c in line.split(sep)]
         if sep == ";":

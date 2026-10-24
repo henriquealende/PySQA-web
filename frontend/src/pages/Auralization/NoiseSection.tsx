@@ -1,14 +1,31 @@
+import { useEffect, useMemo, useState } from 'react'
 import clsx from 'clsx'
+import { useStore } from '../../store/useStore'
 import { useAuralStore } from '../../store/useAuralStore'
 import { useT } from '../../i18n'
-import type { NoiseType } from '../../api/auralizationApi'
+import { isAbort } from '../../api/audioApi'
+import { fetchNoiseSpectrum, NO_ENV, NoiseSpectrum, NoiseType } from '../../api/auralizationApi'
+import NoisePlot from './NoisePlot'
 
 const TYPES: NoiseType[] = ['none', 'white', 'pink', 'brown']
 
 /** Background noise at a chosen signal-to-noise ratio (the car's rolling noise, the cruise noise of a plane). */
 export default function NoiseSection() {
   const t = useT()
-  const { noise, setNoise } = useAuralStore()
+  const sessionId = useStore((s) => s.sessionId)
+  const { noise, setNoise, sourceId, hrtf, env } = useAuralStore()
+  const [data, setData] = useState<NoiseSpectrum | null>(null)
+  const envEff = useMemo(() => (env.type !== 'none' && !env.asset ? NO_ENV : env), [env])
+
+  // the curves follow the source, the room, the head position and the noise settings
+  useEffect(() => {
+    if (!sourceId) { setData(null); return }
+    const ctrl = new AbortController()
+    const id = window.setTimeout(() => {
+      fetchNoiseSpectrum(sessionId, sourceId, hrtf, envEff, noise, ctrl.signal).then(setData).catch((e) => { if (!isAbort(e)) setData(null) })
+    }, 400)
+    return () => { window.clearTimeout(id); ctrl.abort() }
+  }, [sessionId, sourceId, hrtf, envEff, noise])
   return (
     <section className="rounded-lg border border-border bg-panel p-4 space-y-3" aria-labelledby="aur-noise">
       <h2 id="aur-noise" className="text-sm font-semibold">{t('aur.noise.title')}</h2>
@@ -36,6 +53,12 @@ export default function NoiseSection() {
           <p className="text-[11px] text-muted">{t('aur.noise.snrNote')}</p>
         </>
       )}
+      {sourceId ? (
+        <div className="space-y-1">
+          <NoisePlot data={data} />
+          <p className="text-[11px] text-muted">{t('aur.noise.plot.note')}</p>
+        </div>
+      ) : <p className="text-xs text-muted">{t('aur.noise.plot.noSource')}</p>}
     </section>
   )
 }

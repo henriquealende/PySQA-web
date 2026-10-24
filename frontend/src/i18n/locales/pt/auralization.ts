@@ -168,4 +168,10 @@ export default {
   'aur.lv.warning': 'O valor do equipamento é uma suposição sua, a menos que você o tenha medido com um ouvido artificial ou acoplador. Sem isso, o nível real no ouvido pode ser outro. A prévia calcula o ganho só nos primeiros 12 s.',
   'aur.step.on': 'ativo',
   'aur.step.hint': 'Clique em uma etapa para ver e ajustar o que foi feito nela. A fonte se escolhe na coluna da esquerda.',
+  'aur.noise.plot.loading': 'Calculando as curvas…',
+  'aur.noise.plot.signal': 'Sinal',
+  'aur.noise.plot.noise': 'Ruído',
+  'aur.noise.plot.y': 'Nível [dB]',
+  'aur.noise.plot.note': 'Níveis em bandas de 1/3 de oitava (0 dB = valor eficaz de um seno em escala máxima), com o sinal já na sala e na posição escolhidas. As três cores de ruído aparecem na relação sinal-ruído escolhida; a selecionada é a linha cheia. A inclinação do ruído branco sobe 3 dB por oitava nestas bandas, a do rosa é plana e a do marrom cai 3 dB por oitava.',
+  'aur.noise.plot.noSource': 'Escolha um áudio de origem para ver as curvas do sinal e do ruído.',
 }

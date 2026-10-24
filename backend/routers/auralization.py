@@ -16,7 +16,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 import services.audio_service as svc
-from auralization import assets, chain as chain_mod, headphone as hp_mod, hrtf as hrtf_mod, level as level_mod, rir as rir_mod, rir_synth
+from auralization import assets, chain as chain_mod, headphone as hp_mod, hrtf as hrtf_mod, level as level_mod, noise as noise_mod, rir as rir_mod, rir_synth
 from auralization.rir import RirError, read_rir
 from auralization.sofa_io import HrtfSet, SofaError, read_sofa
 from services.session_store import add_entry, check_session_id, get_entry
@@ -359,6 +359,32 @@ def headphone_response(body: HeadphoneResponseRequest):
         "filter_db": np.round(hp_mod.response_db(fir, body.fs, freq), 2).tolist(),
         "result_db": np.round(measured + hp_mod.response_db(fir, body.fs, freq), 2).tolist() if body.mode == "compensate" else None,
         "max_boost_db": body.max_boost_db,
+    }
+
+
+@router.post("/noise/spectrum")
+def noise_spectrum(body: RenderRequest):
+    """1/3-octave levels of the signal (room and head applied, before the noise) and of each noise colour at the chosen SNR."""
+    entry = _entry(body.session_id, body.audio_id)
+    fs = entry.sample_rate
+    start = int(max(0.0, body.t0 or 0.0) * fs)
+    stop = min(entry.data.shape[0], start + int(_PREVIEW_MAX_S * fs))
+    if stop <= start:
+        raise HTTPException(400, msg("O início está depois do fim do áudio.", "The start is past the end of the audio."))
+    dry = Blocks(hrtf=body.blocks.hrtf, environment=body.blocks.environment)       # no noise, headphone or level: the bare signal
+    res = _run(body.session_id, chain_mod.downmix(entry.data[start:stop]), fs, dry, "auralization", entry.calibration_pa)
+    centres, sig = noise_mod.third_octave_levels(res.data, fs)
+    snr = body.blocks.noise.snr_db
+    noises = {}
+    for color in noise_mod.COLORS:
+        comp = noise_mod.noise_component(res.data, fs, color, snr)
+        noises[color] = np.round(noise_mod.third_octave_levels(comp, fs)[1], 2).tolist()
+    return {
+        "freq": centres.tolist(),
+        "signal_db": np.round(sig, 2).tolist(),
+        "noises": noises,
+        "selected": body.blocks.noise.type,
+        "snr_db": snr,
     }
 
 

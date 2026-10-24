@@ -217,6 +217,21 @@ export const REFS: Record<string, Ref> = {
     id: 'kuttruff2009', cite: 'KUTTRUFF, 2009', sort: 'KUTTRUFF',
     entry: 'KUTTRUFF, H. **Room acoustics**. 5. ed. Abingdon: Spon Press, 2009.',
   },
+  sbaf: {
+    id: 'sbaf', cite: 'SUPERBESTAUDIOFRIENDS, [s. d.]', sort: 'SUPERBESTAUDIOFRIENDS',
+    entry: 'SUPERBESTAUDIOFRIENDS. **Headphone measurements: frequency response**. [S. l.]: GitHub, [s. d.]. Licença CC BY 4.0. Disponível em: https://github.com/superbestaudiofriends/headphone-measurements-frequency-response. ' + ACCESS,
+    url: 'https://github.com/superbestaudiofriends/headphone-measurements-frequency-response',
+  },
+  coat: {
+    id: 'coat', cite: 'KOHNEN et al., 2020', sort: 'KOHNEN',
+    entry: 'KOHNEN, M.; DENK, F.; LLORCA-BOFÍ, J.; KOLLMEIER, B.; VORLÄNDER, M. **COAT**: cross-site Oldenburg-Aachener transfer-functions. Versão 2. [S. l.]: Zenodo, 2020. Licença CC BY 4.0. DOI: 10.5281/zenodo.4556707. Disponível em: https://zenodo.org/records/4556707. ' + ACCESS,
+    url: 'https://zenodo.org/records/4556707',
+  },
+  opra: {
+    id: 'opra', cite: 'OPRA PROJECT, [s. d.]', sort: 'OPRA',
+    entry: 'OPRA PROJECT. **OPRA**: open profiles for revealing audio. [S. l.]: GitHub, [s. d.]. Código sob licença MIT; dados sob licença CC BY-SA 4.0. Disponível em: https://github.com/opra-project/OPRA. ' + ACCESS,
+    url: 'https://github.com/opra-project/OPRA',
+  },
   // --- Preparação de áudios: bases abertas de HRTF, fones e respostas ao impulso (página planejada) ---
   algazi2001: {
     id: 'algazi2001', cite: 'ALGAZI et al., 2001', sort: 'ALGAZI',
