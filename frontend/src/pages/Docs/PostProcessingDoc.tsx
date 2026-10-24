@@ -3,6 +3,7 @@ import {
   BarkDemo, EnvelopeChart, FilterDemo, FluctuationChart, LoudnessChart, OctaveChart, RoughnessChart, SharpnessChart,
   SpectrogramChart, SpectrumChart, TonalityChart, WeightingDemo, WindowDemo,
 } from './demos'
+import { IpmDurationDemo, IpmEventDemo } from './ipmDemos'
 
 export default function PostProcessingDoc() {
   return (
@@ -463,6 +464,14 @@ export default function PostProcessingDoc() {
           </UL>
           <P>O gráfico mostra o IPM por banda (em Bark<sub>HMS</sub>) e uma linha tracejada no <strong>limiar de impulsividade de 5 dB</strong>. Precisa de pelo menos 0,5 s de áudio e taxa de amostragem de 16 kHz ou mais.
             A versão anterior (21 bandas de 1/3 de oitava, sem medir o início do evento) foi substituída em outubro de 2026 e continua no código como <code>mpi_legacy.py</code>.</P>
+          <Figure n={14} title="O IPM de um estalo que vai diminuindo, de 40 dB até 0 dB acima do ruído de fundo."
+            note="Arraste o controle: com o estalo grande, todas as bandas têm evento e o MPI passa de 5 dB; ao diminuir, primeiro somem as bandas graves (o estalo é de ruído branco, e as bandas agudas respondem mais depressa), depois o MPI cai abaixo do limiar, e por fim não há evento e o valor global é 0.">
+            <IpmEventDemo />
+          </Figure>
+          <Figure n={15} title="O IPM de um estalo do mesmo tamanho (28 dB acima do ruído de fundo) que vai ficando mais longo, de 1 ms a 200 ms de subida."
+            note="Quanto mais curto o evento, mais impulsivo: com subida de até 20 ms quase todas as bandas têm evento e o MPI passa de 5 dB; com 40 ms já faltam bandas e o MPI cai para perto do limiar; a partir de 80 ms o som cresce devagar demais e não há evento (o valor global é 0). Abaixo de uns 5 ms o MPI quase não muda, porque o histórico de nível usa blocos de 10 ms.">
+            <IpmDurationDemo />
+          </Figure>
         </Section>
       </Section>
 

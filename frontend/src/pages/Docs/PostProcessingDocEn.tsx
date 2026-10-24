@@ -3,6 +3,7 @@ import {
   BarkDemo, EnvelopeChart, FilterDemo, FluctuationChart, LoudnessChart, OctaveChart, RoughnessChart, SharpnessChart,
   SpectrogramChart, SpectrumChart, TonalityChart, WeightingDemo, WindowDemo,
 } from './demos'
+import { IpmDurationDemo, IpmEventDemo } from './ipmDemos'
 
 export default function PostProcessingDocEn() {
   return (
@@ -463,6 +464,14 @@ export default function PostProcessingDocEn() {
           </UL>
           <P>The chart shows the IPM per band (in Bark<sub>HMS</sub>) and a dashed line at the <strong>impulsiveness threshold of 5 dB</strong>. It needs at least 0.5 s of audio and a sample rate of 16 kHz or more.
             The previous version (21 1/3-octave bands, without measuring the event onset) was replaced in October 2026 and stays in the code as <code>mpi_legacy.py</code>.</P>
+          <Figure n={14} title="The IPM of a click that gets smaller, from 40 dB down to 0 dB above the background noise."
+            note="Drag the control: with a large click every band has an event and the MPI goes above 5 dB; as it shrinks, the low bands drop out first (the click is white noise, and the high bands respond faster), then the MPI falls below the threshold, and at the end there is no event and the global value is 0.">
+            <IpmEventDemo />
+          </Figure>
+          <Figure n={15} title="The IPM of a click of the same size (28 dB above the background noise) that gets longer, from 1 ms to 200 ms of rise."
+            note="The shorter the event, the more impulsive: with a rise of up to 20 ms almost every band has an event and the MPI goes above 5 dB; at 40 ms bands start to drop out and the MPI falls close to the threshold; from 80 ms on the sound grows too slowly and there is no event (the global value is 0). Below about 5 ms the MPI barely changes, because the level history uses 10 ms blocks.">
+            <IpmDurationDemo />
+          </Figure>
         </Section>
       </Section>
 
