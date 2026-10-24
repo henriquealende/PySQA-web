@@ -425,11 +425,13 @@ export default function PostProcessingDoc() {
             <strong>Como o PySQA calcula:</strong> pela implementação do Modelo Auditivo de Sottek <Cite ids={['ecma418', 'lotinga']} />, que separa, em cada
             banda crítica, a parte tonal da parte de ruído. O PySQA usa uma versão reorganizada desse código, que dá o mesmo resultado (diferença
             abaixo de 1e-6) com cerca de um sexto da memória e um terço do tempo. Ainda é uma das métricas mais pesadas: num computador comum leva
-            cerca de 1 s para cada segundo de áudio e usa cerca de 70 MB por segundo de áudio. Para arquivos longos, selecione um trecho.
+            cerca de 1 s para cada segundo de áudio. No site hospedado, que tem uma só CPU, leva cerca de 2,5 s por segundo (mais 1,5 s fixos) e o
+            servidor aceita trechos de até uns 20 s dessa métrica. Ela usa cerca de 55 MB de memória por segundo de áudio. Para arquivos longos, selecione um trecho.
           </P>
           <P>
             Na coluna da esquerda (e na barra do cálculo em lote) o seletor <strong>Precisão da tonalidade</strong> escolhe entre <strong>Exato</strong>, o padrão,
-            e <strong>Rápido</strong>. O Rápido usa uma transformada mais curta na janela de atraso e interpola o pico: leva cerca de metade do tempo, com o valor
+            e <strong>Rápido</strong>. O Rápido usa uma transformada mais curta na janela de atraso e interpola o pico: leva de 55% a 65% do tempo do Exato (no site, cerca de
+            1,5 s por segundo de áudio), com o valor
             global a até 0,2% do exato e a frequência do tom a cerca de 1 Hz. Os dois resultados ficam guardados separados, e a escolha vale também para a
             exportação.
           </P>

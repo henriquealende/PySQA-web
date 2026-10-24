@@ -425,11 +425,13 @@ export default function PostProcessingDocEn() {
             <strong>How PySQA computes it:</strong> through the implementation of the Sottek Hearing Model <Cite ids={['ecma418', 'lotinga']} />, which separates, in each
             critical band, the tonal part from the noise part. PySQA uses a reorganised version of that code, which gives the same result (difference
             below 1e-6) with about a sixth of the memory and a third of the time. It is still one of the heaviest metrics: on an ordinary computer it takes
-            about 1 s for each second of audio and uses about 70 MB per second of audio. For long files, select a segment.
+            about 1 s for each second of audio. On the hosted site, which has a single CPU, it takes about 2.5 s per second (plus 1.5 s fixed) and the
+            server accepts segments of up to about 20 s for this metric. It uses about 55 MB of memory per second of audio. For long files, select a segment.
           </P>
           <P>
             In the left column (and in the batch bar) the <strong>Tonality precision</strong> selector chooses between <strong>Exact</strong>, the default,
-            and <strong>Fast</strong>. Fast uses a shorter transform in the lag window and interpolates the peak: it takes about half the time, with the
+            and <strong>Fast</strong>. Fast uses a shorter transform in the lag window and interpolates the peak: it takes 55% to 65% of the time of Exact (about
+            1.5 s per second of audio on the site), with the
             overall value within 0.2% of the exact one and the tonal frequency within about 1 Hz. The two results are kept apart, and the choice also
             applies to the export.
           </P>

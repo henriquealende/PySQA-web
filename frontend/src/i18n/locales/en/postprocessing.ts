@@ -34,7 +34,7 @@ export default {
   'pp.page.tonalityPrecision': 'Tonality precision',
   'pp.page.precisionExact': 'Exact',
   'pp.page.precisionFast': 'Fast',
-  'pp.page.precisionHint': 'Fast takes about half the time of Exact: the overall value stays within 0.2% and the tonal frequency within about 1 Hz.',
+  'pp.page.precisionHint': 'Fast takes 55% to 65% of the time of Exact: the overall value stays within 0.2% and the tonal frequency within about 1 Hz.',
   'pp.page.compareWith': 'Compare with',
   'pp.page.none': '— None —',
   'pp.page.micCal': 'Mic Calibration',

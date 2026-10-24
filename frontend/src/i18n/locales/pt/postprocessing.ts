@@ -34,7 +34,7 @@ export default {
   'pp.page.tonalityPrecision': 'Precisão da tonalidade',
   'pp.page.precisionExact': 'Exato',
   'pp.page.precisionFast': 'Rápido',
-  'pp.page.precisionHint': 'O modo Rápido leva cerca de metade do tempo do Exato: o valor global fica a até 0,2% e a frequência do tom a cerca de 1 Hz.',
+  'pp.page.precisionHint': 'O modo Rápido leva de 55% a 65% do tempo do Exato: o valor global fica a até 0,2% e a frequência do tom a cerca de 1 Hz.',
   'pp.page.compareWith': 'Comparar com',
   'pp.page.none': '— Nenhum —',
   'pp.page.micCal': 'Calibração do microfone',
