@@ -1,5 +1,7 @@
 # Auditoria da IPM (Impulsive Prominence Metric)
 
+> **Status (out/2026):** a IPM foi reescrita seguindo a tese (`backend/psychoacoustics/mpi.py`: 53 filtros ECMA-418-2, LDI/OR medidos no início do evento, porta contra ruído estacionário). Este relatório descreve a versão anterior, mantida em `mpi_legacy.py`. Ainda provisórios: o valor global (soma de energia), o −6 dB e a leitura da taxa de subida. SIL (Eq. 32) não foi alterado.
+
 Código auditado: `backend/psychoacoustics/mpi.py` (calculadora) e `_metric_ipm` em `backend/services/audio_service.py` (o que o
 servidor devolve). Testes: `dev-tests/test_ipm.py` (`python ../dev-tests/test_ipm.py`, na pasta `backend`, 31 s).
 

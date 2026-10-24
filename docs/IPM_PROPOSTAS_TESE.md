@@ -1,5 +1,7 @@
 # IPM (MPI): o que a tese define, o que o código faz e o que propor
 
+> **Status (out/2026):** a IPM foi reescrita seguindo a tese (`backend/psychoacoustics/mpi.py`: 53 filtros ECMA-418-2, LDI/OR medidos no início do evento, porta contra ruído estacionário). Este relatório descreve a versão anterior, mantida em `mpi_legacy.py`. Ainda provisórios: o valor global (soma de energia), o −6 dB e a leitura da taxa de subida. SIL (Eq. 32) não foi alterado.
+
 Fonte: SILVEIRA, H. A. da. *Qualidade sonora aplicada na análise de sinais impulsivos de refrigeradores*. Tese (Doutorado em Engenharia
 Mecânica), UFSC, 2024. Páginas citadas são as impressas (Capítulos 2, 6 e 7). Código: `backend/psychoacoustics/mpi.py` e o `SIL` do painel
 de lote. Este documento só compara e propõe: **nada foi alterado no cálculo.** Complementa `docs/IPM_AUDITORIA.md`.

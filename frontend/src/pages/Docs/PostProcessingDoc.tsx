@@ -538,7 +538,7 @@ export default function PostProcessingDoc() {
             ['Loudness ISO 532-1', '2,4', 'cerca de 28 s'],
             ['Roughness (Daniel e Weber)', '2,4', 'cerca de 30 s'],
             ['Fluctuation strength', '0,3', 'o arquivo inteiro (até 240 s)'],
-            ['IPM', 'cerca de 0,45 (estimado)', 'cerca de 130 s (estimado)'],
+            ['IPM', '0,15', 'o arquivo inteiro (até 240 s)'],
             ['Sharpness DIN 45692', '0,04', 'o arquivo inteiro (até 240 s)'],
             ['Espectro, espectrograma, 1/3 de oitava e envelope', 'menos de 0,05', 'o arquivo inteiro (até 240 s)'],
           ]}
