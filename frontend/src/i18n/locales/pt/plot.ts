@@ -83,4 +83,18 @@ export default {
   'plot.metric.global': 'Global:',
   'plot.metric.compare': 'Comparação:',
   'plot.metric.requires': '(requer {what})',
+
+  'plot.stats.title': 'Estatísticas no tempo',
+  'plot.stats.copy': 'Copiar',
+  'plot.stats.copied': 'Copiado',
+  'plot.stats.copyTitle': 'Copiar a tabela (separada por tabulação) para uma planilha',
+  'plot.stats.file': 'Arquivo',
+  'plot.stats.mean': 'Média',
+  'plot.stats.std': 'Desvio',
+  'plot.stats.min': 'Mín.',
+  'plot.stats.max': 'Máx.',
+  'plot.stats.tMax': 'Em',
+  'plot.stats.tMaxTitle': 'Instante do valor máximo',
+  'plot.stats.nTitle': 'Valor excedido em {p} % do tempo',
+  'plot.stats.note': 'Unidade: {unit}. N5 é o valor excedido em 5 % do tempo (percentil 95); N95, em 95 % (percentil 5).',
 } as Record<string, string>

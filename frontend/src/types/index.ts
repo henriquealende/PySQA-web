@@ -43,8 +43,22 @@ export interface EnvelopeParams {
   lpf_hz: number | null
 }
 
+/** Statistics of a metric over time (N5 = value exceeded in 5 % of the time). */
+export interface MetricStats {
+  n: number
+  mean: number
+  std: number
+  min: number
+  max: number
+  t_min: number
+  t_max: number
+  duration_s: number
+  exceeded: Record<'5' | '10' | '50' | '90' | '95', number>
+}
+
 export interface MetricResult {
   global?: number
+  stats?: MetricStats
   precision?: TonalityPrecision      // set by Tonality ECMA-418-2: how it was calculated
   unit?: string
   x_axis?: number[]

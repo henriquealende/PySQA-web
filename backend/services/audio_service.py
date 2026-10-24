@@ -19,6 +19,7 @@ from services.session_store import AudioEntry, audio_ram_mb, new_audio_id, persi
 from utils import limits
 from utils.lang import msg
 from utils.samples import BROWSER_SAFE, normalise_samples
+from utils.series_stats import series_statistics
 
 # ── Pre-warmed metric singletons ──────────────────────────────────────────────
 _LOUD = _SHARP = _ROUGH = _FS_CALC = _TON = _MPI = None
@@ -562,8 +563,19 @@ def compute_metric(entry: AudioEntry, metric_key: str, field_type: str = "free",
             result = _shift_time(result, sec.offset_s)
             result["section"] = sec.span
             _remember_section(entry, cache_key)
+        _add_statistics(result)
         entry._cache[cache_key] = result
         return result
+
+
+def _add_statistics(result: Dict[str, Any]) -> None:
+    """Statistics of the time series of the metric (mean, extremes, Nx), when it has one."""
+    td = result.get("time_data")
+    if not td:
+        return
+    stats = series_statistics(td.get("t", []), td.get("values", []))
+    if stats is not None:
+        result["stats"] = stats
 
 
 def _remember_section(entry: AudioEntry, new_key: str) -> None:

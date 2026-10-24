@@ -16,6 +16,7 @@ import type {
 } from '../types'
 import SectionBar, { sectionKey, toSection } from './SectionBar'
 import MetricProgress from './MetricProgress'
+import MetricStats from './MetricStats'
 import { useT } from '../i18n'
 import { serverLabel } from '../i18n/serverLabels'
 
@@ -680,6 +681,11 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
         {isBark && <BarkBadge isHMS={isHMS} />}
         {compareId && <CompareBadge name={compareName} color={C_BLUE} />}
       </div>
+
+      <MetricStats rows={[
+        ...(data.stats ? [{ name: files.find(f => f.audio_id === audioId)?.name ?? '', color: C_TEAL, stats: data.stats, unit: data.unit ?? '' }] : []),
+        ...(dataCmp?.stats ? [{ name: compareName, color: C_BLUE, stats: dataCmp.stats, unit: dataCmp.unit ?? '' }] : []),
+      ]} />
 
       {data.time_data && (
         <Plot data={timeTraces}

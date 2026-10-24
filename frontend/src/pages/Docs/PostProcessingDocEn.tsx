@@ -203,6 +203,20 @@ export default function PostProcessingDocEn() {
             the same segment. It is the most direct way to see the effect of processing: compare the original with the filtered version.
           </P>
         </Section>
+
+        <Section id="v-estatisticas" title="Statistics over time" level={3}>
+          <P>
+            When the metric varies in time (loudness, roughness, tonality), a table below the global value sums up the curve: <strong>mean</strong>,
+            <strong> standard deviation</strong>, <strong>minimum</strong>, <strong>maximum</strong> (with the time it occurs) and the values exceeded in 5, 10, 50, 90 and 95 % of the time.
+            With <K>Compare with</K>, the second file gets a row in the same table. The <K>Copy</K> button takes the table to a spreadsheet.
+          </P>
+          <UL>
+            <li><strong>N5</strong> is the value the metric exceeds in 5 % of the time, that is, the 95th percentile of the curve. <strong>N95</strong> is the value exceeded in 95 % of the time (5th percentile). The rule is the same for every metric: the N5 of a loudness is the N5 of ISO 532-1, and that of a roughness is just the value exceeded in 5 % of the time.</li>
+            <li>Every point of the curve weighs the same, because the time steps of the metric are uniform. Points that are not numbers are left out.</li>
+            <li>The statistics follow the chosen segment and the calibration. The table appears only for metrics that have a curve over time; sharpness, fluctuation strength and IPM do not.</li>
+            <li>The start of the curve has a filter transient, which enters the minimum and the mean. To measure only the stable part, choose a segment that starts after it.</li>
+          </UL>
+        </Section>
       </Section>
 
       {/* ── 6 ── */}

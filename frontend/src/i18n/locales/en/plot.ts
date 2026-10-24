@@ -83,4 +83,18 @@ export default {
   'plot.metric.global': 'Global:',
   'plot.metric.compare': 'Compare:',
   'plot.metric.requires': '(requires {what})',
+
+  'plot.stats.title': 'Statistics over time',
+  'plot.stats.copy': 'Copy',
+  'plot.stats.copied': 'Copied',
+  'plot.stats.copyTitle': 'Copy the table (tab separated) to a spreadsheet',
+  'plot.stats.file': 'File',
+  'plot.stats.mean': 'Mean',
+  'plot.stats.std': 'Std dev',
+  'plot.stats.min': 'Min',
+  'plot.stats.max': 'Max',
+  'plot.stats.tMax': 'At',
+  'plot.stats.tMaxTitle': 'Time of the maximum value',
+  'plot.stats.nTitle': 'Value exceeded in {p} % of the time',
+  'plot.stats.note': 'Unit: {unit}. N5 is the value exceeded in 5 % of the time (95th percentile); N95, in 95 % (5th percentile).',
 } as Record<string, string>

@@ -203,6 +203,20 @@ export default function PostProcessingDoc() {
             o mesmo trecho. É a maneira mais direta de ver o efeito de um processamento: compare o original com a versão filtrada.
           </P>
         </Section>
+
+        <Section id="v-estatisticas" title="Estatísticas no tempo" level={3}>
+          <P>
+            Quando a métrica varia no tempo (loudness, roughness, tonality), uma tabela abaixo do valor global resume a curva: <strong>média</strong>,
+            <strong> desvio</strong>, <strong>mínimo</strong>, <strong>máximo</strong> (com o instante em que ocorre) e os valores excedidos em 5, 10, 50, 90 e 95 % do tempo.
+            Com <K>Comparar com</K>, o segundo arquivo ganha uma linha na mesma tabela. O botão <K>Copiar</K> leva a tabela para uma planilha.
+          </P>
+          <UL>
+            <li><strong>N5</strong> é o valor que a métrica ultrapassa em 5 % do tempo, isto é, o percentil 95 da curva. <strong>N95</strong> é o valor excedido em 95 % do tempo (percentil 5). A regra é a mesma para todas as métricas: o N5 da loudness é o N5 da ISO 532-1, e o de uma roughness é apenas o valor excedido em 5 % do tempo.</li>
+            <li>Todos os pontos da curva pesam igual, porque os passos de tempo da métrica são uniformes. Pontos não numéricos ficam de fora.</li>
+            <li>As estatísticas seguem o trecho escolhido e a calibração. A tabela só aparece nas métricas que têm curva no tempo; sharpness, fluctuation strength e IPM não têm.</li>
+            <li>No começo da curva há um transitório dos filtros, que entra no mínimo e na média. Para medir só a parte estável, escolha um trecho que comece depois dele.</li>
+          </UL>
+        </Section>
       </Section>
 
       {/* ── 6 ── */}
