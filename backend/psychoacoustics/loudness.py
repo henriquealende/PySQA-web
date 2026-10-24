@@ -7,6 +7,10 @@ try:
     from sottek_hearing_model import shm_loudness_ecma
 except ImportError:
     shm_loudness_ecma = None
+try:  # same results as the package; its loudness runs the original tonality, which needs about 0.5 GB per second
+    from psychoacoustics.ecma_fast.loudness_exact import shm_loudness_ecma as shm_loudness_ecma_lean
+except ImportError:
+    shm_loudness_ecma_lean = None
 class Loudness():
     def __init__(self):
         super(Loudness, self).__init__()         
@@ -64,7 +68,16 @@ class Loudness():
         time_data = None
         if len(timeData) > 0:
             soundfield = 'free_frontal' if field_type == 'free' else 'diffuse'
-            loudness_ecma = shm_loudness_ecma(timeData, samplingRate, soundfield=soundfield, binaural=False)
+            loudness_ecma = None
+            if shm_loudness_ecma_lean is not None:
+                try:
+                    loudness_ecma = shm_loudness_ecma_lean(timeData, samplingRate, soundfield=soundfield, binaural=False)
+                except ValueError:
+                    raise  # e.g. signal too short: the package would refuse it in the same way
+                except Exception:
+                    loudness_ecma = None  # anything unexpected: fall back to the package itself
+            if loudness_ecma is None:
+                loudness_ecma = shm_loudness_ecma(timeData, samplingRate, soundfield=soundfield, binaural=False, wait_bar=False)
             freq = loudness_ecma['band_centre_freqs']
             Bark = self._freq_to_bark_hms(freq)
             specificLoudness = loudness_ecma['spec_loudness_powavg']

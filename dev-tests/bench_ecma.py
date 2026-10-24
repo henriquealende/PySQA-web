@@ -1,4 +1,4 @@
-"""Reference + benchmark harness for the ECMA-418-2 metrics of the sottek-hearing-model package (tonality, roughness).
+"""Reference + benchmark harness for the ECMA-418-2 metrics of the sottek-hearing-model package (tonality, roughness, loudness).
 
 Run with the backend venv from the backend folder:
 
@@ -36,6 +36,11 @@ METRICS = {
         kwargs=dict(soundfield="free_frontal", wait_bar=False, binaural=False),
         keys=("roughness90pc", "roughness_t", "time_out", "spec_roughness_avg", "band_centre_freqs"),
         total="roughness90pc", series="roughness_t", spec="spec_roughness_avg", freqs=None, seconds=5.0),
+    "loudness": dict(
+        package=("sottek_hearing_model", "shm_loudness_ecma"),
+        kwargs=dict(soundfield="free_frontal", wait_bar=False, binaural=False),
+        keys=("loudness_powavg", "loudness_t", "time_out", "spec_loudness_powavg", "band_centre_freqs"),
+        total="loudness_powavg", series="loudness_t", spec="spec_loudness_powavg", freqs=None, seconds=5.0),
 }
 CASES = ("tone1k", "noise", "tone_noise", "am_tone", "am70", "harmonics", "wav")   # "wav" only if PYSQA_BENCH_WAV is set
 
