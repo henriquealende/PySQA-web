@@ -19,6 +19,7 @@ import MetricProgress from './MetricProgress'
 import MetricStats from './MetricStats'
 import { useT } from '../i18n'
 import { serverLabel } from '../i18n/serverLabels'
+import { LEGEND_INSIDE } from './plotLegend'
 
 // ─── Colors ─────────────────────────────────────────────────────────────────
 const C_TEAL   = '#50b89e'   // primary time
@@ -485,7 +486,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
           dragmode: wfDrag, selectdirection: 'h',
           newselection: { mode: 'gradual' },
           activeselection: { fillcolor: 'rgba(80,184,158,0.10)', opacity: 0.3 },
-          showlegend: showLegend || wfStereo, legend: { x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top', font: { size: 10, color: '#8ab4c9' }, bgcolor: 'rgba(17,28,40,0.7)' } } as any}
+          showlegend: showLegend || wfStereo, legend: LEGEND_INSIDE } as any}
         config={PLOT_CONFIG} className="w-full h-full" useResizeHandler
         onClick={(evt: any) => { const pt = evt.points?.[0]; if (!pt) return; setWfPins(p => [...p, {x: pt.x, y: pt.y}]) }}
         onSelected={dragSection}
@@ -509,7 +510,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
           shapes: f0 ? harmonicShapes(f0, C_ORANGE) : [],
           annotations: spPins.map(p => makePinAnnotation(p, true, '.0f', '.1f', specUnit)),
           showlegend: showLegend || stereo,
-          legend: { x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top', font: { size: 10, color: '#8ab4c9' }, bgcolor: 'rgba(17,28,40,0.7)' } }}
+          legend: LEGEND_INSIDE }}
         config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler
         onClick={(evt: any) => { const pt = evt.points?.[0]; if (!pt) return; setSpPins(p => [...p, {x: pt.x, y: pt.y}]) }}
         style={{ width:'100%', height:'100%' }} />
@@ -692,7 +693,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
           layout={{ ...BASE_LAYOUT, margin: { ...BASE_LAYOUT.margin, t: 8 },
             xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time') },
             yaxis: { ...BASE_LAYOUT.yaxis, title: timeYLabel },
-            showlegend: showLegend, legend: { font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' } }}
+            showlegend: showLegend, legend: LEGEND_INSIDE }}
           config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
       )}
 
@@ -715,7 +716,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
             bordercolor: '#8ab4c9', borderwidth: 1, borderpad: 3,
           })),
           bargap: 0.1, showlegend: showLegend,
-          legend: { font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' },
+          legend: LEGEND_INSIDE,
           ...(barkTicks ? {
             xaxis2: {
               overlaying: 'x', side: 'top',
@@ -877,7 +878,7 @@ function OctaveView({ sessionId, audioId, section }: { sessionId: string; audioI
           type: 'bar', marker: { color: c.color, opacity: 0.85 }, name: c.name,
           hovertemplate: `%{x} Hz — %{customdata:.1f} ${octUnit}<extra></extra>` }) as any)}
           layout={{ ...BASE_LAYOUT, barmode: 'group', showlegend: octCurves.length > 1,
-            legend: { x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top', font: { size: 10, color: '#8ab4c9' }, bgcolor: 'rgba(17,28,40,0.7)' },
+            legend: LEGEND_INSIDE,
             xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.octCentre'), type: 'category', tickangle: -45, tickfont: { size: 9 } },
             yaxis: { ...BASE_LAYOUT.yaxis, title: yLabel, range: [floorDb, topDb] }, bargap: 0.15 }}
           config={PLOT_CONFIG} className="w-full h-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
@@ -938,13 +939,13 @@ function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audi
             layout={{ ...BASE_LAYOUT,
               xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time') },
               yaxis: { ...BASE_LAYOUT.yaxis, title: t('plot.axis.amplitude') },
-              legend: { font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' } }}
+              legend: LEGEND_INSIDE }}
             config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
           <Plot data={envCurves.map(c => ({ x: c.f_env, y: c.env_spec_db, type: 'scatter' as const, mode: 'lines' as const,
             line: { color: c.specColor, width: 1 }, name: `${t('plot.trace.envSpectrum')}${c.tag}`,
             hovertemplate: '%{x:.1f} Hz — %{y:.1f} dB<extra></extra>' }))}
             layout={{ ...BASE_LAYOUT, showlegend: envCurves.length > 1,
-              legend: { x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top', font: { size: 10, color: '#8ab4c9' }, bgcolor: 'rgba(17,28,40,0.7)' },
+              legend: LEGEND_INSIDE,
               xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.frequency'), type: 'log' },
               yaxis: { ...BASE_LAYOUT.yaxis, title: t('plot.axis.magnitudeDb') } }}
             config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler style={{ width:'100%', height:'100%' }} />

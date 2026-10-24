@@ -3,6 +3,7 @@ import Plot from '../../components/Plot'
 import { DEMO } from './demoData'
 import { trDeep, tr } from './demoTr'
 import { useLang } from '../../i18n'
+import { LEGEND_INSIDE } from '../../components/plotLegend'
 
 const AXIS = { gridcolor: '#1e2d3d', zerolinecolor: '#2b3c50', color: '#8ab4c9', linecolor: '#2b3c50' }
 export const TEAL = '#50b89e', ORANGE = '#ed693b', AMBER = '#ffa94d', BLUE = '#60a5fa'
@@ -15,7 +16,7 @@ const BASE: any = {
   autosize: true,
   hovermode: 'x',
   hoverlabel: { bgcolor: '#1c2a38', bordercolor: TEAL, font: { color: 'white', size: 11 } },
-  legend: { orientation: 'h', y: 1.12, x: 0, font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' },
+  legend: LEGEND_INSIDE,
   modebar: { bgcolor: 'rgba(17,28,40,0.75)', color: '#8ab4c9', activecolor: TEAL },
 }
 const CONFIG = { displayModeBar: false, responsive: true }

@@ -4,6 +4,7 @@ import { AMBER, BLUE, Chart, ORANGE, TEAL, ax, line } from './demos'
 import { FRF_DEMO as D } from './demoFrf'
 import { tr as tt, trDeep } from './demoTr'
 import { useLang } from '../../i18n'
+import { LEGEND_INSIDE } from '../../components/plotLegend'
 
 const loc = () => (useLang.getState().lang === 'en' ? 'en-US' : 'pt-BR')
 const fmt = (v: number, d = 2) => v.toLocaleString(loc(), { minimumFractionDigits: d, maximumFractionDigits: d })
@@ -33,7 +34,7 @@ const BASE: any = {
   font: { color: '#e2e8f0', size: 11, family: 'Inter, system-ui, sans-serif' },
   margin: { l: 58, r: 14, t: 10, b: 44 }, autosize: true, hovermode: 'x',
   hoverlabel: { bgcolor: '#1c2a38', bordercolor: TEAL, font: { color: 'white', size: 11 } },
-  legend: { orientation: 'h', y: 1.1, x: 0, font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' },
+  legend: LEGEND_INSIDE,
 }
 const AX = { gridcolor: '#1e2d3d', zerolinecolor: '#2b3c50', color: '#8ab4c9', linecolor: '#2b3c50' }
 

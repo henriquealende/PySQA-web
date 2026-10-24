@@ -1,6 +1,7 @@
 import Plot from '../../components/Plot'
 import type { HrtfResponse } from '../../api/auralizationApi'
 import { useT } from '../../i18n'
+import { LEGEND_INSIDE } from '../../components/plotLegend'
 
 const LEFT = '#50b89e'
 const RIGHT = '#ed693b'
@@ -23,7 +24,7 @@ export default function ResponsePlot({ data }: { data: HrtfResponse | null }) {
         font: { color: '#e2e8f0', size: 11, family: 'Inter, system-ui, sans-serif' },
         xaxis: { ...AXIS, type: 'log', title: { text: t('aur.plot.freq') }, range: [Math.log10(100), Math.log10(data.freq[data.freq.length - 1])] },
         yaxis: { ...AXIS, title: { text: t('aur.plot.mag') } },
-        legend: { orientation: 'h', y: 1.15, x: 0, font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' },
+        legend: LEGEND_INSIDE,
         hovermode: 'x unified',
       } as any}
       config={{ displaylogo: false, displayModeBar: false, responsive: true }}

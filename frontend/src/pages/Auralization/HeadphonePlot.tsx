@@ -1,6 +1,7 @@
 import Plot from '../../components/Plot'
 import type { HeadphoneResponse } from '../../api/auralizationApi'
 import { useT } from '../../i18n'
+import { LEGEND_INSIDE } from '../../components/plotLegend'
 
 const AXIS = { gridcolor: '#1e2d3d', zerolinecolor: '#2b3c50', color: '#8ab4c9', linecolor: '#2b3c50' }
 
@@ -23,7 +24,7 @@ export default function HeadphonePlot({ data, mode }: { data: HeadphoneResponse 
         font: { color: '#e2e8f0', size: 11, family: 'Inter, system-ui, sans-serif' },
         xaxis: { ...AXIS, type: 'log', title: { text: t('aur.plot.freq') }, range: [Math.log10(20), Math.log10(data.freq[data.freq.length - 1])] },
         yaxis: { ...AXIS, title: { text: t('aur.plot.mag') } },
-        legend: { orientation: 'h', y: 1.18, x: 0, font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' },
+        legend: LEGEND_INSIDE,
         hovermode: 'x unified',
       } as any}
       config={{ displaylogo: false, displayModeBar: false, responsive: true }}

@@ -1,6 +1,7 @@
 import Plot from '../../components/Plot'
 import type { FrfMode, FrfResult } from '../../api/frfApi'
 import { useT } from '../../i18n'
+import { LEGEND_INSIDE } from '../../components/plotLegend'
 
 export type FrfView = 'bode' | 'complex' | 'nyquist' | 'modes'
 
@@ -16,7 +17,7 @@ const BASE: any = {
   autosize: true,
   hovermode: 'x',
   hoverlabel: { bgcolor: '#1c2a38', bordercolor: '#50b89e', font: { color: 'white', size: 11 } },
-  legend: { orientation: 'h', y: 1.06, x: 0, font: { size: 10, color: '#8ab4c9' }, bgcolor: 'transparent' },
+  legend: LEGEND_INSIDE,
   modebar: { orientation: 'h', bgcolor: 'rgba(17,28,40,0.75)', color: '#8ab4c9', activecolor: '#50b89e' },
 }
 
