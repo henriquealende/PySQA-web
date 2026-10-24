@@ -124,8 +124,13 @@ try:
     check("light metric (ipm, 3 s) runs", st == 200 and "global" in d, st)
     st, d = s.metric(sess, aid, "roughness_ecma")
     check("roughness_ecma refused before it can crash", st == 413 and "needs about" in str(d), d)
+    # the lean Loudness ECMA needs about 60 MB per second, so on 512 MB it is a 6 s file that no longer fits (3 s does)
+    st, d6 = s.upload(sess, wav_bytes(6))
+    aid6 = d6[0]["audio_id"] if st == 200 else ""
+    st, d = s.metric(sess, aid6, "loudness_ecma")
+    check("loudness_ecma 6 s refused with a section hint", st == 413 and "Select a section" in str(d), d)
     st, d = s.metric(sess, aid, "loudness_ecma")
-    check("loudness_ecma 3 s refused with a section hint", st == 413 and "Select a section" in str(d), d)
+    check("loudness_ecma 3 s fits on 512 MB now", st == 200 and d.get("global", 0) > 0, d.get("global") if st == 200 else d)
     sess2 = "t-" + uuid.uuid4().hex[:6]
     st, d = s.upload(sess2, wav_bytes(12))
     aid12 = d[0]["audio_id"] if st == 200 else ""
@@ -198,6 +203,27 @@ def fake(aid, mb):
     p.write_bytes(b"x")
     return AudioEntry(audio_id=aid, name=aid, sample_rate=48000, channels=1, duration_s=mb, data=np.zeros(int(mb * 131072)), raw_path=p)
 
+
+# time limit of one calculation (MAX_COMPUTE_S, 75 s by default when hosted)
+check("time limit is on when hosted", limits.MAX_COMPUTE_S == 75, limits.MAX_COMPUTE_S)
+limits.check_time("roughness_dw", 25, 48000)
+check("a calculation that fits the time limit passes", True)
+try:
+    limits.check_time("roughness_dw", 40, 48000)
+    check("a calculation expected to take too long is refused", False, "no error raised")
+except limits.ResourceLimitError as exc:
+    check("a calculation expected to take too long is refused", "single calculation" in str(exc) and "about 30 s" in str(exc), str(exc)[:110])
+try:
+    limits.check_time("tonality_ecma", 40, 48000, time_kind="tonality_ecma_fast")
+    check("Tonality Fast has its own, shorter, time model", limits.estimate_s("tonality_ecma", 40, 48000) > 75 >= limits.estimate_s("tonality_ecma_fast", 40, 48000))
+except limits.ResourceLimitError as exc:
+    check("Tonality Fast has its own, shorter, time model", False, exc)
+limits.check_time("loudness_zwk", 60, 48000, time_kind="")
+check("an empty time_kind skips the check (stationary loudness of the match)", True)
+check("quick analyses are not time-limited", limits.estimate_s("spectrum", 240, 48000) is None and limits.estimate_s("sharpness_din", 240, 48000) is None)
+check("sharpness no longer costs 51 MB per second", limits.COST["sharpness_din"][1] < 5, limits.COST["sharpness_din"])
+check("sample rate scales the expected time", abs(limits.estimate_s("roughness_dw", 10, 96000) - (1.0 + 2.5 * 20)) < 1e-6)
+check("/api/health data carries the new fields", {"max_compute_s", "peak_rss_mb"} <= set(limits.describe()))
 
 ss.add_entry("old-session", fake("o1", 4)); ss.add_entry("recent-session", fake("r1", 4))
 ss._last_seen["old-session"] = time.time() - 600

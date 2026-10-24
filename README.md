@@ -300,6 +300,10 @@ machine. `GET /api/health` reports the limits in force.
 | `PYSQA_MAX_EXPORT_CELLS` | 100000 | Largest Excel table the server builds (CSV is made in the browser) |
 | `PYSQA_TMP_DIR` | `backend/tmp_sessions` | Where session files are kept |
 
+`PYSQA_MAX_COMPUTE_S` (75) is the longest one calculation may be expected to take: the slow analyses (Tonality, Loudness and Roughness
+ECMA, Loudness ISO, Roughness D&W, Fluctuation) have a measured time model and are refused, with the length that does fit, when it
+would hold the only compute slot for longer. `/api/health` also reports `peak_rss_mb`, the highest memory since the server started.
+
 Set a limit to `0` to disable it alone; larger containers get proportionally larger defaults.
 Only one heavy calculation runs at a time, and a calculation whose estimated memory does not fit is
 refused up front with a message instead of crashing the process. Measured on a 512 MiB container:

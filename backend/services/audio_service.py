@@ -542,12 +542,16 @@ def compute_metric(entry: AudioEntry, metric_key: str, field_type: str = "free",
     if cache_key in entry._cache:
         return entry._cache[cache_key]
 
+    # A calculation expected to take too long is refused at once, before it waits for the slot.
+    limits.check_time(metric_key, sec.entry.duration_s, sec.entry.sample_rate,
+                      time_kind="tonality_ecma_fast" if fast else None)
     # One memory-hungry computation at a time; the others wait for the slot.
     with limits.heavy_slot(cancelled, job, metric_key):
         if cache_key in entry._cache:          # finished by a request that was ahead in the queue
             return entry._cache[cache_key]
         part = sec.entry
-        limits.check_budget(metric_key, part.duration_s, part.sample_rate, audio_ram_mb())
+        limits.check_budget(metric_key, part.duration_s, part.sample_rate, audio_ram_mb(),
+                            time_kind="tonality_ecma_fast" if fast else None)
         mono = _calibrated_mono(part)
         sr   = part.sample_rate
         started = time.monotonic()
@@ -883,7 +887,8 @@ def apply_loudness_adj_to_entry(entry: AudioEntry, ref: AudioEntry, audio_id: Op
 
     with limits.heavy_slot():
         for e in (entry, ref):
-            limits.check_budget("loudness_zwk", e.duration_s, e.sample_rate, audio_ram_mb(), can_select=False)
+            limits.check_budget("loudness_zwk", e.duration_s, e.sample_rate, audio_ram_mb(), can_select=False,
+                                time_kind="")      # the stationary loudness of the match is quick: only memory limits it
         ref_global = stationary_loudness(ref_mono, ref.sample_rate)
         src_global = stationary_loudness(mono, entry.sample_rate)
         if src_global < 1e-6 or ref_global < 1e-6:

@@ -14,6 +14,7 @@ limit is detected, so local development stays unrestricted:
     PYSQA_MAX_AUDIO_RAM_MB      float64 audio kept in RAM across all sessions
     PYSQA_SESSION_IDLE_MIN      minutes without activity before a session is dropped
     PYSQA_HEAVY_WAIT_S          seconds a heavy job may wait for the single compute slot
+    PYSQA_MAX_COMPUTE_S         longest a single calculation may be expected to take (see TIME)
     PYSQA_MAX_EXPORT_CELLS      largest Excel table the server builds (CSV is made in the browser)
 
 Set one of them to 0 to disable that limit alone.
@@ -125,6 +126,7 @@ MAX_FILES_PER_SESSION = _setting("PYSQA_MAX_FILES_PER_SESSION", 20 * _SCALE)
 MAX_AUDIO_RAM_MB      = _setting("PYSQA_MAX_AUDIO_RAM_MB",      120 * _SCALE)
 SESSION_IDLE_MIN      = _setting("PYSQA_SESSION_IDLE_MIN",      30)
 HEAVY_WAIT_S          = _setting("PYSQA_HEAVY_WAIT_S",          120) or 120.0
+MAX_COMPUTE_S         = _setting("PYSQA_MAX_COMPUTE_S",         75)     # one calculation holds the only compute slot: bound how long
 MAX_EXPORT_CELLS      = _setting("PYSQA_MAX_EXPORT_CELLS",      100_000 * _SCALE)   # ~0.65 MB of RAM per 1000 cells
 
 BASELINE_MB = 160.0   # idle footprint of this app (FastAPI + numpy/scipy/mosqito), measured on Render
@@ -142,6 +144,18 @@ def rss_mb() -> Optional[float]:
         return None
 
 
+def peak_rss_mb() -> Optional[float]:
+    """Highest resident memory of this process since it started, in MB (Linux only)."""
+    try:
+        with open("/proc/self/status", "r", encoding="ascii") as fh:
+            for line in fh:
+                if line.startswith("VmHWM:"):
+                    return int(line.split()[1]) / 1024
+    except (OSError, ValueError, IndexError):
+        pass
+    return None
+
+
 def used_mb(audio_ram_mb: float = 0.0) -> float:
     measured = rss_mb()
     return measured if measured is not None else BASELINE_MB + audio_ram_mb
@@ -157,13 +171,26 @@ COST: Dict[str, Tuple[float, float]] = {
     "octave":               (3.0,   1.8),
     "envelope":             (3.0,   3.5),
     "ipm":                  (1.0,   9.5),
-    "sharpness_din":        (2.0,   51.0),
-    "roughness_dw":         (12.0,  0.5),
+    "sharpness_din":        (5.0,   0.5),      # stationary loudness only: +0 to 2 MB for 60 s here and on Render (it was 51, the time-varying cost)
+    "roughness_dw":         (5.0,   0.8),      # on Render: +11 MB at 30 s, +44 at 60 s, +88 at 120 s, +175 at 240 s
     "fluctuation_strength": (2.0,   5.5),
     "loudness_zwk":         (3.0,   50.0),
     "loudness_ecma":        (30.0,  62.0),     # on Render (lean tonality, 1 thread): +69 MB at 1 s, +116 at 2 s, +179 at 3 s (plus ~10 %); the package version used +1.75 GB at 2 s
     "roughness_ecma":       (20.0,  135.0),    # on Render: +137 MB at 1 s, +260 MB at 2 s, +358 MB at 2.8 s (plus ~10 %); 650 MB at 5 s here
     "tonality_ecma":        (30.0,  60.0),     # on Render (1 CPU, 1 thread): +291 MB at 5 s, +562 MB at 10 s, plus ~10 %
+}
+
+# Expected time of the slow calculations on Render (1 CPU): (fixed seconds, seconds per second of 48 kHz audio), measured on the
+# server with a margin. A calculation holds the only compute slot, so the ones expected to take longer than MAX_COMPUTE_S are
+# refused, with the length that does fit. Quick analyses are not listed: the memory limit decides them.
+TIME: Dict[str, Tuple[float, float]] = {
+    "loudness_zwk":         (0.5, 2.5),        # 5.0 s for 2 s, 20.3 s for 8 s, 68.4 s for 28 s
+    "loudness_ecma":        (4.0, 2.2),        # 16.4 s for 6 s, 30.3 s for 12 s, 50.4 s for 22 s
+    "roughness_ecma":       (1.5, 2.2),        # 15 to 22 s for 10 s
+    "tonality_ecma":        (1.7, 2.3),        # 6.1 s for 2 s, 24.5 s for 10 s (Exact)
+    "tonality_ecma_fast":   (1.4, 1.5),        # 4.1 s for 2 s, 15.6 s for 10 s (Fast)
+    "roughness_dw":         (1.0, 2.5),        # 23 s for 10 s, 144 s for 60 s; far slower beyond that (120 s took over 15 minutes)
+    "fluctuation_strength": (1.0, 0.3),        # 70 s for 240 s
 }
 
 # (Portuguese, English) names shown inside the refusal messages; use label(kind) to pick one.
@@ -194,13 +221,55 @@ def estimate_mb(kind: str, duration_s: float, sample_rate: int) -> Optional[floa
     return (cost[0] + cost[1] * seconds) * SAFETY
 
 
+def estimate_s(kind: str, duration_s: float, sample_rate: int) -> Optional[float]:
+    """Expected seconds of a slow calculation on this kind of server (None: not modelled, it is quick)."""
+    cost = TIME.get(kind)
+    if cost is None:
+        return None
+    return cost[0] + cost[1] * duration_s * max(sample_rate, 48_000) / 48_000
+
+
+def check_time(kind: str, duration_s: float, sample_rate: int, can_select: bool = True,
+               time_kind: Optional[str] = None) -> None:
+    """Refuse a calculation expected to hold the only compute slot for longer than MAX_COMPUTE_S.
+
+    time_kind names another entry of TIME when the cost depends on how the metric is run (Tonality Fast);
+    an empty string skips the check (a variant that is quick, such as the stationary loudness of the loudness match).
+    """
+    if not MAX_COMPUTE_S:
+        return
+    key = kind if time_kind is None else time_kind
+    est = estimate_s(key, duration_s, sample_rate) if key else None
+    if est is None or est <= MAX_COMPUTE_S:
+        return
+    base, per_s = TIME[key]
+    fits_s = max(0.0, (MAX_COMPUTE_S - base) / per_s) / (max(sample_rate, 48_000) / 48_000)
+    if fits_s >= 1.0 and can_select:
+        hint = msg(
+            f"Escolha um trecho de até cerca de {fits_s:.0f} s (a barra Trecho acima do gráfico) ou rode o PySQA no seu computador.",
+            f"Select a section of up to about {fits_s:.0f} s (the Section bar above the chart) or run PySQA locally.")
+    elif fits_s >= 1.0:
+        hint = msg(
+            f"Corte o arquivo para cerca de {fits_s:.0f} s (Processamento, Janela) ou rode o PySQA no seu computador.",
+            f"Trim the file to about {fits_s:.0f} s (Processing, Windowing) or run PySQA locally.")
+    else:
+        hint = msg("Rode o PySQA no seu computador.", "Run PySQA locally.")
+    raise ResourceLimitError(msg(
+        f"{label(kind)} levaria cerca de {est:.0f} s para {duration_s:.1f} s de áudio, mais do que os {MAX_COMPUTE_S:.0f} s que este servidor "
+        f"aceita para um único cálculo. {hint}",
+        f"{label(kind)} would take about {est:.0f} s for {duration_s:.1f} s of audio, more than the {MAX_COMPUTE_S:.0f} s this server "
+        f"accepts for a single calculation. {hint}"
+    ))
+
+
 def check_budget(kind: str, duration_s: float, sample_rate: int, audio_ram_mb: float = 0.0,
-                 can_select: bool = True) -> None:
-    """Refuse a computation that would not fit in the memory still free.
+                 can_select: bool = True, time_kind: Optional[str] = None) -> None:
+    """Refuse a computation that would take too long or would not fit in the memory still free.
 
     can_select: the request can be narrowed to a section of the file, so the hint says so
     (processing a whole file into a new one cannot, and suggests trimming it instead).
     """
+    check_time(kind, duration_s, sample_rate, can_select, time_kind)
     if not ENABLED or MEMORY_LIMIT_MB is None:
         return
     need = estimate_mb(kind, duration_s, sample_rate)
@@ -363,6 +432,8 @@ def describe(audio_ram_mb: float = 0.0) -> Dict[str, object]:
         "enabled": ENABLED,
         "memory_limit_mb": None if MEMORY_LIMIT_MB is None else round(MEMORY_LIMIT_MB),
         "rss_mb": None if rss is None else round(rss),
+        "peak_rss_mb": None if peak_rss_mb() is None else round(peak_rss_mb()),   # since the server started: lets a test see short peaks
+        "max_compute_s": MAX_COMPUTE_S,
         "audio_ram_mb": round(audio_ram_mb, 1),
         "max_upload_mb": MAX_UPLOAD_MB,
         "max_audio_seconds": MAX_AUDIO_SECONDS,
