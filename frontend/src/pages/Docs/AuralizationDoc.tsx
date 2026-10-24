@@ -339,7 +339,7 @@ export default function AuralizationDoc() {
         <P>
           Se a sala que você precisa não está nos cenários, o <strong>Auralize Salas</strong> (<a href="https://auralize.com.br/salas?utm_source=pysqa&utm_medium=app&utm_campaign=docs" target="_blank" rel="noopener noreferrer" className="text-teal underline">auralize.com.br/salas</a>),
           produto da mesma equipe, permite modelar a geometria, aplicar materiais e ler TR, C80, STI e a frequência de Schroeder. A resposta ao impulso exportada em WAV (1 ou 2 canais, até 30 s)
-          entra no PySQA pelo bloco Ambiente, com <K>Enviar WAV</K>. O card “Da equipe Auralize”, na seção Ambiente, tem uma comparação de exemplo e pode ser fechado; o chip
+          entra no PySQA pelo bloco Ambiente, com <K>Enviar WAV</K>. O card “Da equipe Auralize”, na seção Ambiente, tem o vídeo de apresentação e pode ser fechado; o chip
           <K>Construir minha sala</K> nos Cenários rápidos o reabre.
         </P>
       </Section>

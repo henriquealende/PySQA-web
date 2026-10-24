@@ -242,3 +242,6 @@ A página passou a se chamar "Preparação de áudios" (EN: "Audio Preparation")
 
 ### Capa do vídeo (2026-10-23)
 - A capa oficial do vídeo ("Auralize Salas · Passo 01 · Criando um projeto", 1280×720, 79 KB) foi baixada uma vez de `i.ytimg.com/vi/cP-ZDtmdS1w/maxresdefault.jpg` e guardada em `frontend/public/auralize/auralize-salas-video-capa.jpg`. O card a mostra a partir do próprio site: continua sem nenhuma requisição ao YouTube antes do clique. A capa já traz o botão de tocar e o título, então o card não sobrepõe outro. Se o vídeo ou a capa mudarem, é preciso trocar o arquivo.
+
+### Card do Auralize Salas sem a demonstração (2026-10-23)
+- O quadro "Ouça a diferença" (duas salas sintéticas com o áudio do usuário) foi removido do card; o código e os textos dele saíram do frontend. O card ficou com o texto e os botões à esquerda e o vídeo à direita, alinhados ao centro na mesma linha. A rota `/preview` ainda aceita `environment.synth` (sala de uso único, com testes); só não há mais tela que a use.

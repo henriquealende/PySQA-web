@@ -228,21 +228,6 @@ export async function synthesizeRoom(sessionId: string, name: string, fs: number
   return res.json()
 }
 
-/** Preview with a synthetic room that is not kept on the server (the comparison demo of the Auralize Salas card). */
-export async function fetchRoomPreview(
-  sessionId: string, audioId: string, room: SynthParams, signal?: AbortSignal,
-): Promise<string> {
-  const res = await apiFetch(sessionId, `${BASE}/preview`, {
-    method: 'POST', headers: json, signal,
-    body: JSON.stringify({
-      session_id: sessionId, audio_id: audioId, t0: 0,
-      blocks: { hrtf: { enabled: true, asset: SPHERE_ID, azimuth: 20, elevation: 0, distance_m: 1 }, environment: { synth: room }, noise: NO_NOISE },
-    }),
-  })
-  await checkResponse(res)
-  return URL.createObjectURL(await res.blob())
-}
-
 /** 1/3-octave levels of the signal (room and head applied, before the noise) and of each noise colour at the chosen SNR. */
 export async function fetchNoiseSpectrum(
   sessionId: string, audioId: string, h: HrtfParams, env: EnvParams, noise: NoiseParams, signal?: AbortSignal,

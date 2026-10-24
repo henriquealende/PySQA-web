@@ -1,11 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { ArrowUpRight, X } from 'lucide-react'
-import { useStore } from '../../store/useStore'
 import { useAuralStore } from '../../store/useAuralStore'
 import { useT } from '../../i18n'
-import { isAbort } from '../../api/audioApi'
-import { fetchRoomPreview, SynthParams } from '../../api/auralizationApi'
-import AbPlayer from './AbPlayer'
 
 /**
  * Card of Auralize Salas, a product of the same team. Colours and tone follow the brand manual of Auralize
@@ -24,27 +20,8 @@ const WATCH = `https://www.youtube.com/watch?v=${YOUTUBE_ID}`
 // The cover of the video (official, 1280x720), kept here so the card asks nothing of YouTube before the click.
 const COVER = '/auralize/auralize-salas-video-capa.jpg'
 
-const BANDS = ['125', '250', '500', '1000', '2000', '4000']
-const room = (volume: number, rt: number[]): SynthParams => ({ volume_m3: volume, distance_m: 2.5, rt60: Object.fromEntries(BANDS.map((b, i) => [b, rt[i]])) })
-const UNTREATED = room(60, [1.6, 1.5, 1.4, 1.3, 1.1, 0.9])      // bare walls, hard surfaces
-const TREATED = room(60, [0.7, 0.55, 0.4, 0.35, 0.3, 0.28])     // the same room with absorption
-
 const NOITE = '#00161C'
 const CIANO = '#00BFC8'
-
-function Bars({ playing }: { playing: boolean }) {
-  const heights = [14, 26, 20, 32]
-  return (
-    <span className="flex items-end gap-1 h-8" aria-hidden="true">
-      {heights.map((h, i) => (
-        <span
-          key={i} className={`w-1.5 rounded-sm origin-bottom ${playing ? 'motion-safe:animate-eq' : ''}`}
-          style={{ height: h, background: CIANO, animationDelay: `${i * 0.15}s` }}
-        />
-      ))}
-    </span>
-  )
-}
 
 function VideoThumb() {
   const t = useT()
@@ -89,59 +66,6 @@ function VideoThumb() {
   )
 }
 
-/** The same sound in the same room, bare and treated: two synthetic rooms of PySQA, not a result of Auralize Salas. */
-function RoomsDemo() {
-  const t = useT()
-  const sessionId = useStore((s) => s.sessionId)
-  const sourceId = useAuralStore((s) => s.sourceId)
-  const [urls, setUrls] = useState<{ bare: string; treated: string } | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [playing, setPlaying] = useState(false)
-  const onPlaying = useCallback((p: boolean) => setPlaying(p), [])
-
-  // a different source makes the old comparison stale
-  useEffect(() => {
-    setUrls((old) => { if (old) { URL.revokeObjectURL(old.bare); URL.revokeObjectURL(old.treated) } return null })
-  }, [sourceId])
-  useEffect(() => () => { setUrls((old) => { if (old) { URL.revokeObjectURL(old.bare); URL.revokeObjectURL(old.treated) } return null }) }, [])
-
-  const prepare = async () => {
-    if (!sourceId) return
-    setBusy(true); setError('')
-    try {
-      const [bare, treated] = await Promise.all([fetchRoomPreview(sessionId, sourceId, UNTREATED), fetchRoomPreview(sessionId, sourceId, TREATED)])
-      setUrls({ bare, treated })
-    } catch (e: any) { if (!isAbort(e)) setError(e.message) } finally { setBusy(false) }
-  }
-
-  return (
-    <div className="rounded-lg border border-[#1E2B2F] bg-[#1E2B2F]/50 p-3 space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-[#EEF3F4]">{t('aur.ad.demo.title')}</h4>
-        <Bars playing={playing} />
-      </div>
-      <p className="text-[11px] text-[#9fb0b3] leading-relaxed">{t('aur.ad.demo.help')}</p>
-      {urls ? (
-        <AbPlayer
-          originalUrl={urls.bare} processedUrl={urls.treated} busy={false} initial="original" onPlayingChange={onPlaying}
-          order={['original', 'processed']} labels={{ original: t('aur.ad.demo.untreated'), processed: t('aur.ad.demo.treated') }}
-        />
-      ) : (
-        <button
-          onClick={() => void prepare()} disabled={!sourceId || busy}
-          className="text-xs font-semibold px-3 py-1.5 rounded-md disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00BFC8]"
-          style={{ background: CIANO, color: NOITE }}
-        >
-          {busy ? t('aur.ad.demo.preparing') : t('aur.ad.demo.button')}
-        </button>
-      )}
-      {!sourceId && <p className="text-[11px] text-[#9fb0b3]">{t('aur.ad.demo.noSource')}</p>}
-      {error && <p className="text-[11px] text-red-400">{error}</p>}
-    </div>
-  )
-}
-
 export default function AuralizeSalasCard() {
   const t = useT()
   const { adDismissed, setAdDismissed } = useAuralStore()
@@ -167,7 +91,7 @@ export default function AuralizeSalasCard() {
         </button>
       </div>
 
-      <div className={`grid gap-6 md:grid-cols-2 items-start`}>
+      <div className="grid gap-6 md:grid-cols-2 items-center">
         <div className="space-y-4">
           <h3 id="aur-ad-title" className="text-2xl md:text-[28px] font-bold leading-tight text-white" style={{ letterSpacing: '-0.025em' }}>
             <mark className="px-1.5 rounded-sm" style={{ background: CIANO, color: NOITE }}>{t('aur.ad.title.mark')}</mark>{t('aur.ad.title.rest')}
@@ -201,7 +125,6 @@ export default function AuralizeSalasCard() {
 
         <div className="space-y-3">
           <VideoThumb />
-          <RoomsDemo />
         </div>
       </div>
     </section>
