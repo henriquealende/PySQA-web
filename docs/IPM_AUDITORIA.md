@@ -77,3 +77,17 @@ DC não importa; entrada vazia, estéreo, `int16` e lista funcionam; chamadas re
 
 Contrato da API, valores, gráfico e documentação continuam iguais. O vetor "golden" do teste (`GOLDEN_P`) foi gerado com o código
 de hoje: se uma das mudanças das sugestões 5 a 8 for adotada, ele deve ser regerado de propósito.
+
+## Atualização: sugestões 1 a 3 aplicadas (commit `c3bd42e`)
+
+Aplicadas sem mudar nenhum valor da métrica (idêntica bit a bit à versão anterior em 17 entradas válidas, comparada com o código do git):
+
+- **Banda a banda (achado 11).** 92 MB para 13 MB em 10 s de áudio. No Render, a memória acima do repouso passou de +77, +231, +462 e +942 MB
+  (10, 30, 60 e 120 s) para **+12, +25, +65 e +132 MB**, com os mesmos valores globais (16,799 a 16,818). O custo no `limits.py` passou de
+  9,5 para 1,3 MB por segundo, e o site aceita agora a IPM no arquivo inteiro (240 s) em vez de ~150 s.
+- **Erros claros (achados 9 e 10).** `IPMInputError` com motivo: menos de 40 amostras, taxa de amostragem até 22,45 kHz, NaN ou infinito. O
+  servidor traduz (PT e EN). Arquivos de 16 e 22,05 kHz continuam sem IPM (a banda de 10 kHz passa de Nyquist), mas agora dizem por quê.
+- **Arrumar a casa (achado 12).** Um nome só (IPM), docstrings corretas (grade de 5,04 Hz), filtros em cache por taxa, curva de ponderação em
+  uma função só.
+
+Continuam abertos os achados 1 a 8.

@@ -170,7 +170,7 @@ COST: Dict[str, Tuple[float, float]] = {
     "spectrogram":          (4.0,   3.1),
     "octave":               (3.0,   1.8),
     "envelope":             (3.0,   3.5),
-    "ipm":                  (1.0,   9.5),
+    "ipm":                  (1.0,   1.3),      # on Render, band by band: +12 MB at 10 s, +65 at 60 s, +132 at 120 s (it was +942 at 120 s with 9.5)
     "sharpness_din":        (5.0,   1.2),      # stationary loudness only; on Render 100 s raised the peak by ~105 MB (it was 51, the time-varying cost)
     "roughness_dw":         (5.0,   0.8),      # on Render: +11 MB at 30 s, +44 at 60 s, +88 at 120 s, +175 at 240 s
     "fluctuation_strength": (2.0,   5.5),
