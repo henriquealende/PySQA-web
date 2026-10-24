@@ -5,6 +5,7 @@ export default {
   'nav.sysAnalysis': 'System Analysis',
   'nav.docs': 'Documentation',
   'nav.pages': 'Pages',
+  'nav.tagline': 'Sound quality analysis',
   'nav.home': 'PySQA, home',
   'nav.menu': 'Toggle menu',
   'nav.recording': 'Recording',

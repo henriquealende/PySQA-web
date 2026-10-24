@@ -14,6 +14,8 @@ import clsx from 'clsx'
 // AGPL-3.0 section 13: whoever uses the hosted service must be able to get the source of what runs.
 const REPO = 'https://github.com/henriquealende/PySQA-web'
 
+type DaqState = 'idle' | 'monitoring' | 'recording'
+
 const NAV = [
   { to: '/data-acquisition', label: 'nav.dataAcq',      Icon: Mic },
   { to: '/post-processing',  label: 'nav.postProc',     Icon: Activity },
@@ -21,15 +23,39 @@ const NAV = [
   { to: '/audio-preparation',  label: 'nav.audioPrep',    Icon: Headphones },
 ]
 
-/** Pulsing dot on the Data Acquisition tab while the microphone is open (also when you are on another page). */
-function DaqDot({ state }: { state: 'idle' | 'monitoring' | 'recording' }) {
+/** Pulsing dot on the Data Acquisition item while the microphone is open (also when you are on another page). */
+function DaqDot({ state, className }: { state: DaqState; className?: string }) {
   const t = useT()
   if (state === 'idle') return null
   return (
     <span
-      className={clsx('w-1.5 h-1.5 rounded-full animate-pulse', state === 'recording' ? 'bg-orange' : 'bg-amber')}
+      className={clsx('w-2 h-2 rounded-full animate-pulse', state === 'recording' ? 'bg-orange' : 'bg-amber', className)}
       title={state === 'recording' ? t('nav.recording') : t('nav.micOpen')}
     />
+  )
+}
+
+/** One entry of the side navigation. Wide screens: icon + name. Medium screens: icon only (name as tooltip). */
+function SideItem({ to, label, Icon, daqState, alwaysWide }: { to: string; label: string; Icon: typeof Mic; daqState?: DaqState; alwaysWide?: boolean }) {
+  const t = useT()
+  return (
+    <NavLink
+      to={to}
+      title={t(label)}
+      aria-label={t(label)}
+      className={({ isActive }) =>
+        clsx(
+          'relative flex items-center gap-3 h-11 px-3 rounded-lg text-sm font-medium transition-colors',
+          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal',
+          alwaysWide ? 'justify-start' : 'justify-center xl:justify-start',
+          isActive ? 'bg-teal/15 text-teal' : 'text-muted hover:bg-panel hover:text-white'
+        )
+      }
+    >
+      <Icon size={19} className="shrink-0" aria-hidden="true" />
+      <span className={clsx('truncate', !alwaysWide && 'hidden xl:inline')}>{t(label)}</span>
+      {daqState && <DaqDot state={daqState} className={alwaysWide ? 'ml-auto' : 'absolute top-2 right-2 xl:static xl:ml-auto'} />}
+    </NavLink>
   )
 }
 
@@ -53,120 +79,83 @@ export default function Layout() {
   useEffect(() => { if (isDaq) setDaqVisited(true) }, [isDaq])
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-dark">
-      {/* ── Top bar ──────────────────────────────────────────────────── */}
-      <header className="flex items-center h-14 bg-surface border-b border-border shrink-0">
-        {/* Logo: this block is as wide as the settings column below it, so the tabs start where the results start */}
-        <Link to="/" className="flex items-center gap-3 px-4 h-full lg:w-80 lg:shrink-0 lg:border-r lg:border-border" aria-label={t('nav.home')}>
-          <Logo state={logoState} className="h-12 w-12 shrink-0" />
-          <span className="font-bold text-teal tracking-wide text-xl hidden sm:block" aria-hidden="true">PySQA</span>
+    <div className="flex h-screen overflow-hidden bg-dark">
+      {/* ── Side navigation (tablet and desktop) ─────────────────────── */}
+      <aside className="hidden sm:flex flex-col shrink-0 w-[4.5rem] xl:w-60 bg-surface border-r border-border">
+        {/* Brand: the cube is the biggest thing here on purpose */}
+        <Link
+          to="/"
+          aria-label={t('nav.home')}
+          className="flex flex-col items-center xl:items-start gap-3 px-3 xl:px-5 pt-6 pb-5 border-b border-border"
+        >
+          <Logo state={logoState} className="h-12 w-12 xl:h-20 xl:w-20 shrink-0" />
+          <span className="hidden xl:flex flex-col gap-1" aria-hidden="true">
+            <span className="font-bold text-teal tracking-wide text-2xl leading-none">PySQA</span>
+            <span className="text-xs text-muted leading-snug">{t('nav.tagline')}</span>
+          </span>
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden sm:flex gap-2 px-3" aria-label={t('nav.pages')}>
+        <nav className="flex flex-col gap-1.5 px-3 py-5" aria-label={t('nav.pages')}>
           {NAV.map(({ to, label, Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                clsx(
-                  'flex items-center gap-2 px-4 py-2 rounded-md border text-sm font-semibold transition-colors',
-                  isActive
-                    ? 'bg-teal border-teal text-dark'
-                    : 'bg-panel border-field text-white hover:border-teal hover:text-teal'
-                )
-              }
-            >
-              <Icon size={17} />
-              {t(label)}
-              {to === '/data-acquisition' && <DaqDot state={daqState} />}
-            </NavLink>
+            <SideItem key={to} to={to} label={label} Icon={Icon} daqState={to === '/data-acquisition' ? daqState : undefined} />
           ))}
         </nav>
 
         <div className="flex-1" />
 
-        <LanguageSwitch className="hidden sm:flex mr-3" />
-
-        {/* Documentation */}
-        <NavLink
-          to="/docs"
-          className={({ isActive }) =>
-            clsx(
-              'hidden sm:flex items-center gap-2 px-4 py-2 mr-4 rounded-md border text-sm font-semibold transition-colors',
-              isActive ? 'bg-teal border-teal text-dark' : 'bg-panel border-field text-white hover:border-teal hover:text-teal'
-            )
-          }
-        >
-          <BookOpen size={17} />
-          {t('nav.docs')}
-        </NavLink>
-
-        {/* Mobile hamburger */}
-        <button
-          className="sm:hidden p-1.5 mr-3 rounded text-muted hover:text-white hover:bg-panel transition-colors"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label={t('nav.menu')}
-        >
-          {menuOpen ? <X size={18} /> : <Menu size={18} />}
-        </button>
-      </header>
-
-      {/* Mobile dropdown nav */}
-      {menuOpen && (
-        <div className="sm:hidden bg-surface border-b border-border px-3 py-2 flex flex-col gap-1 shrink-0 z-40">
-          <LanguageSwitch className="self-start mb-1" />
-          {NAV.map(({ to, label, Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={() => setMenuOpen(false)}
-              className={({ isActive }) =>
-                clsx(
-                  'flex items-center gap-2 px-3 py-2 rounded text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-teal/20 text-teal'
-                    : 'text-muted hover:text-white hover:bg-panel'
-                )
-              }
-            >
-              <Icon size={15} />
-              {t(label)}
-              {to === '/data-acquisition' && <DaqDot state={daqState} />}
-            </NavLink>
-          ))}
-          <NavLink
-            to="/docs"
-            onClick={() => setMenuOpen(false)}
-            className={({ isActive }) =>
-              clsx(
-                'flex items-center gap-2 px-3 py-2 rounded text-sm font-medium transition-colors',
-                isActive ? 'bg-teal/20 text-teal' : 'text-muted hover:text-white hover:bg-panel'
-              )
-            }
-          >
-            <BookOpen size={15} />
-            {t('nav.docs')}
-          </NavLink>
+        <div className="flex flex-col gap-3 px-3 py-4 border-t border-border">
+          <SideItem to="/docs" label="nav.docs" Icon={BookOpen} />
+          <LanguageSwitch className="self-center xl:self-stretch [&>button]:flex-1 [&>button]:px-2" />
         </div>
-      )}
+      </aside>
 
-      <StatusBanner />
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        {/* ── Phone top bar ────────────────────────────────────────────── */}
+        <header className="sm:hidden flex items-center h-14 bg-surface border-b border-border shrink-0">
+          <Link to="/" className="flex items-center gap-3 px-4 h-full" aria-label={t('nav.home')}>
+            <Logo state={logoState} className="h-10 w-10 shrink-0" />
+            <span className="font-bold text-teal tracking-wide text-xl" aria-hidden="true">PySQA</span>
+          </Link>
+          <div className="flex-1" />
+          <button
+            className="p-2 mr-3 rounded text-muted hover:text-white hover:bg-panel transition-colors"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label={t('nav.menu')}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </header>
 
-      {/* ── Page content ─────────────────────────────────────────────── */}
-      <main className="flex flex-1 overflow-hidden">
-        <Outlet />
-        {daqVisited && (
-          <div className={isDaq ? 'flex flex-1 overflow-hidden' : 'hidden'}>
-            <RecordingPage active={isDaq} />
+        {menuOpen && (
+          <div className="sm:hidden bg-surface border-b border-border px-3 py-3 flex flex-col gap-1.5 shrink-0 z-40" onClick={() => setMenuOpen(false)}>
+            {NAV.map(({ to, label, Icon }) => (
+              <SideItem key={to} to={to} label={label} Icon={Icon} alwaysWide daqState={to === '/data-acquisition' ? daqState : undefined} />
+            ))}
+            <SideItem to="/docs" label="nav.docs" Icon={BookOpen} alwaysWide />
+            <div onClick={(e) => e.stopPropagation()} className="self-start mt-2">
+              <LanguageSwitch />
+            </div>
           </div>
         )}
-      </main>
-      <footer className="shrink-0 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 px-4 py-1 bg-surface border-t border-border text-xs text-muted">
-        <span>{t('footer.free')}</span>
-        <a href={`${REPO}/blob/main/LICENSE`} target="_blank" rel="noreferrer" className="hover:text-teal underline">{t('footer.license')}</a>
-        <a href={REPO} target="_blank" rel="noreferrer" className="hover:text-teal underline">{t('footer.source')}</a>
-      </footer>
+
+        <StatusBanner />
+
+        {/* ── Page content ─────────────────────────────────────────────── */}
+        <main className="flex flex-1 overflow-hidden">
+          <Outlet />
+          {daqVisited && (
+            <div className={isDaq ? 'flex flex-1 overflow-hidden' : 'hidden'}>
+              <RecordingPage active={isDaq} />
+            </div>
+          )}
+        </main>
+        <footer className="shrink-0 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 px-4 py-1 bg-surface border-t border-border text-xs text-muted">
+          <span>{t('footer.free')}</span>
+          <a href={`${REPO}/blob/main/LICENSE`} target="_blank" rel="noreferrer" className="hover:text-teal underline">{t('footer.license')}</a>
+          <a href={REPO} target="_blank" rel="noreferrer" className="hover:text-teal underline">{t('footer.source')}</a>
+        </footer>
+      </div>
       <ToastContainer />
     </div>
   )

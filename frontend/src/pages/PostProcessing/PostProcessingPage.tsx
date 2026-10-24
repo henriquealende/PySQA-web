@@ -123,12 +123,12 @@ export default function PostProcessingPage() {
       )}
 
       <aside className={clsx(
-        'flex flex-col gap-3 p-3 border-r border-border overflow-y-auto shrink-0 transition-transform',
+        'flex flex-col gap-5 p-4 border-r border-border overflow-y-auto shrink-0 transition-transform',
         'sm:relative sm:translate-x-0 sm:w-64 lg:w-80',
         'fixed top-0 left-0 h-full w-72 z-30 bg-surface sm:bg-transparent',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'
       )}>
-        <div className="flex items-center gap-2 px-1 pb-1">
+        <div className="flex items-center gap-2 px-1">
           <Activity size={18} className="text-teal" aria-hidden="true" />
           <h1 className="text-base font-semibold">{t('pp.page.title')}</h1>
         </div>
@@ -146,8 +146,8 @@ export default function PostProcessingPage() {
 
         {files.length > 0 && (
           <>
-            <div className="border-t border-border pt-3 space-y-2">
-              <p className="text-[11px] text-muted uppercase tracking-wider">{t('pp.page.metric')}</p>
+            <div className="border-t border-border pt-5 space-y-3">
+              <p className="text-xs font-semibold text-muted">{t('pp.page.metric')}</p>
               <MetricSelector
                 value={metricKey}
                 onChange={(k) => { setMetricKey(k); if (k !== 'none') setViewMode('normal') }}
@@ -156,14 +156,14 @@ export default function PostProcessingPage() {
               {(selectedFile?.channels ?? 1) > 1 && metricKey !== 'none' && <ChannelNotice />}
             </div>
 
-            <div className="border-t border-border pt-3 space-y-2">
-              <p className="text-[11px] text-muted uppercase tracking-wider">{t('pp.page.fieldType')}</p>
+            <div className="border-t border-border pt-5 space-y-3">
+              <p className="text-xs font-semibold text-muted">{t('pp.page.fieldType')}</p>
               <div className="flex gap-1">
                 {(['free', 'diffuse'] as FieldType[]).map((ft) => (
                   <button
                     key={ft}
                     onClick={() => setFieldType(ft)}
-                    className={`flex-1 py-1 text-xs rounded transition-colors ${fieldType === ft ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white'}`}
+                    className={`flex-1 py-1.5 text-xs rounded transition-colors ${fieldType === ft ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white'}`}
                   >
                     {ft === 'free' ? t('pp.page.freeField') : t('pp.page.diffuse')}
                   </button>
@@ -174,8 +174,8 @@ export default function PostProcessingPage() {
             {metricKey === 'tonality_ecma' && <TonalityPrecisionSelect />}
 
             {files.length > 1 && selectedId && !showBatch && (
-              <div className="border-t border-border pt-3 space-y-2">
-                <p className="text-[11px] text-muted uppercase tracking-wider">{t('pp.page.compareWith')}</p>
+              <div className="border-t border-border pt-5 space-y-3">
+                <p className="text-xs font-semibold text-muted">{t('pp.page.compareWith')}</p>
                 <select
                   value={compareId ?? ''}
                   onChange={e => setCompareId(e.target.value || null)}
@@ -199,8 +199,8 @@ export default function PostProcessingPage() {
             )}
 
             {selectedId && (
-              <div className="border-t border-border pt-3 space-y-2">
-                <p className="text-[11px] text-muted uppercase tracking-wider">{t('pp.page.micCal')}</p>
+              <div className="border-t border-border pt-5 space-y-3">
+                <p className="text-xs font-semibold text-muted">{t('pp.page.micCal')}</p>
                 {calibrations[selectedId] != null ? (
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] text-teal flex-1">
