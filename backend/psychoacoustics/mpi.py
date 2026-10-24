@@ -12,8 +12,10 @@ is kept in ``mpi_legacy.py``. The steps are:
 
 1. **Filtering.** The signal (resampled to 48 kHz) goes through the 53 auditory filters of ECMA-418-2 (z = 0.5 ... 26.5 Bark_HMS,
    50 % overlap). The envelope of each band is the magnitude of the complex filter output.
-2. **Level history.** The envelope power is averaged in blocks of 10 ms and converted to dB: the level history L(t) of the band
-   (NT ACOU 112 works on the level history of the signal; 10 ms is also the resolution of its Table 1 in the thesis).
+2. **Level history.** The envelope power is averaged in blocks of 2.5 ms and converted to dB: the level history L(t) of the band
+   (NT ACOU 112 works on the level history of the signal). Blocks of 10 ms, the first choice, cap the onset rate at about 2600 dB/s
+   and made clicks of 1, 2 and 5 ms read alike; at 2.5 ms they are told apart. What is left of the difference to the true rise is the
+   smoothing of the auditory filter itself (80 to 100 Hz wide in the low bands), which belongs to the model.
 3. **Event.** Several candidate peaks of the level history are examined in each band (the six highest, at least 0.1 s apart) and the
    one with the highest prominence is kept. For each candidate the **stationary part** of the band is estimated first: the median
    of the level history in the 3 s around the peak, leaving out the event itself (from 0.25 s before to 1 s after the peak).
@@ -83,7 +85,7 @@ BARK_HMS: np.ndarray = Z
 CENTRE_FREQUENCIES: np.ndarray = CENTRE_FREQS
 
 #: Level-history step [s]: the envelope power is averaged in blocks of this length.
-_HOP_S: float = 0.010
+_HOP_S: float = 0.0025
 #: How far before the peak the onset is looked for [s].
 _ONSET_SEARCH_S: float = 0.500
 #: Shortest signal accepted [s]: the level history needs context around the event.
@@ -99,14 +101,16 @@ _LDI_MIN_DB: float = 3.0
 _BG_SPAN_S: float = 3.0
 _BG_BEFORE_S: float = 0.25
 _BG_AFTER_S: float = 1.0
-#: Fewest blocks of stationary part that count as context (0.3 s); with less the older reading of the level before the onset is used.
-_BG_MIN_BLOCKS: int = 30
+#: Least stationary part that counts as context [s]; with less the level just before the onset is used.
+_BG_MIN_S: float = 0.3
 #: An impulse decays: within _DECAY_WINDOW_S after the peak the level falls by at least max(3 dB, _DECAY_FRACTION * LDI).
 _DECAY_WINDOW_S: float = 1.0
 _DECAY_FRACTION: float = 0.3
 _DECAY_MIN_DB: float = 3.0
-#: Fewest blocks after the peak needed to judge the decay (0.2 s).
-_DECAY_MIN_BLOCKS: int = 20
+#: Least record after the peak needed to judge the decay [s].
+_DECAY_MIN_S: float = 0.2
+#: Length of the moving average used to pick candidates and to follow the decay [s].
+_SMOOTH_S: float = 0.030
 #: Candidate peaks examined per band, and their minimum spacing [s].
 _CANDIDATES: int = 6
 _CANDIDATE_GAP_S: float = 0.100
@@ -125,7 +129,7 @@ THRESHOLD_DB: float = 5.0
 #: Skip the filter settling at the start of the file: at least this long [s] and 6 / bandwidth.
 _GUARD_MIN_S: float = 0.05
 #: Samples filtered at a time (a multiple of the block length): limits the memory.
-_CHUNK_BLOCKS: int = 200
+_CHUNK_BLOCKS: int = 800
 
 #: Weighting-function frequency support and JND values (thesis, Figure 61).
 _JND_FREQS: np.ndarray = np.array([250, 500, 1000, 2000, 3000, 4000, 8000], dtype=float)
@@ -295,7 +299,7 @@ class IPM:
 
     @staticmethod
     def _band_levels(x48: np.ndarray, band: int, hop: int) -> np.ndarray:
-        """Level history [dB, arbitrary reference] of one band: envelope power in blocks of 10 ms, filtered in chunks."""
+        """Level history [dB, arbitrary reference] of one band: envelope power in blocks of 2.5 ms, filtered in chunks."""
         b, a = filter_coefficients(band)
         zi = np.zeros(max(len(a), len(b)) - 1, dtype=complex)
         n_blocks = len(x48) // hop
@@ -339,10 +343,15 @@ def measure_event(level_db: np.ndarray, guard_blocks: int = 0, hop_s: float = _H
 
     gap = max(int(round(_CANDIDATE_GAP_S / hop_s)), 1)
     first = guard_blocks + 1
-    smooth = np.convolve(level, np.ones(3) / 3.0, mode="same")
+    k_smooth = max(int(round(_SMOOTH_S / hop_s)), 1) | 1
+    smooth = np.convolve(level, np.ones(k_smooth) / k_smooth, mode="same")
     # candidates are ranked by how far they rise above the local level (median of 3 s), not by the raw level: a louder steady
     # section elsewhere in the record must not crowd the real event out
-    excess = smooth - median_filter(smooth, size=2 * int(round(_BG_SPAN_S / hop_s / 2)) + 1, mode="nearest")
+    m = max(int(round(0.010 / hop_s)), 1)               # the local level is slow: take its median on a coarser (10 ms) grid
+    pad = (-n) % m
+    coarse = np.concatenate([smooth, np.full(pad, smooth[-1])]).reshape(-1, m).mean(axis=1)
+    local = median_filter(coarse, size=2 * int(round(_BG_SPAN_S / (hop_s * m) / 2)) + 1, mode="nearest")
+    excess = smooth - np.repeat(local, m)[:n]
     best = None
     taken: list[int] = []
     for i in np.argsort(excess[first:])[::-1] + first:
@@ -368,7 +377,7 @@ def _evaluate_peak(level: np.ndarray, peak: int, guard: int, hop_s: float):
     cut_lo, cut_hi = max(0, peak - int(round(_BG_BEFORE_S / hop_s))), min(n, peak + int(round(_BG_AFTER_S / hop_s)) + 1)
     lo, hi = max(guard, peak - span), min(n, peak + span + 1)
     surround = np.concatenate([level[lo:max(lo, cut_lo)], level[min(hi, cut_hi):hi]])
-    context = len(surround) >= _BG_MIN_BLOCKS
+    context = len(surround) * hop_s >= _BG_MIN_S
     if context:
         background = float(np.median(surround))
         sigma = max(1.4826 * float(np.median(np.abs(surround - background))), _MAD_FLOOR_DB)
@@ -386,10 +395,11 @@ def _evaluate_peak(level: np.ndarray, peak: int, guard: int, hop_s: float):
 
     # 2. it decays (an impulse), it does not stay up (a step)
     after = level[peak + 1:peak + 1 + int(round(_DECAY_WINDOW_S / hop_s))]
-    decay_checked = len(after) >= _DECAY_MIN_BLOCKS
+    decay_checked = len(after) * hop_s >= _DECAY_MIN_S
     decay = float("nan")
     if decay_checked:
-        decay = float(level[peak] - np.convolve(after, np.ones(3) / 3.0, mode="valid").min())
+        k_decay = max(int(round(_SMOOTH_S / hop_s)), 1) | 1
+        decay = float(level[peak] - np.convolve(after, np.ones(k_decay) / k_decay, mode="valid").min())
         if decay < max(_DECAY_MIN_DB, _DECAY_FRACTION * ldi):
             return None
 

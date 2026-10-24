@@ -22,6 +22,7 @@ from psychoacoustics.mpi import IPM, IPMInputError, measure_event  # noqa: E402
 
 FS = 48000
 ipm = IPM()
+me = lambda h: measure_event(h, 0, hop_s=0.01)     # synthetic level histories are written on a 10 ms grid
 fails = []
 
 
@@ -77,11 +78,11 @@ for orate, ldi, p in T23 + T30:
     hist = np.concatenate([np.full(150, 20.0), 20.0 + np.linspace(0, ldi, max(int(round(rise / 0.01)), 2)),
                            20.0 + ldi - np.linspace(0, ldi, 120)])    # stationary part, linear rise, then the decay of an impulse
     hist = hist + np.random.default_rng(0).standard_normal(len(hist)) * 0.1
-    e = measure_event(hist, 0)
+    e = me(hist)
     worst = max(worst, abs(e["p"] - p)) if e else 99
     ok &= e is not None
 check("measure_event on synthetic rises reproduces the 12 P values of Tables 23 and 30 (within 0.8 dB: the 10 ms grid)", ok and worst < 0.8, f"max diff {worst:.2f} dB")
-a = measure_event(np.concatenate([np.full(150, 20.0), np.full(1, 70.0), 70.0 - np.linspace(0, 50, 120)]), 0)
+a = me(np.concatenate([np.full(150, 20.0), np.full(1, 70.0), 70.0 - np.linspace(0, 50, 120)]))
 check("a step (one block) gives the shortest rise (one block, 10 ms) and LDI 50 dB", a is not None and abs(a["ldi"] - 50) < 0.5 and abs(a["onset_rate"] - 50 / 0.010) < 1, f"{a}")
 
 # 3. behaviour -----------------------------------------------------------------
@@ -118,24 +119,24 @@ print("\n== 3b. criteria: stationary level, decay, candidates, coherence ==")
 rg = np.random.default_rng(5)
 bg = 30.0 + rg.standard_normal(600) * 0.8
 hist = bg.copy(); hist[300:306] = 30.0 + np.array([6, 18, 30, 20, 10, 4])
-e = measure_event(hist, 0)
+e = me(hist)
 check("LDI is the peak minus the stationary level (median of the surroundings), not the level just before", e is not None and abs(e["background"] - 30.0) < 0.4 and abs(e["ldi"] - 30.0) < 1.5, f"background {e and e['background']:.2f}, LDI {e and e['ldi']:.1f}")
 check("a clean event with context and a decay is marked reliable", e is not None and e["reliable"])
 step = bg.copy(); step[300:] += 25.0
-check("a step up that stays (machine switched on) is NOT an impulse", measure_event(step, 0) is None)
+check("a step up that stays (machine switched on) is NOT an impulse", me(step) is None)
 step_ramp = bg.copy(); step_ramp[300:] += np.minimum(np.arange(300), 3) * 8.0
-check("a fast rise to a new steady level is NOT an impulse either", measure_event(step_ramp, 0) is None)
+check("a fast rise to a new steady level is NOT an impulse either", me(step_ramp) is None)
 two = bg.copy(); two[150:154] += np.array([8, 25, 12, 4]); two[420:424] += np.array([15, 40, 20, 6])
-e2 = measure_event(two, 0)
+e2 = me(two)
 check("with two events the most prominent one is kept (the second, 40 dB)", e2 is not None and abs(e2["t_peak"] - 4.215) < 0.03, f"t_peak {e2 and e2['t_peak']:.3f}")
 tiny = bg.copy(); tiny[300] += 2.0
-check("a bump under 3 dB LDI is no event", measure_event(tiny, 0) is None)
+check("a bump under 3 dB LDI is no event", me(tiny) is None)
 late = bg[:305].copy(); late[300:305] += np.array([10, 30, 20, 8, 3])
-el = measure_event(late, 0)
+el = me(late)
 check("an event at the very end of the record is kept but not marked reliable (the decay cannot be checked)", el is not None and not el["reliable"], f"{el}")
 # a long background hum with a louder section far away: the surroundings (3 s) decide, not the whole record
 mixed = np.concatenate([30.0 + rg.standard_normal(1200) * 0.8, 50.0 + rg.standard_normal(1200) * 0.8]); mixed[600:604] += np.array([10, 30, 15, 5])
-em = measure_event(mixed, 0)
+em = me(mixed)
 check("a different level far from the event (3 s away) does not change its stationary level", em is not None and abs(em["background"] - 30.0) < 0.5, f"{em and round(em['background'], 1)}")
 # coherence of the bands: one band whose only peak is elsewhere is dropped
 rc = ipm.analyze(burst(0.01) + 0 * noise(5, 1), FS)
