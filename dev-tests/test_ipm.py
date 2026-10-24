@@ -259,6 +259,46 @@ check("the server answers in the user's language with the numbers that matter",
       "40 amostras" in msgs["pt"][0] and "40 samples" in msgs["en"][0] and "22.45 kHz" in msgs["pt"][1] and "16000 Hz" in msgs["en"][1]
       and "inv" in msgs["pt"][2] and "invalid" in msgs["en"][2], msgs["en"][1][:70])
 
+# ── 8. the thesis as reference (numbers printed in it; no audio needed) ──────
+print("\n== 8. thesis tables as reference (Silveira, 2024) ==")
+# Table 23 and Table 30: (OR [dB/s], LDI [dB], P [dB]) of the MPI per critical band; Table 1: the same for NT ACOU 112 (the standard, whole signal)
+T23 = [(548.78, 16.46, 4.65), (1543.16, 46.29, 6.90)]
+T30 = [(1128.06, 33.84, 6.21), (1169.67, 35.09, 6.29), (1148.40, 34.45, 6.25), (1117.22, 33.52, 6.19), (755.41, 22.66, 5.34),
+       (732.86, 21.98, 5.28), (878.13, 26.34, 5.67), (834.86, 25.04, 5.56), (945.33, 28.36, 5.83), (1138.90, 34.17, 6.23)]
+T1 = [(1117.3, 78.2, 12.9), (2417.3, 72.5, 13.8), (2457.0, 73.7, 13.9)]
+p_code = lambda ldi: 3 * np.log10(ldi / (15 * mpi._EVENT_DURATION_S)) + 2 * np.log10(ldi)     # what _band_prominence computes
+check("Table 1 (NT ACOU 112): P = 3*log10(OR) + 2*log10(LDI), no offset (the thesis truncates 13.87 to 13.8)", all(abs(3 * np.log10(o) + 2 * np.log10(l) - p) < 0.1 for o, l, p in T1))
+check("Tables 23 and 30: the code's P(LDI) reproduces all 12 values printed in the thesis (within the rounding)",
+      all(abs(p_code(l) - p) < 0.015 for _, l, p in T23 + T30), f"max |diff| {max(abs(p_code(l) - p) for _, l, p in T23 + T30):.4f} dB")
+check("Tables 23 and 30: the thesis' P equals 3*log10(OR) + 2*log10(LDI) - 6 (a 6 dB offset the standard does not have)",
+      all(abs(3 * np.log10(o) + 2 * np.log10(l) - 6 - p) < 0.015 for o, l, p in T23 + T30))
+ratio = [o / l for o, l, _ in T23 + T30]
+known("in every MPI row of the thesis OR/LDI = 33.33 (onset fixed at 30 ms, so P depends on LDI only); in Table 1, measured, it is 14.3, 33.3 and 33.3",
+      max(abs(r - 33.333) for r in ratio) < 0.02 and abs(T1[0][0] / T1[0][1] - 14.29) < 0.1, f"{min(ratio):.3f}..{max(ratio):.3f}")
+
+T24 = [(4, -2.9), (7, -1.1), (10, -0.5), (13, -0.2), (15, 0.0), (16, -0.3), (19, -1.4)]    # (band index of 250, 500, 1000, 2000, ~3000, 4000, 8000 Hz; weighting [dB])
+check("the weighting reproduces Table 24 of the thesis within 0.1 dB", all(abs(WEIGHT[i] - w) < 0.1 for i, w in T24),
+      f"max |diff| {max(abs(WEIGHT[i] - w) for i, w in T24):.3f} dB")
+
+# Figure 68: the MPI of a cracking noise read from the plot (22 critical bands); the text says its global value is 32.5 dB
+Y68 = np.array([1.2, 1.7, 2.3, 2.6, 2.8, 3.3, 3.9, 4.7, 5.4, 6.0, 6.3, 6.9, 7.1, 7.2, 7.3, 7.7, 7.9, 7.7, 7.3, 6.8, 6.3, 6.1])
+thesis_like = 20 * np.log10(np.sum(10 ** (Y68 / 20)))       # amplitude sum
+app_global = total(Y68)                                     # what the server computes (energy sum)
+known("the global IPM of the server (energy sum) does not give the 32.5 dB the thesis prints for Figure 68; an amplitude sum of the plotted values gives it",
+      abs(thesis_like - 32.5) < 0.5 and app_global < 21, f"amplitude sum {thesis_like:.1f} dB, energy sum {app_global:.1f} dB (values read from the plot)")
+spread = [total(P_BASE + WEIGHT), total(P_CLICK + WEIGHT), total(prom(click(BASE, 200.0)) + WEIGHT), total(WEIGHT), total(p_abrupt + WEIGHT)]
+known("the thesis' global MPI spans 16.6 to 77.9 dB (Table 41); the server's stays within 8 dB for silence, noise, a tone and clicks up to +80 dB",
+      max(spread) - min(spread) < 8.0, f"server: {min(spread):.1f}..{max(spread):.1f} dB")
+
+bp = os.path.join(os.getcwd(), "..", "frontend", "src", "pages", "PostProcessing", "BatchPanel.tsx")
+if os.path.exists(bp):
+    src = open(bp, encoding="utf-8").read()
+    m = __import__("re").search(r"return (-?[\d.]+) \+ ([\d.]+)\*Number\(N\) \+ ([\d.]+)\*Number\(S\) \+ ([\d.]+)\*Number\(R\) \+ ([\d.]+)\*Number\(I\)", src)
+    app_sil = tuple(float(v) for v in m.groups()) if m else None
+    thesis_eq32 = (-26.86, 5.44, 13.29, 7.75, 0.13)
+    known("the SIL model of the Batch panel is not Equation 32 of the thesis (constant -25.95 vs -26.86 and loudness 10.24 vs 5.44); S, R and MPI coefficients are the same",
+          app_sil is not None and app_sil != thesis_eq32 and app_sil[2:] == thesis_eq32[2:], f"app {app_sil} vs thesis {thesis_eq32}")
+
 print(f"\n{len(fails)} failed, {len(still_open)} known limitations still present, {len(fixed)} fixed ({time.perf_counter() - t0:.0f} s)")
 print("FAILS:", fails)
 sys.exit(1 if fails else 0)

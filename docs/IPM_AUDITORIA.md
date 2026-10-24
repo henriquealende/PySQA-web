@@ -7,6 +7,8 @@ servidor devolve). Testes: `dev-tests/test_ipm.py` (`python ../dev-tests/test_ip
 encontradas (KNOWN ISSUE), que passam a FIXED quando uma correção as elimina. O que está dito aqui sobre a *intenção* da métrica
 precisa ser confirmado com a tese e os artigos, que não fazem parte do repositório.
 
+**Leitura complementar:** `docs/IPM_PROPOSTAS_TESE.md` compara o código com a tese (que ficou disponível depois) e propõe as mudanças por fase.
+
 ## Como a IPM funciona hoje
 
 1. 21 filtros passa-faixa de 1/3 de oitava (100 Hz a 10 kHz), Butterworth de 6ª ordem aplicados com `sosfiltfilt` (fase zero).
