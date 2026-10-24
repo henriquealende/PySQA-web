@@ -154,7 +154,7 @@ export default function BatchPanel() {
     if (load?.timing_s_per_audio_s) {
       let eta = 0, known = true
       for (const f of selectedFiles) for (const m of metrics) {
-        const rate = load.timing_s_per_audio_s[m]
+        const rate = load.timing_s_per_audio_s[m === 'tonality_ecma' && precision === 'fast' ? 'tonality_ecma_fast' : m]
         if (rate == null) { known = false; continue }
         const sec = sectionMap[f.audio_id]
         eta += rate * (sec ? sec[1] - sec[0] : f.duration_s)

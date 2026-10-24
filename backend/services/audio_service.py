@@ -552,7 +552,8 @@ def compute_metric(entry: AudioEntry, metric_key: str, field_type: str = "free",
         sr   = part.sample_rate
         started = time.monotonic()
         result = _dispatch_metric(mono, sr, metric_key, field_type=field_type, fast=fast)
-        limits.record_timing(metric_key, part.duration_s, time.monotonic() - started)
+        # Exact and Fast have different speeds: each keeps its own average (it feeds the progress bar)
+        limits.record_timing(metric_key + ("_fast" if fast else ""), part.duration_s, time.monotonic() - started)
         if not sec.whole:
             result = _shift_time(result, sec.offset_s)
             result["section"] = sec.span

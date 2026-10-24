@@ -163,7 +163,7 @@ COST: Dict[str, Tuple[float, float]] = {
     "loudness_zwk":         (3.0,   50.0),
     "loudness_ecma":        (14.0,  142.0),
     "roughness_ecma":       (153.0, 440.0),
-    "tonality_ecma":        (100.0, 70.0),
+    "tonality_ecma":        (285.0, 85.0),
 }
 
 # (Portuguese, English) names shown inside the refusal messages; use label(kind) to pick one.
@@ -346,10 +346,20 @@ def check_export_size(cells: int) -> None:
         ))
 
 
+def _ecma_threads() -> Optional[int]:
+    try:
+        from psychoacoustics.ecma_fast.tonality_exact import thread_count
+        return thread_count()
+    except Exception:
+        return None
+
+
 def describe(audio_ram_mb: float = 0.0) -> Dict[str, object]:
     """Snapshot for /api/health."""
     rss = rss_mb()
     return {
+        "cpu_count": os.cpu_count(),
+        "ecma_threads": _ecma_threads(),
         "enabled": ENABLED,
         "memory_limit_mb": None if MEMORY_LIMIT_MB is None else round(MEMORY_LIMIT_MB),
         "rss_mb": None if rss is None else round(rss),

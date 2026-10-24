@@ -16,7 +16,9 @@ The standard's stages are unchanged; only the organisation of the computation di
   * the tonal frequency is the first bin whose spectrum rounded to 8 decimals is maximal, found from the few
     candidates near the maximum instead of rounding the whole spectrum.
 """
+import math
 import multiprocessing
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 import bottleneck as bn
@@ -29,7 +31,49 @@ from sottek_hearing_model.shm_subs import (shm_basis_loudness, shm_in_check,
                                            shm_signal_segment)
 from sottek_hearing_model.shm_tonality_ecma import shm_noise_red_lowpass
 
-_NUM_THREADS = max(1, multiprocessing.cpu_count() - 1)
+def _read(path):
+    try:
+        with open(path, "r", encoding="ascii") as fh:
+            return fh.read().strip()
+    except OSError:
+        return None
+
+
+def _cpu_quota():
+    """CPUs the container may use (cgroup quota), or None when there is no quota."""
+    raw = _read("/sys/fs/cgroup/cpu.max")                       # cgroup v2: "<quota> <period>" or "max <period>"
+    if raw:
+        parts = raw.split()
+        if len(parts) == 2 and parts[0] != "max":
+            return float(parts[0]) / float(parts[1])
+        return None
+    quota, period = _read("/sys/fs/cgroup/cpu/cpu.cfs_quota_us"), _read("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
+    if quota and period and float(quota) > 0:                   # cgroup v1: -1 means no quota
+        return float(quota) / float(period)
+    return None
+
+
+def thread_count():
+    """Worker threads: one per CPU the machine really gives us (leaving one free), PYSQA_ECMA_THREADS overrides.
+
+    Every thread holds its own working arrays, so on a container with a CPU quota (a hosted server with 1 CPU)
+    extra threads would only cost memory and gain no speed.
+    """
+    try:
+        forced = int(os.environ.get("PYSQA_ECMA_THREADS", "0"))
+    except ValueError:
+        forced = 0
+    if forced > 0:
+        return forced
+    n = max(1, multiprocessing.cpu_count() - 1)
+    try:
+        quota = _cpu_quota()
+    except ValueError:
+        quota = None
+    return max(1, min(n, math.ceil(quota))) if quota else n
+
+
+_NUM_THREADS = thread_count()
 _EPS = 1e-12
 _FS = 48e3
 _SLICE_ELEMS = 1 << 19            # elements per working slice (~4 MB of float64)

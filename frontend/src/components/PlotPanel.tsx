@@ -609,7 +609,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
   if (err) return <ErrorMsg msg={err} />
   if (cancelled) return <CancelledPanel wasRunning={cancelled.wasRunning} onRetry={() => setRetry(n => n + 1)} onBack={() => setMetricKey('none')} />
   if (!data) return (
-    <MetricProgress label={metricKey.replace(/_/g, ' ')} metricKey={metricKey} job={job} duration={workSeconds}
+    <MetricProgress label={metricKey.replace(/_/g, ' ')} metricKey={metricKey} timingKey={metricKey === 'tonality_ecma' && precision === 'fast' ? 'tonality_ecma_fast' : undefined} job={job} duration={workSeconds}
       onCancel={(wasRunning) => { setCancelled({ wasRunning }); ctrlRef.current?.abort() }} />
   )
   if (data.error) return <ErrorMsg msg={data.error + (data.requires ? ` ${t('plot.metric.requires', { what: data.requires })}` : '')} />

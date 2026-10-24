@@ -13,9 +13,10 @@ const fmt = (s: number) => (s < 10 ? s.toFixed(1) : String(Math.round(s)))
  * it has been going, and how long this kind of calculation usually takes there (from its earlier runs).
  * The bar shows time against that estimate, never more than 95% until the answer arrives.
  */
-export default function MetricProgress({ label, metricKey, job, duration, onCancel }: {
+export default function MetricProgress({ label, metricKey, timingKey, job, duration, onCancel }: {
   label: string
   metricKey: string
+  timingKey?: string       // which running average gives the estimate, when it is not the metric key (Tonality, Fast)
   job: string                       // the name this request was sent under
   duration: number                  // seconds of audio being calculated
   onCancel: (wasRunning: boolean) => void
@@ -45,7 +46,7 @@ export default function MetricProgress({ label, metricKey, job, duration, onCanc
   const waiting = queued >= 0
   const ahead = waiting ? queued + (heavy!.running_job ? 1 : 0) : 0
 
-  const rate = load?.timing_s_per_audio_s?.[metricKey]
+  const rate = load?.timing_s_per_audio_s?.[timingKey ?? metricKey]
   const eta = rate && duration > 0 ? rate * duration : null
   const worked = running ? (heavy!.running_for_s ?? 0) : elapsed       // time spent calculating, not waiting
   const pct = eta ? Math.min(95, (worked / eta) * 100) : 0
