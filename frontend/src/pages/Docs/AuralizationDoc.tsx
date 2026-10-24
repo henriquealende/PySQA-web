@@ -27,7 +27,7 @@ export default function AuralizationDoc() {
         </ol>
         <P>
           Os cartões da cadeia (Ambiente, HRTF, Ruído, Fone e Nível) funcionam como abas: cada um mostra o que foi definido naquela etapa e, ao clicar, abre os ajustes dela.
-          A fonte não é uma aba: ela se escolhe na coluna da esquerda. A prévia e a geração do arquivo ficam sempre abaixo.
+          A fonte não é uma aba: ela se escolhe na coluna da esquerda. A prévia e a geração do arquivo ficam sempre abaixo, no painel <K>Ouvir e gerar o arquivo</K>. Uma faixa colorida no topo marca o que fica sempre na tela: o cartão da fonte, as etapas e esse painel.
         </P>
       </Section>
 
@@ -80,7 +80,7 @@ export default function AuralizationDoc() {
             [<>CIPIC <Cite ids={['algazi2001']} /></>, 'Domínio público (anúncio de 2001)', 'A confirmar: a página de download não abriu na conferência.'],
           ]}
         />
-        <P>A lista no fim da página Preparação de áudios mostra o mesmo estado e os links de origem. Cite o conjunto que você usar.</P>
+        <P>Os links de origem de cada conjunto estão nas referências, ao final desta página. Cite o conjunto que você usar.</P>
       </Section>
 
       <Section id="distancia" title="Distância e nível">

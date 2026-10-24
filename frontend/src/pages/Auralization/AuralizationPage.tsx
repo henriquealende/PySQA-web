@@ -23,6 +23,11 @@ import ScenesBar from './ScenesBar'
 
 const STEPS: StepId[] = ['environment', 'hrtf', 'noise', 'headphone', 'level']
 
+/** The coloured strip on top of what stays on screen in every step: the source card, the step cards and the listen-and-create panel. */
+function FixedBar() {
+  return <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-teal to-sky-400" />
+}
+
 /** "Sennheiser HD600" from a library id such as lib:sbaf:cEAR32:Sennheiser-HD600 */
 const libName = (id: string) => id.split(':').slice(3).join(':').replace(/-/g, ' ')
 
@@ -34,9 +39,10 @@ function StepCard({ n, title, children, configured, selected, step, onSelect }: 
   n: number; title: string; children: React.ReactNode; configured?: boolean; selected?: boolean; step?: StepId; onSelect?: () => void
 }) {
   const t = useT()
-  const base = 'flex-1 min-w-[130px] rounded-lg border px-3 py-2 text-left'
+  const base = 'relative overflow-hidden flex-1 min-w-[130px] rounded-lg border px-3 pb-2 pt-3 text-left'
   const body = (
     <>
+      <FixedBar />
       <span className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted">
         <span>{n} · {title}</span>
         {configured && <><Check size={12} className="text-teal" aria-hidden="true" /><span className="sr-only">{t('aur.step.on')}</span></>}
@@ -186,7 +192,6 @@ export default function AuralizationPage() {
   const asset = assets.find((a) => a.asset_id === hrtf.asset)
   const setName = hrtf.asset === SPHERE_ID ? t('aur.hrtf.sphere') : asset?.name ?? '—'
   const modelDesc = useMemo(() => catalog?.builtin.find((b) => b.id === SPHERE_ID)?.description[lang] ?? '', [catalog, lang])
-  const freeSets = catalog?.datasets.filter((d) => d.kind === 'hrtf' || d.kind === 'room' || d.kind === 'headphone') ?? []
   const clipped = (preview?.peakDbfs ?? -200) > 0
 
   return (
@@ -333,9 +338,12 @@ export default function AuralizationPage() {
         {step === 'level' && <LevelSection gainDb={lvEff.mode === 'off' ? null : preview?.gainDb ?? null} calibrated={calibrated} />}
         </div>
 
-        {/* ── A/B preview ─────────────────────────────────────────────── */}
-        <section className="rounded-lg border border-border bg-panel p-4 space-y-2" aria-labelledby="aur-ab">
-          <h2 id="aur-ab" className="text-sm font-semibold">{t('aur.ab.title')}</h2>
+        {/* ── Listen and create the file (always on screen) ───────────── */}
+        <section className="relative overflow-hidden rounded-lg border border-border bg-panel p-4 pt-5 space-y-4" aria-labelledby="aur-play">
+          <FixedBar />
+          <h2 id="aur-play" className="text-sm font-semibold">{t('aur.play.title')}</h2>
+          <div className="space-y-2">
+          <h3 id="aur-ab" className="text-xs font-semibold uppercase tracking-wider text-muted">{t('aur.ab.title')}</h3>
           <AbPlayer
             originalUrl={sourceId ? getStreamUrl(sessionId, sourceId) : null}
             processedUrl={preview?.url ?? null}
@@ -350,11 +358,10 @@ export default function AuralizationPage() {
               <AlertTriangle size={13} aria-hidden="true" /> {t('aur.ab.clip', { db: fmt(preview!.peakDbfs) })}
             </p>
           )}
-        </section>
+          </div>
 
-        {/* ── Render ──────────────────────────────────────────────────── */}
-        <section className="rounded-lg border border-border bg-panel p-4 space-y-3" aria-labelledby="aur-render">
-          <h2 id="aur-render" className="text-sm font-semibold">{t('aur.render.title')}</h2>
+          <div className="space-y-3 border-t border-border pt-4">
+          <h3 id="aur-render" className="text-xs font-semibold uppercase tracking-wider text-muted">{t('aur.render.title')}</h3>
           <p className="text-[11px] text-muted">{t('aur.render.help')}</p>
           <button
             onClick={() => void render()} disabled={!sourceId || rendering}
@@ -386,26 +393,8 @@ export default function AuralizationPage() {
               </div>
             </div>
           )}
+        </div>
         </section>
-
-        {/* ── Where to find free HRTF sets ────────────────────────────── */}
-        {freeSets.length > 0 && (
-          <details className="rounded-lg border border-border bg-panel p-4">
-            <summary className="text-sm font-semibold cursor-pointer">{t('aur.open.title')}</summary>
-            <p className="text-[11px] text-muted mt-2">{t('aur.open.help')}</p>
-            <ul className="mt-2 space-y-2">
-              {freeSets.map((d) => (
-                <li key={d.id} className="text-xs">
-                  <span className="text-muted">{t(`aur.open.kind.${d.kind}`)} · </span>
-                  <a href={d.url} target="_blank" rel="noreferrer" className="text-teal underline">{d.name}</a>
-                  <span className="text-muted"> · {d.license} · </span>
-                  <span className={d.license_status === 'verified' ? 'text-teal' : 'text-amber'}>{t(`aur.open.status.${d.license_status}`)}</span>
-                  <span className="block text-[11px] text-muted">{d.note}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
       </main>
     </div>
   )

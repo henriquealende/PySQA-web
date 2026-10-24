@@ -27,7 +27,7 @@ export default function AuralizationDocEn() {
         </ol>
         <P>
           The chain cards (Environment, HRTF, Noise, Headphone and Level) work as tabs: each shows what was set in that step and, when clicked, opens its settings.
-          The source is not a tab: it is chosen in the left column. The preview and the file creation always stay below.
+          The source is not a tab: it is chosen in the left column. The preview and the file creation always stay below, in the <K>Listen and create the file</K> panel. A coloured strip on top marks what always stays on screen: the source card, the steps and that panel.
         </P>
       </Section>
 
@@ -80,7 +80,7 @@ export default function AuralizationDocEn() {
             [<>CIPIC <Cite ids={['algazi2001']} /></>, 'Public domain (2001 announcement)', 'To be confirmed: the download page did not open when checked.'],
           ]}
         />
-        <P>The list at the bottom of the Audio Preparation page shows the same status and the source links. Cite the set you use.</P>
+        <P>The source links of each set are in the references at the end of this page. Cite the set you use.</P>
       </Section>
 
       <Section id="distancia" title="Distance and level">

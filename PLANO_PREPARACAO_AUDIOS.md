@@ -235,3 +235,7 @@ A página passou a se chamar "Preparação de áudios" (EN: "Audio Preparation")
 - Frontend: no bloco Fone, campo de filtro e lista com "Seus arquivos" e "Biblioteca SBAF"; mostra o acoplador, a atribuição e o link da fonte; o cartão da cadeia mostra o nome do fone.
 - Cuidados na documentação e na tela: as medições já vêm compensadas pela curva SBAF (não são brutas nem a Harman); quase todos os modelos são hi-fi; três tipos de acoplador (91 entradas de placa plana, 31 de miniDSP EARS); 17 entradas só com um canal; a licença CC BY 4.0 está no README (o GitHub não mostra LICENSE); fonte sem atualização desde 2021.
 - Testes: `test_aural.py` com 199 verificações (122 entradas, 227 arquivos, todos carregam, média dos canais, ids inválidos e tentativa de sair da pasta, aviso de licença e commit, rotas).
+
+### Menos informação na página (2026-10-23)
+- "Ouvir e comparar" e "Gerar o arquivo" viraram um só painel, "Ouvir e gerar o arquivo", com dois subtítulos. Uma faixa em degradê (verde-água para azul-claro) no topo marca o que fica sempre na tela em qualquer etapa: o cartão da Fonte, os cartões das etapas e esse painel. A linha de dica sob os cartões explica a faixa.
+- O quadro "Onde achar HRTFs e respostas de sala de uso livre" foi removido da página (as fontes continuam na documentação, nas referências e em `catalog.json`); chaves de texto `aur.open.*` apagadas.
