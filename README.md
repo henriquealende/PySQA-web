@@ -1,10 +1,184 @@
 # PySQA Web
 
-Web version of [PySQA](https://github.com/henriquealende/PySQA) -- Python Sound Quality Analyser.
+**Sound quality analysis in your browser, with no programming needed.**
 
-**Stack:** FastAPI (Python) - React 18 + TypeScript + Vite - Plotly.js - Tailwind CSS - Zustand
+PySQA Web is the web version of [PySQA](https://github.com/henriquealende/PySQA) (Python Sound Quality Analyser). You give it sound recordings (WAV files, or a microphone) and it shows you what they look like and how they are *perceived*: how loud, how sharp, how rough, how tonal. It also helps you measure how a structure vibrates and prepare listening-test sounds.
+
+You do not need to write code, install audio tools or know signal processing. Open the page, drop a file, click a metric.
+
+> The pictures below were taken with two synthetic test sounds (an engine-like hum with harmonics and a fan-like noise) and a simulated vibrating structure, so you can see the screens without any personal data.
 
 ---
+
+## What is it for?
+
+| If you want to... | Use this module |
+|---|---|
+| Record a sound with your microphone, check its level in dB SPL and send it to analysis | **Data Acquisition** |
+| See a sound as a waveform, spectrum or spectrogram, and compute loudness, sharpness, roughness, tonality... | **Post-Processing** |
+| Find the resonances (natural frequencies) of a structure from a hammer or shaker test | **System Analysis** |
+| Place a sound in a room, around a head and on headphones to prepare a listening test | **Audio Preparation** |
+| Learn what each control and metric means, with worked examples | **Documentation** (button at the top right of the app) |
+
+The four modules sit in the bar at the top of the page. The **PT / EN** buttons switch the language of the whole interface.
+
+---
+
+## A typical session in 60 seconds
+
+1. Open **Post-Processing** and drop one or more `.wav` files on the box at the top left.
+2. Click a file in the list: you see its waveform (top) and spectrum (bottom).
+3. Switch the view (Spectrogram, 1/3 Octave, Envelope) with the buttons above the plot.
+4. Pick a metric in the **Metric** menu (for example *Loudness ISO 532-1*). A progress bar shows the calculation.
+5. Open **Batch** to compute several metrics for several files at once and export the table to Excel.
+
+If something goes wrong, every page has a **Report a bug** button at the bottom of the left column.
+
+---
+
+## The modules
+
+### Post-Processing
+
+The main workbench. Load WAV files, look at them in four ways, compute psychoacoustic metrics, clean the sound with filters and compare files.
+
+![Post-Processing, start screen](docs/img/post-start.png)
+
+**Normal view: waveform and spectrum.** The top plot is the pressure over time; the bottom plot is how the energy is spread over frequency (log scale, in dBFS, or in dB SPL once the microphone is calibrated). Drag on the waveform to select a section and analyse only that part.
+
+![Waveform and spectrum](docs/img/post-normal.png)
+
+**Other views.** Each one has a small gear icon for its settings.
+
+| View | What it shows | Good for |
+|---|---|---|
+| **Spectrogram** | Frequency (vertical) against time (horizontal), colour = level | Seeing how a sound changes: engine run-up, whistles, clicks |
+| **1/3 Octave** | Level in 31 standard bands, with optional A-weighting | Comparing with standards, noise reports |
+| **Envelope** | The slow "outline" of the signal's amplitude | Beating, modulation, impulsive events |
+
+![Spectrogram](docs/img/post-spectrogram.png)
+
+![1/3-octave bands](docs/img/post-octave.png)
+
+![Envelope](docs/img/post-envelope.png)
+
+**Psychoacoustic metrics.** These numbers try to describe what a person hears rather than what a microphone measures. Choose one in the **Metric** menu; the plot shows how it evolves over time (top) and how it is spread over frequency (bottom), with the global value above the plot.
+
+![Loudness ISO 532-1 of the engine sound](docs/img/post-metric.png)
+
+| Metric | In plain words | Unit |
+|---|---|---|
+| Loudness (ISO 532-1 Zwicker, ECMA-418-2) | How loud it sounds | sone |
+| Sharpness (DIN 45692) | How "shrill" or bright it sounds | acum |
+| Roughness (Daniel & Weber, ECMA-418-2) | The harsh, rattling feeling of fast modulation | asper |
+| Fluctuation Strength | The slow wobble of modulation | vacil |
+| Tonality (ECMA-418-2) | How much a pure tone stands out of the noise | tu |
+| IPM (Impulse Prominence Metric) | How much impulsive events (clicks, bangs) stand out | dB |
+
+Two options matter for these numbers: **Field type** (*Free-field* or *Diffuse*) tells the loudness, sharpness and tonality models how the sound reached the listener, and **Mic calibration** (mV/Pa) turns the file from relative units into real pascals so levels read in dB SPL. Annoyance indices (SIL and Zwicker-Fastl) combine several metrics into one number in the Batch panel.
+
+**Processing.** The *Processing* button on a file opens a window with four tabs: *Filtering* (band-pass, low-pass, high-pass, band-reject, 1/3-octave equaliser, harmonic notch), *Windowing*, *Weighting* (A or C) and *Loudness adjustment* (scale a sound to a target loudness). The result is a new file in the list; the original is never changed.
+
+![Processing window](docs/img/post-processing.png)
+
+**Batch.** Tick the files and the metrics, press **Compute**, and get one table you can export to Excel (XLSX).
+
+![Batch table](docs/img/post-batch.png)
+
+Other things you can do here: play a file, compare it with another, analyse only a section, export the processed sound as WAV or the data as XLSX / CSV.
+
+---
+
+### Data Acquisition
+
+Record straight from a microphone connected to your computer. Nothing is uploaded until you choose to send the recording to Post-Processing.
+
+![Data Acquisition with the live level meter](docs/img/acquisition.png)
+
+- Pick the **input device**, **sample rate**, **channels** and **bit depth** on the left.
+- Press **Monitor** to see the live waveform, the live spectrum and a level meter (current level, Leq, Max, with a CLIP warning). Nothing is recorded yet.
+- Press **Record**, then **Stop**, then **Accept** (keep it) or **Discard**.
+- Capture modes: free run, **fixed duration** (exact to the sample), **level trigger** (starts when the sound rises above a threshold, and keeps a short pre-roll), plus optional **overload abort** and **auto-stop on silence**.
+- **Calibrate...** starts a wizard: use an acoustic calibrator or type the sensitivity from the microphone data sheet. After that the meter reads **dB SPL** (or dB(A)) and the recording carries its calibration into Post-Processing.
+
+The browser asks for permission to use the microphone. Lossless capture needs HTTPS or `localhost`. (The screenshot above used a fake test microphone.)
+
+---
+
+### System Analysis
+
+Measures how a structure (a plate, a car door, a machine frame) responds to a force and finds its resonances. This is the **Frequency Response Function (FRF)**.
+
+![System Analysis, start screen](docs/img/analysis-start.png)
+
+1. Load the measurement: **UFF/UNV**, **WAV** or **CSV** files (a CSV without a time column asks for the sample rate).
+2. In the **Channels** table mark one channel as **Input** (the force, from the hammer or shaker) and one or more as **Output** (what responds, e.g. an accelerometer).
+3. Choose the **estimator**: **H1** (best when the noise is on the response), **H2** (noise on the force) or **Hv** (noise on both), and the averaging: *Welch* for noise or sweep excitation, *Impact* for hammer tests (it finds each hit and averages them).
+4. Read the plots: **Bode** (magnitude, phase and *coherence*, which tells how much you can trust each frequency), **Real / Imag**, **Nyquist** and **Modes**.
+
+![FRF with magnitude, phase and coherence](docs/img/analysis-bode.png)
+
+Turn on **Detect modes and damping** to list each resonance with its frequency, damping ratio, Q, bandwidth and coherence, together with plain-language warnings (for example "coherence is low here, the estimate is noisy"). Export the FRF or the modes table as CSV.
+
+![Detected modes and damping](docs/img/analysis-modes.png)
+
+The example is a simulated system with three known resonances (about 87, 214 and 390 Hz). Peaks at very low frequency, where coherence is near zero, are flagged as unreliable by the app itself.
+
+---
+
+### Audio Preparation
+
+Prepares a **stimulus for a listening test**: take a dry sound and make it sound as if it were in a room, heard by a person, on a given pair of headphones. The result is a stereo file you can analyse in Post-Processing.
+
+![Audio Preparation with the "Car cabin" quick scene](docs/img/preparation.png)
+
+The work is a chain of six steps, shown as cards at the top:
+
+1. **Source**: the sound you uploaded.
+2. **Environment**: a room impulse response (the "sound" of the room). Use a ready scene, build a synthetic room, or upload a measured response (1 channel or binaural). The panel shows reverberation times (T20, T30, EDT) and clarity (C50, C80, D50).
+3. **HRTF**: the direction the sound comes from, using a head model (azimuth and elevation).
+4. **Noise**: background noise to add, at a chosen level.
+5. **Headphone**: a correction curve for the headphones, from a built-in library or your own CSV.
+6. **Level**: the final listening level.
+
+**Quick scenes** (Kitchen, Living room, Car cabin, Aircraft cabin) set the whole chain in one click with typical starting values. They are *orders of magnitude, not measurements of a real place*, so adjust them or use a measured response. An **A/B player** lets you compare before and after.
+
+---
+
+### Documentation
+
+A full help section inside the app, in Portuguese and English, with the theory, guided examples and the references behind every module. Open it with the **Documentation** button at the top right.
+
+![Documentation page](docs/img/documentation.png)
+
+---
+
+## Glossary
+
+| Term | Meaning |
+|---|---|
+| **WAV** | An uncompressed audio file; the format this app reads |
+| **dBFS** | Level relative to the largest value the file can hold. Always negative; without calibration this is all the app can say |
+| **dB SPL** | Real sound pressure level (re 20 µPa). Needs a calibrated microphone |
+| **dB(A)** | A level weighted to follow human hearing; the usual choice for noise |
+| **Leq** | The average level over the measurement (equivalent continuous level) |
+| **Spectrum** | How the energy is spread over frequency |
+| **Spectrogram** | A spectrum that evolves with time |
+| **1/3 octave** | A standard way of grouping frequencies into bands |
+| **Sone, acum, asper, vacil, tu** | Units of the psychoacoustic metrics (see the table above) |
+| **Free-field / Diffuse** | Sound arriving from one direction / from all around |
+| **FRF** | Frequency Response Function: how strongly a structure responds at each frequency |
+| **Coherence** | From 0 to 1: how reliable an FRF value is (near 1 is good) |
+| **Mode** | A natural vibration pattern of a structure, with its own frequency and damping |
+| **RIR / BRIR** | Room impulse response / the same measured at each ear of a head |
+| **HRTF** | How the head and ears change a sound depending on its direction |
+
+---
+
+## Running it on your computer
+
+PySQA Web can run locally so your files never leave your machine. The easy way is the two start scripts below; you only need Python and Node.js installed once.
+
 
 ## Requirements
 
@@ -222,7 +396,7 @@ PySQA web/
 
 ---
 
-## Implemented Features (Post-Processing)
+## Feature checklist
 
 | Feature | Status |
 |---------|--------|
@@ -256,12 +430,6 @@ PySQA web/
 | Data Acquisition: exact fixed duration, silence stop and level trigger (counted in samples inside the AudioWorklet) | Done |
 
 ---
-
-## Modules
-
-- **Post-Processing** -- the features listed above.
-- **Data Acquisition** -- live recording, calibration wizard, level meter (done; see the Documentation page).
-- **System Analysis** -- FRF (H1 / H2 / HT), coherence, impact testing, modes and damping, UFF/WAV/CSV input (done).
 
 ## Deployment
 
