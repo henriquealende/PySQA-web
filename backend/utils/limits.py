@@ -162,7 +162,7 @@ COST: Dict[str, Tuple[float, float]] = {
     "fluctuation_strength": (2.0,   5.5),
     "loudness_zwk":         (3.0,   50.0),
     "loudness_ecma":        (14.0,  142.0),
-    "roughness_ecma":       (153.0, 440.0),
+    "roughness_ecma":       (20.0,  135.0),    # on Render: +137 MB at 1 s, +260 MB at 2 s, +358 MB at 2.8 s (plus ~10 %); 650 MB at 5 s here
     "tonality_ecma":        (30.0,  60.0),     # on Render (1 CPU, 1 thread): +291 MB at 5 s, +562 MB at 10 s, plus ~10 %
 }
 

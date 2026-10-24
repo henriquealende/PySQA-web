@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tonality ECMA-418-2:2025 (Sottek Hearing Model): same maths as `sottek_hearing_model.shm_tonality_ecma`,
-reorganised to need far less memory and time. Results must match the package (see dev-tests/bench_tonality_ecma.py).
+reorganised to need far less memory and time. Results must match the package (see dev-tests/bench_ecma.py).
 
 Derived from sottek_hearing_model (https://github.com/acoustics-code-salford/sottek-hearing-model), itself based on
 the RefMap code and on 'SottekTonality.m' by M. Torjussen.
