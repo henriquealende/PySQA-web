@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Play, X } from 'lucide-react'
+import { ArrowUpRight, X } from 'lucide-react'
 import { useStore } from '../../store/useStore'
 import { useAuralStore } from '../../store/useAuralStore'
 import { useT } from '../../i18n'
@@ -21,6 +21,8 @@ const link = (content: string) =>
 const YOUTUBE_ID = 'cP-ZDtmdS1w'
 const EMBED = `https://www.youtube-nocookie.com/embed/${YOUTUBE_ID}?autoplay=1&rel=0&modestbranding=1&hl=pt-BR`
 const WATCH = `https://www.youtube.com/watch?v=${YOUTUBE_ID}`
+// The cover of the video (official, 1280x720), kept here so the card asks nothing of YouTube before the click.
+const COVER = '/auralize/auralize-salas-video-capa.jpg'
 
 const BANDS = ['125', '250', '500', '1000', '2000', '4000']
 const room = (volume: number, rt: number[]): SynthParams => ({ volume_m3: volume, distance_m: 2.5, rt60: Object.fromEntries(BANDS.map((b, i) => [b, rt[i]])) })
@@ -56,19 +58,13 @@ function VideoThumb() {
         onClick={show} aria-label={t('aur.ad.video.play')}
         className="group relative block w-full aspect-video overflow-hidden rounded-lg border border-[#035D66] bg-[#1E2B2F] text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#00BFC8]"
       >
-        <span className="absolute inset-0 flex items-end justify-center gap-2 pb-6 opacity-30" aria-hidden="true">
-          {[22, 40, 30, 52, 36, 60, 28, 44, 24].map((h, i) => (
-            <span key={i} className="w-3 rounded-sm" style={{ height: h, background: CIANO }} />
-          ))}
-        </span>
-        <span className="absolute inset-0 flex items-center justify-center">
-          <span className="w-14 h-14 rounded-full flex items-center justify-center motion-safe:transition-transform motion-safe:group-hover:scale-110" style={{ background: CIANO, color: NOITE }}>
-            <Play size={22} className="ml-0.5" aria-hidden="true" />
-          </span>
-        </span>
-        <span className="absolute left-3 right-3 top-3 text-[11px] font-semibold uppercase tracking-wider text-[#EEF3F4]">{t('aur.ad.video.title')}</span>
-        <span className="absolute left-3 right-3 bottom-2 text-[10px] text-[#9fb0b3]">{t('aur.ad.video.privacy')}</span>
+        <img
+          src={COVER} alt="" width={1280} height={720} loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-105"
+        />
+        <span className="absolute inset-0 bg-[#00161C]/0 group-hover:bg-[#00161C]/20 motion-safe:transition-colors" />
       </button>
+      <p className="text-[10px] text-[#9fb0b3]">{t('aur.ad.video.privacy')}</p>
       <dialog
         ref={dialog} aria-label={t('aur.ad.video.title')}
         onClick={(e) => { if (e.target === dialog.current) close() }}

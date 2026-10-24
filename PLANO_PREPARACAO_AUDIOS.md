@@ -239,3 +239,6 @@ A página passou a se chamar "Preparação de áudios" (EN: "Audio Preparation")
 ### Menos informação na página (2026-10-23)
 - "Ouvir e comparar" e "Gerar o arquivo" viraram um só painel, "Ouvir e gerar o arquivo", com dois subtítulos. Uma faixa em degradê (verde-água para azul-claro) no topo marca o que fica sempre na tela em qualquer etapa: o cartão da Fonte, os cartões das etapas e esse painel. A linha de dica sob os cartões explica a faixa.
 - O quadro "Onde achar HRTFs e respostas de sala de uso livre" foi removido da página (as fontes continuam na documentação, nas referências e em `catalog.json`); chaves de texto `aur.open.*` apagadas.
+
+### Capa do vídeo (2026-10-23)
+- A capa oficial do vídeo ("Auralize Salas · Passo 01 · Criando um projeto", 1280×720, 79 KB) foi baixada uma vez de `i.ytimg.com/vi/cP-ZDtmdS1w/maxresdefault.jpg` e guardada em `frontend/public/auralize/auralize-salas-video-capa.jpg`. O card a mostra a partir do próprio site: continua sem nenhuma requisição ao YouTube antes do clique. A capa já traz o botão de tocar e o título, então o card não sobrepõe outro. Se o vídeo ou a capa mudarem, é preciso trocar o arquivo.
