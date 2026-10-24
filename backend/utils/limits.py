@@ -163,7 +163,7 @@ COST: Dict[str, Tuple[float, float]] = {
     "loudness_zwk":         (3.0,   50.0),
     "loudness_ecma":        (14.0,  142.0),
     "roughness_ecma":       (153.0, 440.0),
-    "tonality_ecma":        (111.0, 537.0),
+    "tonality_ecma":        (100.0, 70.0),
 }
 
 # (Portuguese, English) names shown inside the refusal messages; use label(kind) to pick one.

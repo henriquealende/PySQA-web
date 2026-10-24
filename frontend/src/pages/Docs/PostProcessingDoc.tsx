@@ -423,8 +423,9 @@ export default function PostProcessingDoc() {
           </Figure>
           <P>
             <strong>Como o PySQA calcula:</strong> pela implementação do Modelo Auditivo de Sottek <Cite ids={['ecma418', 'lotinga']} />, que separa, em cada
-            banda crítica, a parte tonal da parte de ruído. É uma das métricas mais pesadas: pode levar dezenas de segundos para alguns segundos de
-            áudio e exige bastante memória. Para arquivos longos, selecione um trecho.
+            banda crítica, a parte tonal da parte de ruído. O PySQA usa uma versão reorganizada desse código, que dá o mesmo resultado (diferença
+            abaixo de 1e-12) com cerca de um sexto da memória e metade do tempo. Ainda é uma das métricas mais pesadas: num computador comum leva
+            cerca de 1,5 s para cada segundo de áudio e usa cerca de 70 MB por segundo de áudio. Para arquivos longos, selecione um trecho.
           </P>
         </Section>
 

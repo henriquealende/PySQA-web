@@ -97,6 +97,11 @@ Loudness, Roughness and Tonality ECMA-418-2 use the `sottek-hearing-model` packa
 `backend/requirements.txt` and installed with the other dependencies. If the import fails in some environment,
 those three metrics are disabled and all other features keep working.
 
+Tonality runs on `backend/psychoacoustics/ecma_fast/tonality_exact.py`, a reorganised copy of the package's function
+(AGPL-3.0, see License) that gives the same results with about a sixth of the memory and half the time; if it fails
+for an unexpected reason, the package's own function answers instead. `dev-tests/bench_tonality_ecma.py` records a
+reference from the package and compares any candidate with it (time, peak memory, relative difference).
+
 ---
 
 ## Hosted deployment: resource limits

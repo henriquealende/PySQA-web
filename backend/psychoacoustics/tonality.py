@@ -6,6 +6,10 @@ try:
     from sottek_hearing_model import shm_tonality_ecma
 except ImportError:
     shm_tonality_ecma = None
+try:  # same results as the package with about a sixth of the memory (see ecma_fast/tonality_exact.py)
+    from psychoacoustics.ecma_fast.tonality_exact import shm_tonality_ecma as shm_tonality_ecma_lean
+except ImportError:
+    shm_tonality_ecma_lean = None
 
 class TonalityECMA:
     """
@@ -329,7 +333,16 @@ class TonalityECMA:
         time_data = None
         if len(timeData) > 0:
             soundfield = 'free_frontal' if field_type == 'free' else 'diffuse'
-            tonality_ecma = shm_tonality_ecma(timeData, samplingRate, soundfield=soundfield)
+            tonality_ecma = None
+            if shm_tonality_ecma_lean is not None:
+                try:
+                    tonality_ecma = shm_tonality_ecma_lean(timeData, samplingRate, soundfield=soundfield)
+                except ValueError:
+                    raise  # e.g. signal too short: the package would refuse it in the same way
+                except Exception:
+                    tonality_ecma = None  # anything unexpected: fall back to the package itself
+            if tonality_ecma is None:
+                tonality_ecma = shm_tonality_ecma(timeData, samplingRate, soundfield=soundfield, wait_bar=False)
             freq = tonality_ecma['band_centre_freqs']
             Bark = self._freq_to_bark_hms(freq)
             # spec_tonality_avg  → time-averaged specific tonality per band [0..1] tu_HMS
