@@ -348,6 +348,12 @@ export default function PostProcessingDocEn() {
             preferably uses the implementation by Lotinga <Cite ids={['lotinga']} /> (ECMA-418-2:2025); if it is not available, it falls back to the
             MoSQITo implementation <Cite ids={['eomys']} />, which also includes the model.
           </P>
+          <P>
+            The loudness comes from the same tonal and noise components as the tonality, which PySQA computes with a reorganised version of Lotinga's code{' '}
+            <Cite ids={['lotinga']} />: the same result (global value identical to 1e-11), with about a fifth of the memory and half the time. On an ordinary
+            computer it takes about 1.3 s for each second of audio. On the hosted site, which has a single CPU, it takes about 2.2 s per second and the server
+            accepts segments of up to about 22 s; see the table in “Limits and good practices”.
+          </P>
           <Callout kind="info">
             The ISO 532-1 and ECMA-418-2 values are <em>not interchangeable</em>: they are different models. Always compare within the same method.
           </Callout>
@@ -391,6 +397,10 @@ export default function PostProcessingDocEn() {
               global value is the 90th percentile of the curve over time (asper<sub>HMS</sub>).
             </li>
           </UL>
+          <P>
+            Both are slow. On the hosted site Daniel and Weber takes about 2.4 s per second of audio and ECMA-418-2 about 2.1 s, and the server accepts
+            segments of up to about 30 s and 10 s, respectively. Selecting the segment of interest solves it (see “Limits and good practices”).
+          </P>
         </Section>
 
         <Section id="m-fluctuation" title="Fluctuation strength" level={3}>
@@ -426,7 +436,7 @@ export default function PostProcessingDocEn() {
             critical band, the tonal part from the noise part. PySQA uses a reorganised version of that code, which gives the same result (difference
             below 1e-6) with about a sixth of the memory and a third of the time. It is still one of the heaviest metrics: on an ordinary computer it takes
             about 1 s for each second of audio. On the hosted site, which has a single CPU, it takes about 2.5 s per second (plus 1.5 s fixed) and the
-            server accepts segments of up to about 20 s for this metric. It uses about 55 MB of memory per second of audio. For long files, select a segment.
+            server accepts segments of up to about 23 s for this metric. It uses about 55 MB of memory per second of audio. For long files, select a segment.
           </P>
           <P>
             In the left column (and in the batch bar) the <strong>Tonality precision</strong> selector chooses between <strong>Exact</strong>, the default,
@@ -507,11 +517,34 @@ export default function PostProcessingDocEn() {
         <UL>
           <li><strong>Calibrate whenever possible.</strong> Without calibration, the metrics are only useful to compare files recorded in the same way.</li>
           <li><strong>One channel at a time for metrics.</strong> Stereo and multichannel files use the left channel; the charts show both.</li>
-          <li><strong>Stationary or short segments.</strong> ECMA-418-2 metrics (tonality, roughness and loudness) consume a lot of time and memory; the server warns when a computation does not fit and suggests selecting a segment.</li>
+          <li><strong>Stationary or short segments.</strong> The slow metrics (the three ECMA-418-2 ones, ISO 532-1 loudness and Daniel and Weber roughness) take a lot of time; the hosted site immediately refuses a computation that would take more than 75 s or does not fit in memory, and says which segment does fit. Select a segment and calculate again.</li>
           <li><strong>Sampling rate.</strong> Frequencies above half the sampling rate do not exist in the file; for the metrics, 44.1 and 48 kHz are adequate.</li>
           <li><strong>Zero-phase filters</strong> preserve the waveform, but apply the response twice; plan the cutoff frequencies taking the −6 dB into account.</li>
           <li><strong>Sessions.</strong> Your files stay in the server memory during the session; the browser keeps a copy and re-sends it automatically if the server restarts.</li>
         </UL>
+        <P>
+          The hosted site runs on a server with 2 GB of memory and a single CPU, and one heavy calculation at a time. The table shows, for each analysis,
+          how long it takes and the longest segment the server accepts when it is free. Each file can be up to 240 s long. A local installation has none of these limits.
+        </P>
+        <Table
+          head={['Analysis', 'Time on the site (s per s of audio)', 'Longest segment on the site']}
+          widths={['44%', '28%', '28%']}
+          rows={[
+            ['Tonality ECMA-418-2 (Exact / Fast)', '2.3 / 1.5', 'about 23 s'],
+            ['Loudness ECMA-418-2', '2.2', 'about 22 s'],
+            ['Roughness ECMA-418-2', '2.1', 'about 10 s'],
+            ['Loudness ISO 532-1', '2.4', 'about 28 s'],
+            ['Roughness (Daniel and Weber)', '2.4', 'about 30 s'],
+            ['Fluctuation strength', '0.3', 'the whole file (up to 240 s)'],
+            ['IPM', '0.07', 'about 150 s'],
+            ['Sharpness DIN 45692', '0.04', 'the whole file (up to 240 s)'],
+            ['Spectrum, spectrogram, 1/3-octave and envelope', 'under 0.05', 'the whole file (up to 240 s)'],
+          ]}
+        />
+        <Callout kind="info">
+          With other files open in the session the server has less free memory, and the longest segment may be shorter. When a calculation does not fit,
+          PySQA refuses it at once, without spending time, and says which segment does fit.
+        </Callout>
       </Section>
 
       {/* ── 12 ── */}

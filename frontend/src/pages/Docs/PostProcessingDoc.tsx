@@ -348,6 +348,12 @@ export default function PostProcessingDoc() {
             usa de preferência a implementação de Lotinga <Cite ids={['lotinga']} /> (ECMA-418-2:2025); se ela não estiver disponível, recorre à implementação da
             MoSQITo <Cite ids={['eomys']} />, que também traz o modelo.
           </P>
+          <P>
+            A loudness sai dos mesmos componentes tonal e de ruído da tonalidade, que o PySQA calcula com uma versão reorganizada do código de Lotinga{' '}
+            <Cite ids={['lotinga']} />: mesmo resultado (valor global idêntico até 1e-11), com cerca de um quinto da memória e metade do tempo. Num computador
+            comum leva cerca de 1,3 s por segundo de áudio. No site hospedado, que tem uma só CPU, leva cerca de 2,2 s por segundo e o servidor aceita trechos de
+            até uns 22 s; veja a tabela em “Limites e boas práticas”.
+          </P>
           <Callout kind="info">
             Os valores ISO 532-1 e ECMA-418-2 <em>não são intercambiáveis</em>: são modelos diferentes. Compare sempre dentro do mesmo método.
           </Callout>
@@ -391,6 +397,10 @@ export default function PostProcessingDoc() {
               global é o percentil 90 da curva no tempo (asper<sub>HMS</sub>).
             </li>
           </UL>
+          <P>
+            As duas são lentas. No site hospedado a de Daniel e Weber leva cerca de 2,4 s por segundo de áudio e a ECMA-418-2 cerca de 2,1 s, e o servidor aceita
+            trechos de até uns 30 s e 10 s, respectivamente. Selecionar o trecho de interesse resolve (veja “Limites e boas práticas”).
+          </P>
         </Section>
 
         <Section id="m-fluctuation" title="Fluctuation strength" level={3}>
@@ -426,7 +436,7 @@ export default function PostProcessingDoc() {
             banda crítica, a parte tonal da parte de ruído. O PySQA usa uma versão reorganizada desse código, que dá o mesmo resultado (diferença
             abaixo de 1e-6) com cerca de um sexto da memória e um terço do tempo. Ainda é uma das métricas mais pesadas: num computador comum leva
             cerca de 1 s para cada segundo de áudio. No site hospedado, que tem uma só CPU, leva cerca de 2,5 s por segundo (mais 1,5 s fixos) e o
-            servidor aceita trechos de até uns 20 s dessa métrica. Ela usa cerca de 55 MB de memória por segundo de áudio. Para arquivos longos, selecione um trecho.
+            servidor aceita trechos de até uns 23 s dessa métrica. Ela usa cerca de 55 MB de memória por segundo de áudio. Para arquivos longos, selecione um trecho.
           </P>
           <P>
             Na coluna da esquerda (e na barra do cálculo em lote) o seletor <strong>Precisão da tonalidade</strong> escolhe entre <strong>Exato</strong>, o padrão,
@@ -507,11 +517,34 @@ export default function PostProcessingDoc() {
         <UL>
           <li><strong>Calibre sempre que possível.</strong> Sem calibração, as métricas servem apenas para comparar arquivos gravados da mesma forma.</li>
           <li><strong>Um canal por vez nas métricas.</strong> Estéreo e multicanal usam o canal esquerdo; os gráficos mostram os dois.</li>
-          <li><strong>Trechos estacionários ou curtos.</strong> Métricas ECMA-418-2 (tonalidade, roughness e loudness) consomem muito tempo e memória; o servidor avisa quando um cálculo não cabe e sugere selecionar um trecho.</li>
+          <li><strong>Trechos estacionários ou curtos.</strong> As métricas lentas (as três ECMA-418-2, a loudness ISO 532-1 e a roughness de Daniel e Weber) consomem muito tempo; o site hospedado recusa na hora um cálculo que levaria mais de 75 s ou que não cabe na memória e diz qual trecho cabe. Selecione um trecho e calcule de novo.</li>
           <li><strong>Taxa de amostragem.</strong> Frequências acima da metade da taxa de amostragem não existem no arquivo; para as métricas, 44,1 e 48 kHz são adequados.</li>
           <li><strong>Filtros de fase zero</strong> preservam a forma de onda, mas aplicam a resposta duas vezes; planeje as frequências de corte considerando os −6 dB.</li>
           <li><strong>Sessões.</strong> Seus arquivos ficam na memória do servidor durante a sessão; o navegador guarda uma cópia e reenvia sozinho se o servidor reiniciar.</li>
         </UL>
+        <P>
+          O site hospedado roda num servidor de 2 GB de memória e uma só CPU, e um cálculo pesado de cada vez. A tabela mostra, para cada análise, quanto
+          tempo ela leva e o maior trecho que o servidor aceita quando está livre. Cada arquivo pode ter até 240 s. Numa instalação local não há esses limites.
+        </P>
+        <Table
+          head={['Análise', 'Tempo no site (s por s de áudio)', 'Trecho máximo no site']}
+          widths={['44%', '28%', '28%']}
+          rows={[
+            ['Tonalidade ECMA-418-2 (Exato / Rápido)', '2,3 / 1,5', 'cerca de 23 s'],
+            ['Loudness ECMA-418-2', '2,2', 'cerca de 22 s'],
+            ['Roughness ECMA-418-2', '2,1', 'cerca de 10 s'],
+            ['Loudness ISO 532-1', '2,4', 'cerca de 28 s'],
+            ['Roughness (Daniel e Weber)', '2,4', 'cerca de 30 s'],
+            ['Fluctuation strength', '0,3', 'o arquivo inteiro (até 240 s)'],
+            ['IPM', '0,07', 'cerca de 150 s'],
+            ['Sharpness DIN 45692', '0,04', 'o arquivo inteiro (até 240 s)'],
+            ['Espectro, espectrograma, 1/3 de oitava e envelope', 'menos de 0,05', 'o arquivo inteiro (até 240 s)'],
+          ]}
+        />
+        <Callout kind="info">
+          Com outros arquivos abertos na sessão o servidor tem menos memória livre, e o trecho máximo pode ser menor. Quando um cálculo não cabe, o PySQA
+          recusa na hora, sem gastar tempo, e diz o trecho que cabe.
+        </Callout>
       </Section>
 
       {/* ── 12 ── */}
