@@ -11,13 +11,13 @@ const AXIS = { gridcolor: '#1e2d3d', zerolinecolor: '#2b3c50', color: '#8ab4c9',
 export default function ResponsePlot({ data }: { data: HrtfResponse | null }) {
   const t = useT()
   if (!data) return <div className="h-[220px] flex items-center justify-center text-xs text-muted">{t('aur.plot.loading')}</div>
-  const mk = (y: number[], name: string, color: string) => ({
-    x: data.freq, y, name, type: 'scatter', mode: 'lines', line: { color, width: 1.6 },
+  const mk = (y: number[], name: string, color: string, dash: string, width: number) => ({
+    x: data.freq, y, name, type: 'scatter', mode: 'lines', line: { color, width, dash },
     hovertemplate: `%{x:.0f} Hz<br>%{y:.1f} dB<extra>${name}</extra>`,
   })
   return (
     <Plot
-      data={[mk(data.left_db, t('aur.plot.left'), LEFT), mk(data.right_db, t('aur.plot.right'), RIGHT)] as any}
+      data={[mk(data.left_db, t('aur.plot.left'), LEFT, 'solid', 3), mk(data.right_db, t('aur.plot.right'), RIGHT, 'dash', 1.6)] as any}
       layout={{
         paper_bgcolor: 'transparent', plot_bgcolor: '#111c28', autosize: true, height: 220,
         margin: { l: 52, r: 12, t: 8, b: 44 },

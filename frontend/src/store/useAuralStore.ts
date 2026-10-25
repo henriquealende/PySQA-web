@@ -41,7 +41,7 @@ const writeDismissed = (v: boolean) => { try { if (v) localStorage.setItem(AD_KE
 export const useAuralStore = create<AuralState>((set) => ({
   step: 'environment',
   sourceId: null,
-  hrtf: { asset: SPHERE_ID, azimuth: 30, elevation: 0, distance_m: 1 },
+  hrtf: { asset: SPHERE_ID, azimuth: 0, elevation: 0, distance_m: 1 },
   env: NO_ENV,
   noise: NO_NOISE,
   headphone: NO_HEADPHONE,

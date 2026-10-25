@@ -34,6 +34,8 @@ def spherical_head_hrir(az_deg: float, el_deg: float, fs: float, n: int = 512) -
     interaural axis. Returns (2, n).
     """
     a, c = _HEAD_RADIUS_M, _SPEED_OF_SOUND
+    n_out, n = n, 4 * n                                                    # build long, keep n_out: no wrap-around
+    lead = 64.0 / fs                                                       # same lead for both ears; ITD is unchanged
     az, el = np.radians(az_deg), np.radians(el_deg)
     lateral = np.arcsin(np.clip(np.sin(az) * np.cos(el), -1.0, 1.0))      # angle from the median plane, + = right
     itd = (a / c) * (abs(lateral) + np.sin(abs(lateral)))                  # Woodworth
@@ -48,9 +50,9 @@ def spherical_head_hrir(az_deg: float, el_deg: float, fs: float, n: int = 512) -
         alpha = (1 + alpha_min / 2) + (1 - alpha_min / 2) * np.cos(theta / theta_min * np.pi)
         h = (1 + 1j * alpha * w / (2 * w0)) / (1 + 1j * w / (2 * w0))
         near = (ear_sign * lateral) >= 0
-        h = h * np.exp(-1j * w * (0.0 if near else itd))
+        h = h * np.exp(-1j * w * (lead + (0.0 if near else itd)))
         out[ear] = np.fft.irfft(h, n)
-    return out
+    return out[:, :n_out]
 
 
 def sphere_set(fs: float) -> HrtfSet:
