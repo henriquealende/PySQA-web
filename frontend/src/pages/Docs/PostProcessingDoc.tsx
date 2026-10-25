@@ -211,7 +211,7 @@ export default function PostProcessingDoc() {
             Com <K>Comparar com</K>, o segundo arquivo ganha uma linha na mesma tabela. O botão <K>Copiar</K> leva a tabela para uma planilha.
           </P>
           <UL>
-            <li><strong>N5</strong> é o valor que a métrica ultrapassa em 5 % do tempo, isto é, o percentil 95 da curva. <strong>N95</strong> é o valor excedido em 95 % do tempo (percentil 5). A regra é a mesma para todas as métricas: o N5 da loudness é o N5 da ISO 532-1, e o de uma roughness é apenas o valor excedido em 5 % do tempo.</li>
+            <li><strong>N5</strong> é o valor que a métrica ultrapassa em 5 % do tempo, isto é, o percentil 95 da curva. <strong>N95</strong> é o valor excedido em 95 % do tempo (percentil 5). A regra é a mesma para todas as métricas. A letra segue a métrica: N na loudness (o N5 da ISO 532-1), S na sharpness, R na roughness e P (percentil) nas demais; R5 de uma roughness é apenas o valor excedido em 5 % do tempo.</li>
             <li>Todos os pontos da curva pesam igual, porque os passos de tempo da métrica são uniformes. Pontos não numéricos ficam de fora.</li>
             <li>As estatísticas seguem o trecho escolhido e a calibração. A tabela só aparece nas métricas que têm curva no tempo; sharpness, fluctuation strength e IPM não têm.</li>
             <li>No começo da curva há um transitório dos filtros, que entra no mínimo e na média. Para medir só a parte estável, escolha um trecho que comece depois dele.</li>

@@ -96,5 +96,5 @@ export default {
   'plot.stats.tMax': 'Em',
   'plot.stats.tMaxTitle': 'Instante do valor máximo',
   'plot.stats.nTitle': 'Valor excedido em {p} % do tempo',
-  'plot.stats.note': 'Unidade: {unit}. N5 é o valor excedido em 5 % do tempo (percentil 95); N95, em 95 % (percentil 5).',
+  'plot.stats.note': 'Unidade: {unit}. {l}5 é o valor excedido em 5 % do tempo (percentil 95); {l}95, em 95 % (percentil 5). A letra segue a métrica: N loudness, S sharpness, R roughness, P as demais.',
 } as Record<string, string>

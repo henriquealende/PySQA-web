@@ -211,7 +211,7 @@ export default function PostProcessingDocEn() {
             With <K>Compare with</K>, the second file gets a row in the same table. The <K>Copy</K> button takes the table to a spreadsheet.
           </P>
           <UL>
-            <li><strong>N5</strong> is the value the metric exceeds in 5 % of the time, that is, the 95th percentile of the curve. <strong>N95</strong> is the value exceeded in 95 % of the time (5th percentile). The rule is the same for every metric: the N5 of a loudness is the N5 of ISO 532-1, and that of a roughness is just the value exceeded in 5 % of the time.</li>
+            <li><strong>N5</strong> is the value the metric exceeds in 5 % of the time, that is, the 95th percentile of the curve. <strong>N95</strong> is the value exceeded in 95 % of the time (5th percentile). The rule is the same for every metric. The letter follows the metric: N for loudness (the N5 of ISO 532-1), S for sharpness, R for roughness and P (percentile) for the others; the R5 of a roughness is just the value exceeded in 5 % of the time.</li>
             <li>Every point of the curve weighs the same, because the time steps of the metric are uniform. Points that are not numbers are left out.</li>
             <li>The statistics follow the chosen segment and the calibration. The table appears only for metrics that have a curve over time; sharpness, fluctuation strength and IPM do not.</li>
             <li>The start of the curve has a filter transient, which enters the minimum and the mean. To measure only the stable part, choose a segment that starts after it.</li>

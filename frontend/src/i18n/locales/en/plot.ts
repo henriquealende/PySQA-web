@@ -96,5 +96,5 @@ export default {
   'plot.stats.tMax': 'At',
   'plot.stats.tMaxTitle': 'Time of the maximum value',
   'plot.stats.nTitle': 'Value exceeded in {p} % of the time',
-  'plot.stats.note': 'Unit: {unit}. N5 is the value exceeded in 5 % of the time (95th percentile); N95, in 95 % (5th percentile).',
+  'plot.stats.note': 'Unit: {unit}. {l}5 is the value exceeded in 5 % of the time (95th percentile); {l}95, in 95 % (5th percentile). The letter follows the metric: N loudness, S sharpness, R roughness, P the others.',
 } as Record<string, string>

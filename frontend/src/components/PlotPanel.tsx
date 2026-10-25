@@ -683,7 +683,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
         {compareId && <CompareBadge name={compareName} color={C_BLUE} />}
       </div>
 
-      <MetricStats rows={[
+      <MetricStats metricKey={metricKey} rows={[
         ...(data.stats ? [{ name: files.find(f => f.audio_id === audioId)?.name ?? '', color: C_TEAL, stats: data.stats, unit: data.unit ?? '' }] : []),
         ...(dataCmp?.stats ? [{ name: compareName, color: C_BLUE, stats: dataCmp.stats, unit: dataCmp.unit ?? '' }] : []),
       ]} />

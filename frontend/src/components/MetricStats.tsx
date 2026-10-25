@@ -7,6 +7,14 @@ interface Row { name: string; color: string; stats: Stats; unit: string }
 
 const EXCEEDED = ['5', '10', '50', '90', '95'] as const
 
+/** Letter of the exceeded value: N for loudness, S sharpness, R roughness, P (percentile) for the others. */
+function letter(metricKey: string): string {
+  if (metricKey.startsWith('loudness')) return 'N'
+  if (metricKey.startsWith('sharpness')) return 'S'
+  if (metricKey.startsWith('roughness')) return 'R'
+  return 'P'
+}
+
 /** Number with a precision that fits its size (loudness 23.4, tonality 0.0312). */
 function fmt(v: number, locale: string): string {
   const a = Math.abs(v)
@@ -16,17 +24,18 @@ function fmt(v: number, locale: string): string {
 
 /**
  * Statistics of the metric over time: mean, extremes and the values exceeded in 5, 10, 50, 90 and 95 % of the time
- * (N5 ... N95). One row per file; a second row when a file is being compared.
+ * (N5 ... N95 for loudness, R5 ... R95 for roughness, and so on). One row per file; a second row when a file is being compared.
  */
-export default function MetricStats({ rows }: { rows: Row[] }) {
+export default function MetricStats({ rows, metricKey }: { rows: Row[]; metricKey: string }) {
   const t = useT()
+  const L = letter(metricKey)
   const locale = currentLocale()
   const [open, setOpen] = useState(true)
   const [copied, setCopied] = useState(false)
   if (rows.length === 0) return null
 
   const copy = async () => {
-    const head = ['file', 'unit', 'mean', 'std', 'min', 'max', 't_max_s', ...EXCEEDED.map(p => `N${p}`)].join('\t')
+    const head = ['file', 'unit', 'mean', 'std', 'min', 'max', 't_max_s', ...EXCEEDED.map(p => `${L}${p}`)].join('\t')
     const body = rows.map(r => [r.name, r.unit, r.stats.mean, r.stats.std, r.stats.min, r.stats.max, r.stats.t_max,
       ...EXCEEDED.map(p => r.stats.exceeded[p])].join('\t'))
     try {
@@ -63,7 +72,7 @@ export default function MetricStats({ rows }: { rows: Row[] }) {
                 <th className={th}>{t('plot.stats.min')}</th>
                 <th className={th}>{t('plot.stats.max')}</th>
                 <th className={th} title={t('plot.stats.tMaxTitle')}>{t('plot.stats.tMax')}</th>
-                {EXCEEDED.map(p => <th key={p} className={th} title={t('plot.stats.nTitle', { p })}>N{p}</th>)}
+                {EXCEEDED.map(p => <th key={p} className={th} title={t('plot.stats.nTitle', { p })}>{L}{p}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -80,7 +89,7 @@ export default function MetricStats({ rows }: { rows: Row[] }) {
               ))}
             </tbody>
           </table>
-          <p className="text-[10px] text-muted mt-1">{t('plot.stats.note', { unit: rows[0].unit || '—' })}</p>
+          <p className="text-[10px] text-muted mt-1">{t('plot.stats.note', { unit: rows[0].unit || '—', l: L })}</p>
         </div>
       )}
     </div>
