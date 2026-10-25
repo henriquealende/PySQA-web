@@ -442,7 +442,7 @@ export default function ProcessingModal({
 
           {/* FILTER */}
           {tab === 'filter' && (
-            <div className="flex gap-4 items-start">
+            <div className="flex flex-col-reverse sm:flex-row gap-4 items-stretch sm:items-start">
               <div className="flex-1 space-y-3 min-w-0">
                 <div>
                   <label className={labelCls}>{t('pp.proc.filterType')}</label>
@@ -521,7 +521,7 @@ export default function ProcessingModal({
 
           {/* WINDOW */}
           {tab === 'window' && (
-            <div className="flex gap-4 items-start">
+            <div className="flex flex-col-reverse sm:flex-row gap-4 items-stretch sm:items-start">
               <div className="flex-1 space-y-3 min-w-0">
                 <div>
                   <label className={labelCls}>{t('pp.proc.windowType')}</label>
@@ -563,7 +563,7 @@ export default function ProcessingModal({
 
           {/* WEIGHTING */}
           {tab === 'weighting' && (
-            <div className="flex gap-4 items-start">
+            <div className="flex flex-col-reverse sm:flex-row gap-4 items-stretch sm:items-start">
               <div className="flex-1 space-y-3 min-w-0">
                 <div>
                   <label className={labelCls}>{t('pp.proc.weightCurve')}</label>

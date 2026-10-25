@@ -271,10 +271,10 @@ export default function BatchPanel() {
   }
 
   return (
-    <div className="flex flex-1 overflow-hidden">
+    <div className="flex flex-col sm:flex-row flex-1 overflow-y-auto sm:overflow-hidden">
 
       {/* ── Left column: file list ───────────────────────────────── */}
-      <div className="w-52 shrink-0 border-r border-border flex flex-col overflow-hidden">
+      <div className="w-full sm:w-52 shrink-0 max-h-44 sm:max-h-none border-b sm:border-b-0 sm:border-r border-border flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
           <span className="text-[11px] text-muted uppercase tracking-wider font-semibold">{t('pp.batch.files')}</span>
           <button onClick={toggleAll} className="text-[11px] text-muted hover:text-teal transition-colors">
@@ -317,7 +317,7 @@ export default function BatchPanel() {
       </div>
 
       {/* ── Right area: controls + results ───────────────────────── */}
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-col sm:flex-1 sm:overflow-hidden">
 
         {/* Controls bar */}
         <div className="shrink-0 border-b border-border px-4 py-3 flex flex-col gap-3 bg-surface/40">
@@ -441,7 +441,7 @@ export default function BatchPanel() {
         </div>
 
         {/* Progress / results */}
-        <div className="flex-1 overflow-auto p-4 flex flex-col gap-3">
+        <div className="flex-1 overflow-auto p-4 flex flex-col gap-3 min-h-[320px] sm:min-h-0">
 
           {busy && <BatchProgress step={pStep} total={pTotal} label={pLabel} elapsed={(Date.now() - startedAt) / 1000} eta={etaTotal} onCancel={cancel} />}
 
