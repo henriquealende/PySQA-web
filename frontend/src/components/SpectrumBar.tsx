@@ -72,7 +72,7 @@ export default function SpectrumBar({ x, y, nyquist, unit, f0, pins, onX, onY, o
           {t(pins > 1 ? 'plot.pins.clearMany' : 'plot.pins.clearOne', { n: pins })}
         </button>
       )}
-      <span className="text-muted/80 ml-auto">{t('plot.sp.hint')}</span>
+      <span className="text-muted/80 ml-auto [@media(hover:none)]:hidden">{t('plot.sp.hint')}</span>
     </div>
   )
 }

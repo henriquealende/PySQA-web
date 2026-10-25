@@ -132,7 +132,8 @@ export default function SystemAnalysisPage() {
   return (
     <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden text-white">
 
-      {/* ── Settings column ── */}
+      {/* ── Settings column (only once something is loaded; before that the big box in the middle is the only way in) ── */}
+      {(channels.length > 0 || s.files.length > 0) && (
       <aside className="shrink-0 lg:w-80 lg:border-r border-border p-4 flex flex-col gap-5 lg:overflow-y-auto">
         <div className="flex items-center gap-2 px-1 pb-1">
           <BarChart2 size={18} className="text-teal" aria-hidden="true" />
@@ -322,9 +323,11 @@ export default function SystemAnalysisPage() {
         )}
         <BugReportButton />
       </aside>
+      )}
 
       {/* ── Results column ── */}
       <section aria-label={t('sa.page.results')} className="flex flex-col flex-1 min-w-0 min-h-[420px] lg:min-h-0 lg:overflow-hidden">
+        {channels.length > 0 && (
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0 flex-wrap">
           <div className="flex gap-1 flex-wrap">
             {VIEWS.filter((v) => v.key !== 'modes' || params.modes.enabled).map(({ key, label, Icon }) => (
@@ -369,6 +372,7 @@ export default function SystemAnalysisPage() {
             </>
           )}
         </div>
+        )}
 
         {error && <p className="m-3 text-xs text-red-300 bg-red-400/10 border border-red-400/30 rounded px-3 py-2">{error}</p>}
 
@@ -389,8 +393,17 @@ export default function SystemAnalysisPage() {
 
         <div className="flex-1 min-h-0 p-2 flex flex-col gap-2 lg:overflow-y-auto">
           {!result && !error && channels.length === 0 && (
-            <ImportCallout onFiles={(l) => { void s.addFiles(l) }} disabled={loading}
-              title={t('sa.page.calloutTitle')} what={t('sa.page.calloutWhat')} extensions={FRF_EXTENSIONS} />
+            <div className="flex flex-col flex-1 min-h-[320px]">
+              <div className="flex-1 min-h-0">
+                <ImportCallout onFiles={(l) => { void s.addFiles(l) }} disabled={loading} hintLeft={false}
+                  title={t('sa.page.calloutTitle')} what={t('sa.page.calloutWhat')} extensions={FRF_EXTENSIONS} />
+              </div>
+              <label className="flex items-center justify-center gap-2 pb-4 text-[11px] text-muted" title={t('sa.page.csvFsTitle')}>
+                {t('sa.page.csvFs')}
+                <input type="number" className={clsx(num, '!w-28')} placeholder={t('sa.page.csvFsPlaceholder')} value={s.csvFs}
+                  onChange={(e) => s.setCsvFs(e.target.value)} />
+              </label>
+            </div>
           )}
           {!result && !error && channels.length > 0 && (
             <div className="flex flex-1 items-center justify-center text-center text-muted px-6">

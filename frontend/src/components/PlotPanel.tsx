@@ -548,7 +548,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   }
 
   return (
-    <div className="flex flex-col h-full gap-1">
+    <div className="flex flex-col h-full gap-1 overflow-y-auto sm:overflow-visible">
       <WaveStatsTable rows={waveStatRows} calibrated={!!wf.calibrated} />
       <div className="flex items-center gap-2 px-2 shrink-0 flex-wrap text-[11px]">
         {compareId && <CompareBadge name={compareName} color={C_BLUE} />}
@@ -576,7 +576,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
           </button>
         )}
       </div>
-      <div className="relative flex-1 min-h-0" {...rightButtonFree}>
+      <div className="relative flex-1 min-h-[260px] sm:min-h-0" {...rightButtonFree}>
       <Plot data={wfData}
         layout={{ ...BASE_LAYOUT,
           xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time'), ...(wfRange.current ? { range: wfRange.current, autorange: false } : {}) },
@@ -607,7 +607,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
         x={spX} y={spY} nyquist={sp.freqs[sp.freqs.length - 1] ?? 20000} unit={specUnit} f0={f0} pins={spPins.length}
         onX={setSpX} onY={setSpY} onF0={setF0} onClearPins={() => setSpPins([])}
       />
-      <div ref={spWrap} className="relative flex-1 min-h-0" onContextMenu={openMenu} {...rightButtonFree}>
+      <div ref={spWrap} className="relative flex-1 min-h-[300px] sm:min-h-0" onContextMenu={openMenu} {...rightButtonFree}>
         <Plot data={spData}
           layout={{ ...BASE_LAYOUT,
             xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.frequency'), type: 'log',

@@ -11,7 +11,7 @@ export function Cite({ ids, text }: { ids: string[]; text?: string }) {
   const used = useContext(CiteContext)
   ids.forEach((id) => used.add(id))
   const parts = ids.map((id) => REFS[id]?.cite ?? id.toUpperCase())
-  return <span className="text-muted whitespace-nowrap">{text ?? `(${parts.join('; ')})`}</span>
+  return <span className="text-muted sm:whitespace-nowrap">{text ?? `(${parts.join('; ')})`}</span>
 }
 
 function renderEntry(text: string): ReactNode[] {
