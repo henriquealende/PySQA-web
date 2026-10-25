@@ -74,13 +74,23 @@ export interface MetricResult {
   section?: Section | null
 }
 
+/** Samples of the whole file (Pa when calibrated, full scale otherwise) and, when calibrated, levels in dB re 20 µPa (null: silence). */
+export interface WaveStats {
+  mean: number
+  std: number
+  min: number
+  max: number
+  levels: { lzeq: number | null; laeq: number | null; lzmax: number | null; lamax: number | null; lpeak: number | null } | null
+}
+
 export interface WaveformData {
   t: number[]
   amplitude: number[]
   peak?: number          // highest absolute sample of the whole file (full scale = 1)
   reduced?: boolean      // true: min and max of each bucket, interleaved (long signals)
   calibrated?: boolean   // amplitude is in Pa instead of full scale
-  channels?: { name: string; amplitude: number[]; peak: number }[]   // left and right of a file with two channels
+  stats?: WaveStats | null
+  channels?: { name: string; amplitude: number[]; peak: number; stats?: WaveStats | null }[]   // left and right of a file with two channels
   duration_s: number
   sample_rate: number
 }

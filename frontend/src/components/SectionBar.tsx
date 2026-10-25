@@ -28,7 +28,7 @@ export function toSection(a: number, b: number, duration: number, edge = 0.0005)
 }
 
 /**
- * The part of the file every analysis looks at. It can be dragged on the waveform (Normal view)
+ * The part of the file every analysis looks at. It can be dragged on the waveform (Time & Frequency view)
  * or typed here, and it is the same in every view: spectrum, spectrogram, 1/3-octave, envelope,
  * metrics. A short section is also what lets a long file be analysed on a small server.
  */

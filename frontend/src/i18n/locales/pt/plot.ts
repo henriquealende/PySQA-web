@@ -6,7 +6,7 @@ export default {
   'plot.section.only': 'Analisando só esta parte · {part} de {total} s',
   'plot.section.wholeBtn': 'Arquivo inteiro',
   'plot.section.whole': 'Arquivo inteiro · {total} s',
-  'plot.section.hint': 'Arraste sobre a forma de onda (vista Normal) ou digite os limites para analisar só uma parte',
+  'plot.section.hint': 'Arraste sobre a forma de onda (vista Tempo e frequência) ou digite os limites para analisar só uma parte',
 
   'plot.progress.waitOne': 'Aguardando {n} outro cálculo no servidor…',
   'plot.progress.waitMany': 'Aguardando {n} outros cálculos no servidor…',
@@ -84,6 +84,14 @@ export default {
   'plot.metric.compare': 'Comparação:',
   'plot.metric.requires': '(requer {what})',
 
+  'plot.wstats.title': 'Estatísticas do sinal',
+  'plot.wstats.unitPa': 'Pa',
+  'plot.wstats.unitFs': 'fundo de escala',
+  'plot.wstats.note': 'Arquivo inteiro. Média, desvio, mínimo e máximo em {unit}. Níveis em dB re 20 µPa: Leq com ponderação Z (sem) e A; máximo com resposta Fast (125 ms); Lpico é a maior amostra sem ponderação.',
+  'plot.wstats.noCal': 'Informe a sensibilidade do microfone (mV/Pa) para ver os níveis em dB SPL.',
+  'plot.wstats.lzmaxTitle': 'Nível máximo, ponderação Z, resposta Fast (125 ms)',
+  'plot.wstats.lamaxTitle': 'Nível máximo, ponderação A, resposta Fast (125 ms)',
+  'plot.wstats.lpeakTitle': 'Maior valor instantâneo de pressão, sem ponderação',
   'plot.stats.title': 'Estatísticas no tempo',
   'plot.stats.copy': 'Copiar',
   'plot.stats.copied': 'Copiado',

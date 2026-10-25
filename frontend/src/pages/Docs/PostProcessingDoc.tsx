@@ -28,7 +28,7 @@ export default function PostProcessingDoc() {
         <P>O fluxo típico de trabalho tem cinco passos:</P>
         <ol className="text-sm text-slate-200 leading-relaxed list-decimal pl-5 flex flex-col gap-1 max-w-[72ch]">
           <li><strong>Importar:</strong> arraste arquivos WAV para a área de importação ou clique para escolher. É possível enviar vários de uma vez.</li>
-          <li><strong>Escolher a vista:</strong> Normal (forma de onda + espectro), Espectrograma, 1/3 de oitava ou Envelope. Para uma métrica psicoacústica, escolha-a em <K>Métrica</K>.</li>
+          <li><strong>Escolher a vista:</strong> Tempo e frequência (forma de onda + espectro), Espectrograma, 1/3 de oitava ou Envelope. Para uma métrica psicoacústica, escolha-a em <K>Métrica</K>.</li>
           <li><strong>Processar (opcional):</strong> o botão de edição de cada arquivo abre filtros, janelas, ponderações e ajuste de loudness. O resultado vira um <em>novo arquivo</em>; o original nunca é alterado.</li>
           <li><strong>Comparar e analisar em lote:</strong> sobreponha um segundo arquivo (<K>Comparar com</K>) ou use <K>Lote</K> para calcular várias métricas em vários arquivos.</li>
           <li><strong>Exportar:</strong> WAV, planilha (XLSX) ou tabela (CSV).</li>
@@ -95,7 +95,7 @@ export default function PostProcessingDoc() {
       {/* ── 4 ── */}
       <Section id="trecho" title="Seleção de trecho">
         <P>
-          Muitas vezes só uma parte da gravação interessa: um ruído de partida, um evento, um trecho estável. Na vista Normal,
+          Muitas vezes só uma parte da gravação interessa: um ruído de partida, um evento, um trecho estável. Na vista Tempo e frequência,
           arraste sobre a forma de onda (ou digite os limites na barra <K>Trecho</K>) para escolher o trecho. Todas as vistas, as
           métricas e o lote passam a usar apenas esse trecho, e os eixos de tempo continuam mostrando o tempo original do arquivo.
         </P>
@@ -109,6 +109,14 @@ export default function PostProcessingDoc() {
             Mostra a amplitude ao longo do tempo (em fundo de escala, ou em pascais se o arquivo estiver calibrado). Para arquivos
             longos, o PySQA desenha no máximo 8 000 pontos, mas guarda o <em>máximo e o mínimo</em> de cada trecho, de modo que picos
             curtos e saturação nunca desaparecem do desenho. O pico do arquivo inteiro aparece abaixo do gráfico.
+          </P>
+          <P>
+            Acima do gráfico, a tabela <strong>Estatísticas do sinal</strong> traz <strong>média</strong>, <strong>desvio</strong>,
+            <strong> mínimo</strong> e <strong>máximo</strong> das amostras do arquivo inteiro (em fundo de escala, ou em pascais se calibrado).
+            Com a calibração informada, aparecem também os níveis em dB re 20 µPa: <strong>LZeq</strong> e <strong>LAeq</strong> (nível equivalente
+            sem ponderação e com ponderação A), <strong>LZmax</strong> e <strong>LAmax</strong> (maior nível com resposta <em>Fast</em>, 125 ms) e
+            <strong> Lpeak</strong> (maior valor instantâneo de pressão, sem ponderação). Um arquivo estéreo tem uma linha por canal, e o arquivo
+            de <K>Comparar com</K>, outra.
           </P>
         </Section>
 

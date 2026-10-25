@@ -246,6 +246,47 @@ def _log_reduce(freqs: np.ndarray, mag: np.ndarray, max_points: int):
     return centre, peak, rms
 
 
+_P_REF_PA = 20e-6
+_FAST_TAU_S = 0.125         # "Fast" time weighting of a sound level meter
+
+
+def _db(power: float) -> Optional[float]:
+    """10 log10 of a mean square in Pa^2 re (20 uPa)^2; None for silence."""
+    return float(10.0 * np.log10(power / _P_REF_PA ** 2)) if power > 0 else None
+
+
+def _signal_stats(x: np.ndarray, fs: int, cal_pa: Optional[float]) -> Dict[str, Any]:
+    """Mean, standard deviation, minimum and maximum of the samples (Pa when calibrated, full scale otherwise)
+    and, when calibrated, the levels LZeq, LAeq, LZmax, LAmax (Fast, 125 ms) and Lpeak in dB re 20 uPa."""
+    from scipy.signal import lfilter
+    from processing.filtering import apply_weighting
+    x = np.asarray(x, dtype=np.float64)
+    scale = cal_pa if cal_pa else 1.0
+    p = x * scale
+    out: Dict[str, Any] = {
+        "mean": float(np.mean(p)), "std": float(np.std(p)),
+        "min": float(np.min(p)), "max": float(np.max(p)),
+        "levels": None,
+    }
+    if not cal_pa:
+        return out
+
+    def fast_max(sig: np.ndarray) -> Optional[float]:
+        a = 1.0 - np.exp(-1.0 / (fs * _FAST_TAU_S))
+        sq = sig * sig
+        y = lfilter([a], [1.0, -(1.0 - a)], sq, zi=[(1.0 - a) * sq[0]])[0]
+        return _db(float(np.max(y)))
+
+    pa = apply_weighting(p, int(fs), "A")
+    peak = float(np.max(np.abs(p)))
+    out["levels"] = {
+        "lzeq": _db(float(np.mean(p * p))), "laeq": _db(float(np.mean(pa * pa))),
+        "lzmax": fast_max(p), "lamax": fast_max(pa),
+        "lpeak": _db(peak * peak),
+    }
+    return out
+
+
 def _compute_waveform(entry: AudioEntry) -> Dict[str, Any]:
     mono = _mono(entry.data)
     n = len(mono)
@@ -265,11 +306,12 @@ def _compute_waveform(entry: AudioEntry) -> Dict[str, Any]:
         "calibrated": calibrated,
         "duration_s": entry.duration_s,
         "sample_rate": entry.sample_rate,
+        "stats": _signal_stats(mono, entry.sample_rate, entry.calibration_pa) if n else None,   # of the whole file, at full resolution
     }
 
 
 def compute_waveform(entry: AudioEntry) -> Dict[str, Any]:
-    out = _both_channels(entry, _compute_waveform, ("amplitude", "peak"))
+    out = _both_channels(entry, _compute_waveform, ("amplitude", "peak", "stats"))
     if "channels" in out:
         out["peak"] = max(c["peak"] for c in out["channels"])      # the clipping warning looks at both
     return out

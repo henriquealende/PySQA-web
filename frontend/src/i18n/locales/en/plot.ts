@@ -6,7 +6,7 @@ export default {
   'plot.section.only': 'Analysing only this part · {part} of {total} s',
   'plot.section.wholeBtn': 'Whole file',
   'plot.section.whole': 'Whole file · {total} s',
-  'plot.section.hint': 'Drag on the waveform (Normal view) or type the limits to analyse only a part',
+  'plot.section.hint': 'Drag on the waveform (Time & Frequency view) or type the limits to analyse only a part',
 
   'plot.progress.waitOne': 'Waiting for {n} other calculation on the server…',
   'plot.progress.waitMany': 'Waiting for {n} other calculations on the server…',
@@ -84,6 +84,14 @@ export default {
   'plot.metric.compare': 'Compare:',
   'plot.metric.requires': '(requires {what})',
 
+  'plot.wstats.title': 'Signal statistics',
+  'plot.wstats.unitPa': 'Pa',
+  'plot.wstats.unitFs': 'full scale',
+  'plot.wstats.note': 'Whole file. Mean, standard deviation, minimum and maximum in {unit}. Levels in dB re 20 µPa: Leq with Z (none) and A weighting; maximum with Fast response (125 ms); Lpeak is the highest unweighted sample.',
+  'plot.wstats.noCal': 'Enter the microphone sensitivity (mV/Pa) to see the levels in dB SPL.',
+  'plot.wstats.lzmaxTitle': 'Maximum level, Z weighting, Fast response (125 ms)',
+  'plot.wstats.lamaxTitle': 'Maximum level, A weighting, Fast response (125 ms)',
+  'plot.wstats.lpeakTitle': 'Highest instantaneous sound pressure, unweighted',
   'plot.stats.title': 'Statistics over time',
   'plot.stats.copy': 'Copy',
   'plot.stats.copied': 'Copied',

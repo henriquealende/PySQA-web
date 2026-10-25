@@ -16,9 +16,10 @@ function letter(metricKey: string): string {
 }
 
 /** Number with a precision that fits its size (loudness 23.4, tonality 0.0312). */
-function fmt(v: number, locale: string): string {
+export function fmt(v: number, locale: string): string {
   const a = Math.abs(v)
   const d = a >= 100 ? 1 : a >= 10 ? 2 : a >= 1 ? 3 : 4
+  if (Number(v.toFixed(d)) === 0) v = 0                  // no "-0.0000" from a mean that is zero up to rounding
   return v.toLocaleString(locale, { minimumFractionDigits: d, maximumFractionDigits: d })
 }
 

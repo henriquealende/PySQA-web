@@ -28,7 +28,7 @@ export default function PostProcessingDocEn() {
         <P>The typical workflow has five steps:</P>
         <ol className="text-sm text-slate-200 leading-relaxed list-decimal pl-5 flex flex-col gap-1 max-w-[72ch]">
           <li><strong>Import:</strong> drag WAV files onto the import area or click to choose them. You can upload several at once.</li>
-          <li><strong>Choose the view:</strong> Normal (waveform + spectrum), Spectrogram, 1/3 Octave or Envelope. For a psychoacoustic metric, pick it in <K>Metric</K>.</li>
+          <li><strong>Choose the view:</strong> Time & Frequency (waveform + spectrum), Spectrogram, 1/3 Octave or Envelope. For a psychoacoustic metric, pick it in <K>Metric</K>.</li>
           <li><strong>Process (optional):</strong> the edit button of each file opens filters, windows, weightings and loudness adjustment. The result becomes a <em>new file</em>; the original is never changed.</li>
           <li><strong>Compare and analyze in batch:</strong> overlay a second file (<K>Compare with</K>) or use <K>Batch</K> to compute several metrics on several files.</li>
           <li><strong>Export:</strong> WAV, spreadsheet (XLSX) or table (CSV).</li>
@@ -95,7 +95,7 @@ export default function PostProcessingDocEn() {
       {/* ── 4 ── */}
       <Section id="trecho" title="Selecting a segment">
         <P>
-          Often only part of the recording matters: a start-up noise, an event, a stable stretch. In the Normal view,
+          Often only part of the recording matters: a start-up noise, an event, a stable stretch. In the Time & Frequency view,
           drag over the waveform (or type the limits in the <K>Section</K> bar) to choose the segment. All views, metrics and
           the batch then use only that segment, and the time axes keep showing the original time of the file.
         </P>
@@ -109,6 +109,14 @@ export default function PostProcessingDocEn() {
             Shows the amplitude over time (in full scale, or in pascals if the file is calibrated). For long files, PySQA draws at most
             8,000 points, but it keeps the <em>maximum and minimum</em> of each stretch, so short peaks and clipping never disappear
             from the drawing. The peak of the whole file appears below the chart.
+          </P>
+          <P>
+            Above the chart, the <strong>Signal statistics</strong> table gives the <strong>mean</strong>, <strong>standard deviation</strong>,
+            <strong> minimum</strong> and <strong>maximum</strong> of the samples of the whole file (in full scale, or in pascals if calibrated).
+            Once the calibration is entered, it also shows the levels in dB re 20 µPa: <strong>LZeq</strong> and <strong>LAeq</strong> (equivalent
+            level, unweighted and A-weighted), <strong>LZmax</strong> and <strong>LAmax</strong> (highest level with <em>Fast</em> response, 125 ms) and
+            <strong> Lpeak</strong> (highest instantaneous sound pressure, unweighted). A stereo file has one row per channel, and the file in
+            <K>Compare with</K>, another.
           </P>
         </Section>
 

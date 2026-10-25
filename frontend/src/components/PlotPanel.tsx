@@ -17,6 +17,7 @@ import type {
 import SectionBar, { sectionKey, toSection } from './SectionBar'
 import MetricProgress from './MetricProgress'
 import MetricStats from './MetricStats'
+import WaveStatsTable from './WaveStatsTable'
 import { useT } from '../i18n'
 import { serverLabel } from '../i18n/serverLabels'
 import { LEGEND_INSIDE } from './plotLegend'
@@ -310,7 +311,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   sessionId: string; audioId: string; compareId: string|null; compareName: string; section: Section|null
 }) {
   const t = useT()
-  const { calibrations, audioIsPlaying, setSection } = useStore()
+  const { calibrations, audioIsPlaying, setSection, files } = useStore()
   const secKey = sectionKey(section)
   const isCalibrated = !!calibrations[audioId]
   const [wf,    setWf]    = useState<WaveformData|null>(null)
@@ -453,6 +454,19 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   const showLegend = !!compareId
   const totalPins = spPins.length + wfPins.length
 
+  // Statistics of the waveform: one row per channel of the file, plus one per channel of the compared file
+  const fileName = files.find(f => f.audio_id === audioId)?.name ?? ''
+  const statRows = (data: WaveformData, name: string, colors: string[]) => {
+    const chans = data.channels && data.channels.length > 1 ? data.channels : null
+    return chans
+      ? chans.flatMap((c, i) => c.stats ? [{ name: `${name} · ${c.name}`, color: colors[i] ?? colors[0], stats: c.stats }] : [])
+      : data.stats ? [{ name, color: colors[0], stats: data.stats }] : []
+  }
+  const waveStatRows = [
+    ...statRows(wf, fileName, [C_TEAL, C_VIOLET]),
+    ...(wfCmp ? statRows(wfCmp, compareName, [C_BLUE, C_BLUE]) : []),
+  ]
+
   // The section being analysed, shaded on the (always whole) waveform
   const sectionShape: any[] = section
     ? [{
@@ -476,6 +490,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
           <CompareBadge name={compareName} color={C_BLUE} />
         </div>
       )}
+      <WaveStatsTable rows={waveStatRows} calibrated={!!wf.calibrated} />
       <div className="relative flex-1 min-h-0">
       <Plot data={wfData}
         layout={{ ...BASE_LAYOUT,

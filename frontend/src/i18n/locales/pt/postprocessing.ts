@@ -14,7 +14,7 @@ export default {
   'pp.import.dropPre': 'Solte {what} aqui ou',
   'pp.import.leftPanel': 'ou use a caixa no painel à esquerda',
   'pp.page.loadingCharts': 'Carregando gráficos…',
-  'pp.page.viewNormal': 'Normal',
+  'pp.page.viewNormal': 'Tempo e frequência',
   'pp.page.viewSpectrogram': 'Espectrograma',
   'pp.page.viewOctave': '1/3 de oitava',
   'pp.page.viewEnvelope': 'Envelope',

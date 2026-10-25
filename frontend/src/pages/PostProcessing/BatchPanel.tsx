@@ -89,7 +89,7 @@ export default function BatchPanel() {
   const toggleAll  = () => setCheckedIds(allChecked ? new Set() : new Set(files.map(f => f.audio_id)))
 
   const selectedFiles = files.filter(f => checkedIds.has(f.audio_id))
-  // A file with a section selected in the Normal view is analysed on that part only
+  // A file with a section selected in the Time & Frequency view is analysed on that part only
   const withSection = selectedFiles.filter(f => sections[f.audio_id])
   const sectionMap = Object.fromEntries(withSection.map(f => [f.audio_id, sections[f.audio_id]!]))
 
