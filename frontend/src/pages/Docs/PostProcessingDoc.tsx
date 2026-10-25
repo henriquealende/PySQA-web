@@ -210,6 +210,12 @@ export default function PostProcessingDoc() {
             <K>Comparar com</K> sobrepõe a forma de onda (em azul), o espectro (em amarelo) ou a métrica de um segundo arquivo ao primeiro, usando
             o mesmo trecho. É a maneira mais direta de ver o efeito de um processamento: compare o original com a versão filtrada.
           </P>
+          <P>
+            <strong>Escuta A/B.</strong> Com um arquivo em <K>Comparar com</K>, o player ganha os botões <K>A</K> (o arquivo selecionado) e <K>B</K> (o comparado), e as teclas
+            <K>A</K> e <K>B</K> fazem o mesmo. A troca acontece <strong>no mesmo ponto da reprodução</strong>, sem parar, e continua tocando se já estava tocando: é a forma mais direta de ouvir
+            a diferença entre o original e o processado. Os dois arquivos ficam carregados juntos, então a troca é quase imediata. Se o comparado for mais curto, a troca cai no fim dele. As teclas
+            são ignoradas enquanto você digita em um campo. Ouça sempre no mesmo volume; o PySQA não iguala a loudness dos dois arquivos, e um som mais alto tende a parecer melhor.
+          </P>
         </Section>
 
         <Section id="v-estatisticas" title="Estatísticas no tempo" level={3}>

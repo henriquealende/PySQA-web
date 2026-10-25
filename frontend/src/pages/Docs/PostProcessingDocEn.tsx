@@ -210,6 +210,12 @@ export default function PostProcessingDocEn() {
             <K>Compare with</K> overlays the waveform (in blue), the spectrum (in yellow) or the metric of a second file on the first one, using
             the same segment. It is the most direct way to see the effect of processing: compare the original with the filtered version.
           </P>
+          <P>
+            <strong>A/B listening.</strong> With a file under <K>Compare with</K>, the player gains the buttons <K>A</K> (the selected file) and <K>B</K> (the compared one), and the keys
+            <K>A</K> and <K>B</K> do the same. The switch happens <strong>at the same point of the playback</strong>, without stopping, and keeps playing if it was playing: it is the most direct way to hear
+            the difference between the original and the processed one. Both files are loaded together, so the switch is almost immediate. If the compared file is shorter, the switch lands at its end. The keys
+            are ignored while you type in a field. Always listen at the same volume; PySQA does not match the loudness of the two files, and a louder sound tends to seem better.
+          </P>
         </Section>
 
         <Section id="v-estatisticas" title="Statistics over time" level={3}>

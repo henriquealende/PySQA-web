@@ -2,11 +2,14 @@ import { useEffect } from 'react'
 import { Play, Pause, Square, Volume2, VolumeX } from 'lucide-react'
 import { useAudioPlayer } from '../hooks/useAudioPlayer'
 import { useStore } from '../store/useStore'
+import { useT } from '../i18n'
 import clsx from 'clsx'
 
 interface Props {
   src: string | null
   fileName?: string
+  altSrc?: string | null   // the file chosen in "Compare with": with it the player switches between the two (A/B)
+  altName?: string
   onError?: () => void     // the stream could not be loaded (for example the server forgot the file)
 }
 
@@ -17,16 +20,38 @@ function fmtTime(s: number) {
   return `${m}:${sec}`
 }
 
-export default function AudioPlayer({ src, fileName, onError }: Props) {
-  const { state, play, pause, stop, seek, setVolume, toggleMute } = useAudioPlayer(src, onError)
+const typing = (el: EventTarget | null) => {
+  const e = el as HTMLElement | null
+  return !!e && (e.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.tagName))
+}
+
+export default function AudioPlayer({ src, fileName, altSrc = null, altName, onError }: Props) {
+  const t = useT()
+  const { state, play, pause, stop, seek, setVolume, toggleMute, side, switchTo } = useAudioPlayer(src, onError, altSrc)
   const { isPlaying, currentTime, duration, volume, isMuted } = state
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
   const setAudioPlayback = useStore((s) => s.setAudioPlayback)
+  const hasAb = !!src && !!altSrc
 
   // Sync play/pause/duration to store (NormalView reads these for cursor)
   useEffect(() => {
     setAudioPlayback(isPlaying, duration)
   }, [isPlaying, duration, setAudioPlayback])
+
+  // Keys A and B choose the file to hear, as long as the cursor is not in a text box
+  useEffect(() => {
+    if (!hasAb) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return
+      const k = e.key.toLowerCase()
+      if (k === 'a') switchTo('a')
+      else if (k === 'b') switchTo('b')
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [hasAb, switchTo])
+
+  const heard = hasAb && side === 'b' ? altName : fileName
 
   return (
     <div className="flex items-center gap-3 px-4 py-2 bg-panel border-t border-border rounded-b-lg">
@@ -65,6 +90,24 @@ export default function AudioPlayer({ src, fileName, onError }: Props) {
         <span className="text-[11px] text-muted w-8 shrink-0">{fmtTime(duration)}</span>
       </div>
 
+      {/* A/B: the selected file against the one in "Compare with" */}
+      {hasAb && (
+        <div className="flex rounded overflow-hidden border border-border shrink-0" role="group" aria-label={t('pp.player.ab')}>
+          {(['a', 'b'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => switchTo(s)}
+              aria-pressed={side === s}
+              title={t(s === 'a' ? 'pp.player.hearA' : 'pp.player.hearB', { name: (s === 'a' ? fileName : altName) ?? '' })}
+              className={clsx('px-2.5 py-0.5 text-xs font-semibold transition-colors',
+                side === s ? (s === 'a' ? 'bg-teal text-dark' : 'bg-blue-400 text-dark') : 'bg-panel text-muted hover:text-white')}
+            >
+              {s.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Volume */}
       <div className="flex items-center gap-1.5 shrink-0">
         <button onClick={toggleMute} className="text-muted hover:text-white transition-colors">
@@ -83,9 +126,9 @@ export default function AudioPlayer({ src, fileName, onError }: Props) {
       </div>
 
       {/* File name */}
-      {fileName && (
-        <span className="text-[11px] text-muted truncate max-w-[120px] hidden lg:block" title={fileName}>
-          {fileName}
+      {heard && (
+        <span className="text-[11px] text-muted truncate max-w-[120px] hidden lg:block" title={heard}>
+          {heard}
         </span>
       )}
     </div>

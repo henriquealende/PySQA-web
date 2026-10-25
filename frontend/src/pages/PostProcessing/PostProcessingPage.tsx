@@ -55,6 +55,7 @@ export default function PostProcessingPage() {
   const [showBatch,    setShowBatch]    = useState(false)
 
   const selectedFile = files.find((f) => f.audio_id === selectedId) ?? null
+  const compareFile  = compareId && compareId !== selectedId ? files.find((f) => f.audio_id === compareId) ?? null : null
   const streamUrl    = selectedFile
     ? `/api/audio/${sessionId}/${selectedFile.audio_id}/stream`
     : null
@@ -306,7 +307,7 @@ export default function PostProcessingPage() {
                     : <Suspense fallback={<ChartFallback />}><PlotPanel /></Suspense>}
                 </div>
                 {selectedFile && (
-                  <AudioPlayer src={streamUrl} fileName={selectedFile.name} onError={() => { void restoreSession(sessionId) }} />
+                  <AudioPlayer src={streamUrl} fileName={selectedFile.name} altSrc={compareFile ? `/api/audio/${sessionId}/${compareFile.audio_id}/stream` : null} altName={compareFile?.name} onError={() => { void restoreSession(sessionId) }} />
                 )}
               </div>
             )
