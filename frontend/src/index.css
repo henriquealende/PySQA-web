@@ -21,9 +21,9 @@ html, body, #root {
 /* PySQA cube: builds itself once, lifts apart on hover, shows what the app is doing */
 .pysqa-logo { filter: drop-shadow(0 0 9px rgba(80, 184, 158, 0.30)); }
 .pysqa-logo .logo-face { transform-box: fill-box; transform-origin: center; transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
-a:hover .pysqa-logo .logo-top   { transform: translateY(-6px); }
-a:hover .pysqa-logo .logo-left  { transform: translateX(-4px); }
-a:hover .pysqa-logo .logo-right { transform: translateX(4px); }
+a:hover .pysqa-logo .logo-top,   button:hover .pysqa-logo .logo-top   { transform: translateY(-6px); }
+a:hover .pysqa-logo .logo-left,  button:hover .pysqa-logo .logo-left  { transform: translateX(-4px); }
+a:hover .pysqa-logo .logo-right, button:hover .pysqa-logo .logo-right { transform: translateX(4px); }
 
 @keyframes logo-in-left  { from { transform: translateX(-26px); opacity: 0; } }
 @keyframes logo-in-right { from { transform: translateX(26px);  opacity: 0; } }
@@ -31,6 +31,14 @@ a:hover .pysqa-logo .logo-right { transform: translateX(4px); }
 @keyframes logo-sweep    { 0%, 100% { opacity: 1; } 40% { opacity: 0.35; } }
 @keyframes logo-record   { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.45); } }
 @keyframes logo-breathe  { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.2); } }
+@keyframes logo-burst-glow {
+  0%   { filter: drop-shadow(0 0 9px rgba(80, 184, 158, 0.30)); }
+  30%  { filter: drop-shadow(0 0 6px rgba(80, 184, 158, 1)) drop-shadow(0 0 22px rgba(80, 184, 158, 0.9)) drop-shadow(0 0 40px rgba(237, 105, 59, 0.75)) brightness(1.3); }
+  100% { filter: drop-shadow(0 0 9px rgba(80, 184, 158, 0.30)); }
+}
+@keyframes logo-burst-top   { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(-12px); } }
+@keyframes logo-burst-left  { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-9px); } }
+@keyframes logo-burst-right { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(9px); } }
 
 @media (prefers-reduced-motion: no-preference) {
   .pysqa-logo.logo-intro .logo-left  { animation: logo-in-left  0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
@@ -41,6 +49,10 @@ a:hover .pysqa-logo .logo-right { transform: translateX(4px); }
   .pysqa-logo[data-state=working] .logo-top   { animation: logo-sweep 1.3s ease-in-out 0.44s infinite; }
   .pysqa-logo[data-state=recording] .logo-top  { animation: logo-record 1.1s ease-in-out infinite; }
   .pysqa-logo[data-state=monitoring] .logo-top { animation: logo-breathe 2.4s ease-in-out infinite; }
+  .pysqa-logo.logo-burst { animation: logo-burst-glow 1.3s ease-out; }
+  .pysqa-logo.logo-burst .logo-top   { animation: logo-burst-top   1.3s cubic-bezier(0.16, 1, 0.3, 1); }
+  .pysqa-logo.logo-burst .logo-left  { animation: logo-burst-left  1.3s cubic-bezier(0.16, 1, 0.3, 1); }
+  .pysqa-logo.logo-burst .logo-right { animation: logo-burst-right 1.3s cubic-bezier(0.16, 1, 0.3, 1); }
 }
 
 /* Touch screens: controls need a 44 px target */
