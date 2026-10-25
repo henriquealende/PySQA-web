@@ -4,10 +4,10 @@ import { useT } from '../i18n'
 
 type Range = [number, number] | null
 
-const PRESETS: { label: string; range: [number, number] }[] = [
-  { label: '20 Hz–20 kHz', range: [20, 20000] },
-  { label: '20 Hz–10 kHz', range: [20, 10000] },
-  { label: '100 Hz–5 kHz', range: [100, 5000] },
+const PRESETS: { label: string; short: string; range: [number, number] }[] = [
+  { label: '20 Hz–20 kHz', short: '20–20k', range: [20, 20000] },
+  { label: '20 Hz–10 kHz', short: '20–10k', range: [20, 10000] },
+  { label: '100 Hz–5 kHz', short: '100–5k', range: [100, 5000] },
 ]
 
 const round = (v: number) => Number(v.toPrecision(4))
@@ -40,20 +40,27 @@ export default function SpectrumBar({ x, y, nyquist, unit, f0, pins, onX, onY, o
   const lbl = 'text-muted'
 
   return (
-    <div className="flex items-center gap-x-4 gap-y-1 px-2 shrink-0 flex-wrap text-[11px]" role="group" aria-label={t('plot.sp.bar')}>
-      <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-x-4 sm:gap-y-1 sm:flex-wrap px-2 shrink-0 text-[11px]" role="group" aria-label={t('plot.sp.bar')}>
+      <div className="flex items-center gap-x-1.5 gap-y-1 flex-wrap">
         <span className={lbl}>{t('plot.sp.axisF')}</span>
         <NumberInput value={x ? round(x[0]) : null} onChange={v => setX(v, null)} placeholder={t('plot.sp.auto')} title={t('plot.sp.fmin')} className="w-14 !py-0.5 !text-[11px]" />
         <span className={lbl}>–</span>
         <NumberInput value={x ? round(x[1]) : null} onChange={v => setX(null, v)} placeholder={t('plot.sp.auto')} title={t('plot.sp.fmax')} className="w-14 !py-0.5 !text-[11px]" />
         <span className={lbl}>Hz</span>
-        {PRESETS.map(p => {
-          const range: [number, number] = [p.range[0], Math.min(p.range[1], nyquist)]
-          return <button key={p.label} onClick={() => onX(range)} aria-pressed={sameRange(x, range)} className={chip(sameRange(x, range))}>{p.label}</button>
-        })}
-        <button onClick={() => { onX(null); onY(null) }} disabled={!x && !y} className={clsx(chip(false), 'disabled:opacity-40')}>{t('plot.sp.auto')}</button>
+        <div className="grid grid-cols-4 gap-1 w-full sm:w-auto sm:flex sm:items-center sm:contents">
+          {PRESETS.map(p => {
+            const range: [number, number] = [p.range[0], Math.min(p.range[1], nyquist)]
+            return (
+              <button key={p.label} onClick={() => onX(range)} aria-pressed={sameRange(x, range)} aria-label={p.label} className={clsx(chip(sameRange(x, range)), 'text-center whitespace-nowrap')}>
+                <span className="sm:hidden">{p.short}</span><span className="hidden sm:inline">{p.label}</span>
+              </button>
+            )
+          })}
+          <button onClick={() => { onX(null); onY(null) }} disabled={!x && !y} className={clsx(chip(false), 'text-center disabled:opacity-40')}>{t('plot.sp.auto')}</button>
+        </div>
       </div>
 
+      <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap sm:contents">
       <div className="flex items-center gap-1.5">
         <span className={lbl}>{t('plot.sp.axisY', { unit })}</span>
         <NumberInput value={y ? round(y[0]) : null} onChange={v => setY(v, null)} placeholder={t('plot.sp.auto')} title={t('plot.sp.ymin')} className="w-14 !py-0.5 !text-[11px]" />
@@ -65,6 +72,7 @@ export default function SpectrumBar({ x, y, nyquist, unit, f0, pins, onX, onY, o
         <span className={lbl} title={t('plot.sp.f0Title')}>f₀</span>
         <NumberInput value={f0 ? round(f0) : null} onChange={v => onF0(v != null && v > 0 ? v : null)} placeholder="Hz" title={t('plot.sp.f0Title')} className="w-14 !py-0.5 !text-[11px]" />
         {f0 != null && <button onClick={() => onF0(null)} aria-label={t('plot.sp.f0Clear')} className="px-1 text-muted hover:text-white">✕</button>}
+      </div>
       </div>
 
       {pins > 0 && (

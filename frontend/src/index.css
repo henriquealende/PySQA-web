@@ -82,6 +82,9 @@ a:hover .pysqa-logo .logo-right, button:hover .pysqa-logo .logo-right { transfor
   }
   .seg > button[aria-pressed=true], .seg > button[aria-checked=true] { @apply bg-teal text-dark font-semibold hover:text-dark; }
   .seg-fill { @apply flex w-full; }
+  /* a phone shows the choices as a filled grid, two per row; from sm up it is one row */
+  .seg-grid { @apply grid grid-cols-2 w-full gap-px bg-field sm:inline-flex sm:w-auto sm:gap-0 sm:bg-transparent; }
+  .seg-grid > button:last-child:nth-child(odd) { @apply col-span-2 sm:col-span-1; }
   .seg-fill > button { @apply flex-1; }
 }
 
@@ -103,9 +106,10 @@ input[type=range]:disabled { opacity: 0.4; cursor: default; }
 @media (pointer: coarse) {
   main button:not(.btn):not(.icon-btn):not(.seg > button), aside button:not(.btn):not(.icon-btn):not(.seg > button), main select, aside select,
   main input:not([type=range]):not([type=checkbox]):not([type=file]), aside input:not([type=range]):not([type=checkbox]):not([type=file]) {
-    min-height: 40px;
+    min-height: 36px;
   }
-  .btn, .seg > button { min-height: 40px; }
+  .btn { min-height: 40px; }
+  .seg > button { min-height: 36px; }
   .icon-btn { min-width: 40px; min-height: 40px; }
   main input[type=checkbox], aside input[type=checkbox] { width: 20px; height: 20px; }
   main label:has(> input[type=checkbox]), aside label:has(> input[type=checkbox]) { min-height: 44px; }

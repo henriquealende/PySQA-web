@@ -263,7 +263,7 @@ export default function PostProcessingPage() {
             {t('pp.page.sectFiles')}
           </button>
 
-          <div className="seg flex-wrap">
+          <div className="seg seg-grid">
             {VIEW_MODES.map(({ key, labelKey, Icon }) => (
               <button
                 key={key}

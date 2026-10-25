@@ -327,7 +327,7 @@ export default function SystemAnalysisPage() {
       <section aria-label={t('sa.page.results')} className="flex flex-col flex-1 min-w-0 min-h-[420px] lg:min-h-0 lg:overflow-hidden">
         {channels.length > 0 && (
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0 flex-wrap">
-          <div className="seg flex-wrap">
+          <div className="seg seg-grid">
             {VIEWS.filter((v) => v.key !== 'modes' || params.modes.enabled).map(({ key, label, Icon }) => (
               <button key={key} onClick={() => setView(key)} disabled={!result} aria-pressed={view === key}>
                 <Icon size={13} />{t(label)}
