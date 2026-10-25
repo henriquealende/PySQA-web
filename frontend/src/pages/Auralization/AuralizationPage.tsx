@@ -363,9 +363,9 @@ export default function AuralizationPage() {
         {source && (
           <section className="shrink-0 border-t border-border bg-surface" aria-labelledby="aur-play">
             <h2 id="aur-play" className="sr-only">{t('aur.play.title')}</h2>
-            <div className="mx-auto max-w-5xl px-6 py-3 space-y-2 max-h-[45vh] overflow-y-auto">
-              <div className="flex items-center gap-4 flex-wrap">
-                <div className="flex-1 min-w-[300px]">
+            <div className="mx-auto max-w-5xl px-3 sm:px-6 py-2 sm:py-3 space-y-2 max-h-[45vh] overflow-y-auto">
+              <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+                <div className="flex-1 min-w-[240px] sm:min-w-[300px]">
                   <AbPlayer
                     originalUrl={sourceId ? getStreamUrl(sessionId, sourceId) : null}
                     processedUrl={preview?.url ?? null}
@@ -379,7 +379,7 @@ export default function AuralizationPage() {
                   <Wand2 size={15} aria-hidden="true" /> {rendering ? t('aur.render.working') : t('aur.render.button')}
                 </button>
               </div>
-              <p className="text-xs text-muted flex items-center gap-1.5">
+              <p className="hidden sm:flex text-xs text-muted items-center gap-1.5">
                 <Headphones size={12} aria-hidden="true" /> {t('aur.ab.note')}
               </p>
               {previewError && <p className="text-xs text-red-400">{previewError}</p>}

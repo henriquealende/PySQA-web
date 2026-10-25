@@ -16,18 +16,19 @@ export default function AuralizationDocEn() {
       </header>
 
       <Section id="visao-geral" title="Overview">
+        <P>The page follows <strong>three steps</strong>, shown at the top. Any step marked as done can be reopened with a click.</P>
         <ol className="text-sm text-slate-200 leading-relaxed list-decimal pl-5 flex flex-col gap-1 max-w-[72ch]">
-          <li><strong>Choose the source:</strong> upload a WAV in the left column and select it under <K>Source sound</K>.</li>
-          <li><strong>Quick scene (optional):</strong> pick kitchen, living room, car cabin or aircraft cabin to start from a realistic point.</li>
-          <li><strong>Choose the environment (optional):</strong> under <K>Environment</K>, upload a room (RIR) or binaural (BRIR) impulse response.</li>
-          <li><strong>Choose the HRTF set:</strong> the spherical-head model, or your own <K>.sofa</K> file (<K>Upload SOFA</K>).</li>
-          <li><strong>Place the sound:</strong> click the map or use <K>Azimuth</K>, <K>Elevation</K> and <K>Distance</K>.</li>
-          <li><strong>Listen:</strong> under <K>Listen and compare</K>, switch between <K>Processed</K> and <K>Original</K> without losing your place.</li>
-          <li><strong>Create the file:</strong> <K>Create stereo file</K> processes the whole file and adds it to your list. Then <K>Open in Post-Processing</K> or <K>Download WAV</K>.</li>
+          <li><strong>Audio:</strong> upload a WAV in the drop box and select it under <K>Source sound</K>. Until there is audio, the page shows only that box.</li>
+          <li><strong>Scenario:</strong> pick kitchen, living room, car cabin or aircraft cabin to start from a realistic point, or <K>No scene</K> to start from scratch. <K>Build my room</K> opens Auralize Salas.</li>
+          <li><strong>Listen and create:</strong> the fixed bar at the bottom plays the result, switches between <K>Processed</K> and <K>Original</K> without losing your place, and has the <K>Create stereo file</K> button. It processes the whole file and adds it to your list; then <K>Open in Post-Processing</K> or <K>Download WAV</K>.</li>
         </ol>
         <P>
-          The chain cards (Environment, HRTF, Noise, Headphone and Level) work as tabs: each shows what was set in that step and, when clicked, opens its settings.
-          The source is not a tab: it is chosen in the left column. The preview and the file creation always stay below, in the <K>Listen and create the file</K> panel. A coloured strip on top marks what always stays on screen: the source card, the steps and that panel.
+          The fine settings are in <K>Settings (optional)</K>, closed by default. Each card shows in one line what is set (for example “Car cabin”, “Brown (bass) · 12 dB”) and <K>Adjust</K> opens the tabs
+          <K>Environment</K> (room impulse responses, Environment section), <K>Sound direction</K> (HRTF, azimuth, elevation and distance: click the map or use the controls), <K>Noise</K>, <K>Headphone</K> and <K>Level</K>.
+          Choosing a scenario already fills these tabs, and you can change anything afterwards. <K>Collapse</K> closes the settings.
+        </P>
+        <P>
+          The final file is stereo. On narrow screens (phones) the bottom bar is more compact: the headphones notice is hidden from it but still applies.
         </P>
       </Section>
 

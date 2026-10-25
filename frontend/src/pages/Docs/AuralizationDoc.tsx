@@ -16,18 +16,19 @@ export default function AuralizationDoc() {
       </header>
 
       <Section id="visao-geral" title="Visão geral">
+        <P>A página segue <strong>três passos</strong>, indicados no topo. Cada passo marcado como feito pode ser reaberto com um clique.</P>
         <ol className="text-sm text-slate-200 leading-relaxed list-decimal pl-5 flex flex-col gap-1 max-w-[72ch]">
-          <li><strong>Escolha a fonte:</strong> envie um WAV na coluna da esquerda e selecione-o em <K>Som de origem</K>.</li>
-          <li><strong>Cenário rápido (opcional):</strong> escolha cozinha, sala de estar, cabine de carro ou de avião para começar de um ponto realista.</li>
-          <li><strong>Escolha o ambiente (opcional):</strong> em <K>Ambiente</K>, envie uma resposta ao impulso de sala (RIR) ou binaural (BRIR).</li>
-          <li><strong>Escolha o conjunto de HRTF:</strong> o modelo de cabeça esférica, ou um arquivo <K>.sofa</K> seu (<K>Enviar SOFA</K>).</li>
-          <li><strong>Posicione o som:</strong> clique no mapa ou use os controles de <K>Azimute</K>, <K>Elevação</K> e <K>Distância</K>.</li>
-          <li><strong>Ouça:</strong> em <K>Ouvir e comparar</K>, alterne entre <K>Processado</K> e <K>Original</K> sem perder o ponto da reprodução.</li>
-          <li><strong>Gere o arquivo:</strong> <K>Gerar arquivo estéreo</K> processa o arquivo inteiro e o coloca na sua lista. Depois, <K>Abrir no Pós-processamento</K> ou <K>Baixar WAV</K>.</li>
+          <li><strong>Áudio:</strong> envie um WAV na caixa de arrastar e soltar e selecione-o em <K>Som de origem</K>. Enquanto não há áudio, a página só mostra essa caixa.</li>
+          <li><strong>Cenário:</strong> escolha cozinha, sala de estar, cabine de carro ou de avião para começar de um ponto realista, ou <K>Sem cenário</K> para partir do zero. <K>Construir minha sala</K> abre o Auralize Salas.</li>
+          <li><strong>Ouvir e gerar:</strong> a barra fixa no rodapé toca o resultado, alterna entre <K>Processado</K> e <K>Original</K> sem perder o ponto da reprodução e tem o botão <K>Gerar arquivo estéreo</K>. Ele processa o arquivo inteiro e o coloca na sua lista; depois, <K>Abrir no Pós-processamento</K> ou <K>Baixar WAV</K>.</li>
         </ol>
         <P>
-          Os cartões da cadeia (Ambiente, HRTF, Ruído, Fone e Nível) funcionam como abas: cada um mostra o que foi definido naquela etapa e, ao clicar, abre os ajustes dela.
-          A fonte não é uma aba: ela se escolhe na coluna da esquerda. A prévia e a geração do arquivo ficam sempre abaixo, no painel <K>Ouvir e gerar o arquivo</K>. Uma faixa colorida no topo marca o que fica sempre na tela: o cartão da fonte, as etapas e esse painel.
+          Os ajustes finos ficam em <K>Configurações (opcional)</K>, fechadas por padrão. Cada cartão mostra, em uma linha, o que está definido (por exemplo, “Cabine de carro”, “Marrom · 12 dB”) e <K>Ajustar</K> abre as abas
+          <K>Ambiente</K> (respostas ao impulso de sala, seção Ambiente), <K>Direção do som</K> (HRTF, azimute, elevação e distância: clique no mapa ou use os controles), <K>Ruído</K>, <K>Fone</K> e <K>Nível</K>.
+          Escolher um cenário já preenche essas abas, e você pode alterar o que quiser depois. <K>Recolher</K> fecha as configurações.
+        </P>
+        <P>
+          O arquivo final é estéreo. Em telas estreitas (celular) a barra do rodapé fica mais compacta: o aviso sobre fones de ouvido some dela, mas continua valendo.
         </P>
       </Section>
 
