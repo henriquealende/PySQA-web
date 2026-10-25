@@ -554,7 +554,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   }
 
   return (
-    <div className="flex flex-col h-full gap-1">
+    <div className="flex flex-col h-full gap-1 overflow-y-auto sm:overflow-visible">
       <WaveStatsTable rows={waveStatRows} calibrated={!!wf.calibrated} />
       <div className="sm:hidden px-2 shrink-0">
         <div className="seg seg-fill" role="group" aria-label={t('plot.normal.chartPick')}>
@@ -588,7 +588,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
           </button>
         )}
       </div>
-      <div className={`relative flex-1 min-h-0 ${mv === 'time' ? '' : 'hidden sm:block'}`} {...rightButtonFree}>
+      <div className={`relative h-[44dvh] min-h-[280px] shrink-0 sm:h-auto sm:min-h-0 sm:shrink sm:flex-1 ${mv === 'time' ? '' : 'hidden sm:block'}`} {...rightButtonFree}>
       <Plot data={wfData}
         layout={{ ...BASE_LAYOUT,
           xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time'), ...(wfRange.current ? { range: wfRange.current, autorange: false } : {}) },
@@ -621,7 +621,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
           onX={setSpX} onY={setSpY} onF0={setF0} onClearPins={() => setSpPins([])}
         />
       </div>
-      <div ref={spWrap} className={`relative flex-1 min-h-0 ${mv === 'freq' ? '' : 'hidden sm:block'}`} onContextMenu={openMenu} {...rightButtonFree}>
+      <div ref={spWrap} className={`relative h-[44dvh] min-h-[280px] shrink-0 sm:h-auto sm:min-h-0 sm:shrink sm:flex-1 ${mv === 'freq' ? '' : 'hidden sm:block'}`} onContextMenu={openMenu} {...rightButtonFree}>
         <Plot data={spData}
           layout={{ ...BASE_LAYOUT,
             xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.frequency'), type: 'log',
