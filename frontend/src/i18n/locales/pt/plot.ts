@@ -96,6 +96,9 @@ export default {
   'plot.menu.axisFrom': 'Eixo: começar em {f} Hz',
   'plot.menu.axisTo': 'Eixo: terminar em {f} Hz',
   'plot.menu.clear': 'Limpar marcas e harmônicos',
+  'plot.normal.chartPick': 'Gráfico',
+  'plot.normal.chartTime': 'Tempo',
+  'plot.normal.chartFreq': 'Frequência',
   'plot.pins.clearOne': 'Limpar {n} marcador (ESC)',
   'plot.pins.clearMany': 'Limpar {n} marcadores (ESC)',
 

@@ -263,7 +263,7 @@ export default function PostProcessingPage() {
             {t('pp.page.sectFiles')}
           </button>
 
-          <div className="seg seg-grid">
+          <div className="seg seg-grid order-last basis-full sm:order-none sm:basis-auto">
             {VIEW_MODES.map(({ key, labelKey, Icon }) => (
               <button
                 key={key}
@@ -277,7 +277,7 @@ export default function PostProcessingPage() {
             ))}
           </div>
 
-          {files.length > 0 && <span className="w-px h-5 bg-border mx-1" aria-hidden="true" />}
+          {files.length > 0 && <span className="hidden sm:block w-px h-5 bg-border mx-1" aria-hidden="true" />}
 
           {files.length > 0 && (
             <button

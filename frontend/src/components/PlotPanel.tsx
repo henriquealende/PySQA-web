@@ -344,6 +344,12 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   const [spCmp, setSpCmp] = useState<SpectrumData|null>(null)
   const [err,   setErr]   = useState('')
   const [f0,    setF0]    = useState<number|null>(null)
+  // On a phone one chart at a time fills the height; from sm up both are shown
+  const [mv, setMv] = useState<'time' | 'freq'>('time')
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))   // Plotly measures a chart again once it is shown
+    return () => window.cancelAnimationFrame(id)
+  }, [mv])
   // Range of the spectrum's axes, kept here because every re-render hands Plotly a fresh layout (null: automatic)
   const [spX, setSpX] = useState<[number, number] | null>(null)
   const [spY, setSpY] = useState<[number, number] | null>(null)
@@ -548,9 +554,15 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   }
 
   return (
-    <div className="flex flex-col h-full gap-1 overflow-y-auto sm:overflow-visible">
+    <div className="flex flex-col h-full gap-1">
       <WaveStatsTable rows={waveStatRows} calibrated={!!wf.calibrated} />
-      <div className="flex items-center gap-2 px-2 shrink-0 flex-wrap text-[11px]">
+      <div className="sm:hidden px-2 shrink-0">
+        <div className="seg seg-fill" role="group" aria-label={t('plot.normal.chartPick')}>
+          <button onClick={() => setMv('time')} aria-pressed={mv === 'time'}>{t('plot.normal.chartTime')}</button>
+          <button onClick={() => setMv('freq')} aria-pressed={mv === 'freq'}>{t('plot.normal.chartFreq')}</button>
+        </div>
+      </div>
+      <div className={`items-center gap-2 px-2 shrink-0 flex-wrap text-[11px] ${mv === 'time' ? 'flex' : 'hidden sm:flex'}`}>
         {compareId && <CompareBadge name={compareName} color={C_BLUE} />}
         <span ref={cursorClock} className="font-mono tabular-nums text-orange shrink-0" style={{ display: 'none' }} />
         <div className="flex items-center gap-1" role="group" aria-label={t('plot.normal.dragAria')}>
@@ -576,7 +588,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
           </button>
         )}
       </div>
-      <div className="relative flex-1 min-h-[260px] sm:min-h-0" {...rightButtonFree}>
+      <div className={`relative flex-1 min-h-0 ${mv === 'time' ? '' : 'hidden sm:block'}`} {...rightButtonFree}>
       <Plot data={wfData}
         layout={{ ...BASE_LAYOUT,
           xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time'), ...(wfRange.current ? { range: wfRange.current, autorange: false } : {}) },
@@ -603,11 +615,13 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
       <div ref={cursorLine} className="absolute left-0 w-[1.5px] bg-orange pointer-events-none"
         style={{ display: 'none', top: 0, height: 0 }} />
       </div>
-      <SpectrumBar
-        x={spX} y={spY} nyquist={sp.freqs[sp.freqs.length - 1] ?? 20000} unit={specUnit} f0={f0} pins={spPins.length}
-        onX={setSpX} onY={setSpY} onF0={setF0} onClearPins={() => setSpPins([])}
-      />
-      <div ref={spWrap} className="relative flex-1 min-h-[300px] sm:min-h-0" onContextMenu={openMenu} {...rightButtonFree}>
+      <div className={mv === 'freq' ? '' : 'hidden sm:block'}>
+        <SpectrumBar
+          x={spX} y={spY} nyquist={sp.freqs[sp.freqs.length - 1] ?? 20000} unit={specUnit} f0={f0} pins={spPins.length}
+          onX={setSpX} onY={setSpY} onF0={setF0} onClearPins={() => setSpPins([])}
+        />
+      </div>
+      <div ref={spWrap} className={`relative flex-1 min-h-0 ${mv === 'freq' ? '' : 'hidden sm:block'}`} onContextMenu={openMenu} {...rightButtonFree}>
         <Plot data={spData}
           layout={{ ...BASE_LAYOUT,
             xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.frequency'), type: 'log',

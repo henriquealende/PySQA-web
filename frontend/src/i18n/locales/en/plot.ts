@@ -96,6 +96,9 @@ export default {
   'plot.menu.axisFrom': 'Axis: start at {f} Hz',
   'plot.menu.axisTo': 'Axis: end at {f} Hz',
   'plot.menu.clear': 'Clear marks and harmonics',
+  'plot.normal.chartPick': 'Chart',
+  'plot.normal.chartTime': 'Time',
+  'plot.normal.chartFreq': 'Frequency',
   'plot.pins.clearOne': 'Clear {n} pin (ESC)',
   'plot.pins.clearMany': 'Clear {n} pins (ESC)',
 
