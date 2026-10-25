@@ -611,13 +611,13 @@ export default function ProcessingModal({
         {/* Footer */}
         <div className="flex justify-end gap-2 px-4 py-3 border-t border-border shrink-0">
           <button onClick={onClose}
-            className="px-3 py-1.5 text-xs text-muted hover:text-white rounded hover:bg-panel transition-colors">
+            className="btn btn-ghost">
             {t('pp.proc.cancel')}
           </button>
           <button
             onClick={run}
             disabled={busy || (tab === 'loudness' && otherFiles.length === 0) || (tab === 'weighting' && weightCurve === 'None')}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 disabled:opacity-40 transition-colors"
+            className="btn btn-primary"
           >
             {busy && <Loader2 size={12} className="animate-spin" />}
             {t('pp.proc.apply')}

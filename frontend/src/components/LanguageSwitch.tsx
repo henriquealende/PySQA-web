@@ -11,11 +11,10 @@ export default function LanguageSwitch({ className }: { className?: string }) {
   const { lang, setLang } = useLang()
   const t = useT()
   return (
-    <div role="group" aria-label={t('common.language')} className={clsx('flex rounded-md border border-field overflow-hidden', className)}>
+    <div role="group" aria-label={t('common.language')} className={clsx('seg', className)}>
       {OPTIONS.map((o) => (
         <button key={o.lang} onClick={() => setLang(o.lang)} aria-pressed={lang === o.lang} title={o.full}
-          className={clsx('px-3 py-2 text-sm font-semibold transition-colors',
-            lang === o.lang ? 'bg-teal text-dark' : 'bg-panel text-white hover:text-teal')}>
+          className="font-semibold">
           {o.label}
         </button>
       ))}

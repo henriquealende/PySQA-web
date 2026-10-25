@@ -374,7 +374,7 @@ export default function AuralizationPage() {
                 </div>
                 <button
                   onClick={() => void render()} disabled={!sourceId || rendering} title={t('aur.render.help')}
-                  className="flex items-center gap-2 px-4 py-2 rounded bg-teal text-dark text-sm font-semibold disabled:opacity-40"
+                  className="btn btn-primary"
                 >
                   <Wand2 size={15} aria-hidden="true" /> {rendering ? t('aur.render.working') : t('aur.render.button')}
                 </button>
@@ -405,7 +405,7 @@ function Slider({ id, label, unit, min, max, step, value, onChange }: {
       <label htmlFor={`aur-${id}`} className="text-xs text-muted w-24 shrink-0">{label}</label>
       <input
         id={`aur-${id}`} type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(Number(e.target.value))} className="flex-1 accent-teal"
+        onChange={(e) => onChange(Number(e.target.value))} className="flex-1"
       />
       <input
         type="number" min={min} max={max} step={step} value={Number(value.toFixed(1))} aria-label={label}

@@ -65,22 +65,21 @@ export default function AbPlayer({ originalUrl, processedUrl, busy, labels, orde
       <button
         onClick={toggle} disabled={!url}
         aria-label={playing ? t('aur.ab.pause') : t('aur.ab.play')}
-        className="w-9 h-9 rounded-full bg-teal text-dark flex items-center justify-center disabled:opacity-40"
+        className="icon-btn icon-btn-primary"
       >
-        {playing ? <Pause size={16} /> : <Play size={16} />}
+        {playing ? <Pause size={16} /> : <Play size={16} className="ml-0.5" />}
       </button>
       <input
         type="range" min={0} max={dur || 1} step={0.01} value={pos} disabled={!url}
         aria-label={t('aur.ab.seek')}
         onChange={(e) => { const v = Number(e.target.value); if (audio.current) audio.current.currentTime = v; setPos(v) }}
-        className="flex-1 min-w-[120px] accent-teal"
+        className="flex-1 min-w-[120px]"
       />
       <span className="text-[11px] text-muted tabular-nums w-20 text-right">{pos.toFixed(1)} / {dur.toFixed(1)} s</span>
-      <div className="flex rounded overflow-hidden border border-border" role="group" aria-label={t('aur.ab.version')}>
+      <div className="seg" role="group" aria-label={t('aur.ab.version')}>
         {(order ?? ['processed', 'original']).map((w) => (
           <button
             key={w} onClick={() => swap(w)} aria-pressed={which === w}
-            className={clsx('px-3 py-1 text-xs', which === w ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white')}
           >
             {labels ? labels[w] : t(w === 'processed' ? 'aur.ab.processed' : 'aur.ab.original')}
           </button>

@@ -210,7 +210,7 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
                   onChange={(e) => setManual(e.target.value)} className={`${input} w-32`} />
                 <button disabled={!manualOk}
                   onClick={() => save(paFromSensitivity(manualValue), 'manual', {})}
-                  className="px-3 py-1 rounded bg-teal text-dark font-semibold hover:bg-teal/80 disabled:opacity-40 transition-colors">
+                  className="btn btn-primary btn-sm">
                   {t('cal.wizard.manualUse')}
                 </button>
               </div>
@@ -296,7 +296,7 @@ export default function CalibrationWizard({ deviceId, deviceKeys, deviceLabel, s
                 {!result.warnings.length && <p className="flex items-center gap-1.5 text-teal"><CheckCircle size={12} /> {t('cal.wizard.clean')}</p>}
                 <button disabled={blocked}
                   onClick={() => save(result.calibrationPa, 'calibrator', { levelDb: level, freqHz: result.m.freqHz })}
-                  className="self-start px-4 py-1.5 rounded bg-teal text-dark font-semibold hover:bg-teal/80 disabled:opacity-40 transition-colors">
+                  className="btn btn-primary self-start">
                   {t('cal.wizard.save')}
                 </button>
               </div>

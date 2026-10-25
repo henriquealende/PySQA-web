@@ -44,11 +44,9 @@ function Seg<T extends string>({ value, options, onChange }: {
   value: T; options: { v: T; label: string; title?: string }[]; onChange: (v: T) => void
 }) {
   return (
-    <div className="flex gap-1">
+    <div className="seg seg-fill">
       {options.map((o) => (
-        <button key={o.v} onClick={() => onChange(o.v)} title={o.title}
-          className={clsx('flex-1 py-1 text-xs rounded transition-colors',
-            value === o.v ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white')}>
+        <button key={o.v} onClick={() => onChange(o.v)} title={o.title} aria-pressed={value === o.v}>
           {o.label}
         </button>
       ))}
@@ -329,11 +327,9 @@ export default function SystemAnalysisPage() {
       <section aria-label={t('sa.page.results')} className="flex flex-col flex-1 min-w-0 min-h-[420px] lg:min-h-0 lg:overflow-hidden">
         {channels.length > 0 && (
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0 flex-wrap">
-          <div className="flex gap-1 flex-wrap">
+          <div className="seg flex-wrap">
             {VIEWS.filter((v) => v.key !== 'modes' || params.modes.enabled).map(({ key, label, Icon }) => (
-              <button key={key} onClick={() => setView(key)} disabled={!result}
-                className={clsx('flex items-center gap-1.5 px-3 py-1 text-xs rounded font-medium transition-colors disabled:opacity-30',
-                  view === key ? 'bg-teal text-dark' : 'bg-panel text-muted hover:text-white')}>
+              <button key={key} onClick={() => setView(key)} disabled={!result} aria-pressed={view === key}>
                 <Icon size={13} />{t(label)}
               </button>
             ))}

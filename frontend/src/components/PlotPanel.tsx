@@ -161,7 +161,7 @@ function SessionExpiredMsg() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center px-4">
       <p className="text-xs text-amber-400 max-w-xs">{t('plot.expired')}</p>
-      <button onClick={clearSession} className="px-4 py-1.5 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">
+      <button onClick={clearSession} className="btn btn-primary">
         {t('plot.clearReupload')}
       </button>
     </div>
@@ -181,7 +181,7 @@ function CancelledPanel({ wasRunning, onRetry, onBack }: { wasRunning: boolean; 
       </p>
       <div className="flex gap-2">
         <button onClick={onRetry}
-          className="px-4 py-1.5 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">
+          className="btn btn-primary">
           {t('plot.cancelled.retry')}
         </button>
         <button onClick={onBack}
@@ -898,7 +898,7 @@ function SpectrogramView({ sessionId, audioId, section }: { sessionId: string; a
       {showSettings && (
         <SettingsOverlay onClose={() => setShowSettings(false)}>
           <SpectrogramSettings params={pending} onChange={p => setPending(prev => ({...prev,...p}))} />
-          <button onClick={handleApply} className="mt-2 w-full py-1 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">{t('plot.apply')}</button>
+          <button onClick={handleApply} className="btn btn-primary btn-sm mt-2 w-full">{t('plot.apply')}</button>
         </SettingsOverlay>
       )}
       {!data ? <Spinner /> : (
@@ -961,7 +961,7 @@ function OctaveView({ sessionId, audioId, section }: { sessionId: string; audioI
       {showSettings && (
         <SettingsOverlay onClose={() => setShowSettings(false)}>
           <OctaveSettings weighting={pending} onChange={setPending} />
-          <button onClick={handleApply} className="mt-2 w-full py-1 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">{t('plot.apply')}</button>
+          <button onClick={handleApply} className="btn btn-primary btn-sm mt-2 w-full">{t('plot.apply')}</button>
         </SettingsOverlay>
       )}
       {!data ? <Spinner /> : (
@@ -1019,7 +1019,7 @@ function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audi
       {showSettings && (
         <SettingsOverlay onClose={() => setShowSettings(false)}>
           <EnvelopeSettings params={pending} onChange={p => setPending(prev => ({...prev,...p}))} />
-          <button onClick={handleApply} className="mt-2 w-full py-1 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 transition-colors">{t('plot.apply')}</button>
+          <button onClick={handleApply} className="btn btn-primary btn-sm mt-2 w-full">{t('plot.apply')}</button>
         </SettingsOverlay>
       )}
       {!data ? <Spinner /> : (

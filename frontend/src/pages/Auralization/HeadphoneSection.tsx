@@ -71,11 +71,10 @@ export default function HeadphoneSection() {
   return (
     <section className="rounded-lg border border-border bg-panel p-4 space-y-4" aria-labelledby="aur-hp">
       <h2 id="aur-hp" className="text-sm font-semibold">{t('aur.hp.title')}</h2>
-      <div className="flex flex-wrap rounded overflow-hidden border border-border w-fit" role="radiogroup" aria-label={t('aur.hp.title')}>
+      <div className="seg flex-wrap" role="radiogroup" aria-label={t('aur.hp.title')}>
         {MODES.map((m) => (
           <button
             key={m} role="radio" aria-checked={headphone.mode === m} onClick={() => pick(m)}
-            className={clsx('px-3 py-1.5 text-xs', headphone.mode === m ? 'bg-teal text-dark font-semibold' : 'bg-dark text-muted hover:text-white')}
           >
             {t(`aur.hp.mode.${m}`)}
           </button>

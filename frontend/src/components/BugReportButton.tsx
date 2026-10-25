@@ -65,7 +65,7 @@ function BugReportDialog({ onClose }: { onClose: () => void }) {
           <div className="flex justify-end gap-2">
             <button onClick={onClose} className="px-3 py-1 text-xs text-muted hover:text-white border border-border rounded transition-colors">{t('bug.cancel')}</button>
             <button onClick={submit} disabled={busy}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 disabled:opacity-40 transition-colors">
+              className="btn btn-primary btn-sm">
               {busy && <Loader2 size={12} className="animate-spin" />}{t('bug.send')}
             </button>
           </div>

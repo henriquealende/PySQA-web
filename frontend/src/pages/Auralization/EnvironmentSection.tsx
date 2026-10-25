@@ -72,11 +72,10 @@ export default function EnvironmentSection() {
   return (
     <section className="rounded-lg border border-border bg-panel p-4 space-y-4" aria-labelledby="aur-env">
       <h2 id="aur-env" className="text-sm font-semibold">{t('aur.env.title')}</h2>
-      <div className="flex rounded overflow-hidden border border-border w-fit" role="radiogroup" aria-label={t('aur.env.title')}>
+      <div className="seg" role="radiogroup" aria-label={t('aur.env.title')}>
         {TYPES.map((ty) => (
           <button
             key={ty} role="radio" aria-checked={env.type === ty} onClick={() => pickType(ty)}
-            className={clsx('px-3 py-1.5 text-xs', env.type === ty ? 'bg-teal text-dark font-semibold' : 'bg-dark text-muted hover:text-white')}
           >
             {t(`aur.env.type.${ty}`)}
           </button>

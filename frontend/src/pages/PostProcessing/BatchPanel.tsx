@@ -356,16 +356,15 @@ export default function BatchPanel() {
             <div className="flex-1" />
 
             {/* Field type */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <span className="text-[11px] text-muted">{t('pp.batch.field')}</span>
-              {(['free','diffuse'] as FieldType[]).map(ft => (
-                <button key={ft} onClick={() => setFieldType(ft)} disabled={busy}
-                  className={clsx('px-2 py-0.5 text-[11px] rounded transition-colors disabled:opacity-40',
-                    fieldType===ft ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white'
-                  )}>
-                  {ft === 'free' ? t('pp.batch.free') : t('pp.batch.diffuse')}
-                </button>
-              ))}
+              <div className="seg" role="group" aria-label={t('pp.batch.field')}>
+                {(['free','diffuse'] as FieldType[]).map(ft => (
+                  <button key={ft} onClick={() => setFieldType(ft)} disabled={busy} aria-pressed={fieldType === ft}>
+                    {ft === 'free' ? t('pp.batch.free') : t('pp.batch.diffuse')}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {selected.includes('tonality_ecma') && <TonalityPrecisionSelect compact disabled={busy} />}
@@ -373,13 +372,13 @@ export default function BatchPanel() {
             {/* Compute */}
             <button onClick={compute}
               disabled={busy || !selected.length || !selectedFiles.length}
-              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold bg-teal text-dark rounded hover:bg-teal/80 disabled:opacity-40 transition-colors">
+              className="btn btn-primary">
               {busy ? <><Loader2 size={12} className="animate-spin" /> {t('pp.batch.computing')}</> : t('pp.batch.compute')}
             </button>
 
             {augRows && augRows.length > 0 && !busy && (
               <button onClick={doExport}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted hover:text-white rounded border border-border hover:bg-panel transition-colors">
+                className="btn btn-secondary">
                 <Download size={13} /> {t('pp.batch.exportXlsx')}
               </button>
             )}

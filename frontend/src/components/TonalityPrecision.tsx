@@ -25,10 +25,6 @@ export default function TonalityPrecisionSelect({ compact = false, disabled = fa
       onClick={() => setPrecision(value)}
       disabled={disabled}
       title={compact ? t('pp.page.precisionHint') : undefined}
-      className={clsx(
-        compact ? 'px-2 py-0.5 text-[11px] rounded transition-colors disabled:opacity-40' : 'flex-1 py-1 text-xs rounded transition-colors',
-        precision === value ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white',
-      )}
     >
       {t(label)}
     </button>
@@ -36,16 +32,16 @@ export default function TonalityPrecisionSelect({ compact = false, disabled = fa
 
   if (compact) {
     return (
-      <div className="flex items-center gap-1" role="group" aria-label={t('pp.page.tonalityPrecision')}>
+      <div className="flex items-center gap-2" role="group" aria-label={t('pp.page.tonalityPrecision')}>
         <span className="text-xs text-muted">{t('pp.batch.tonality')}</span>
-        {buttons}
+        <div className="seg">{buttons}</div>
       </div>
     )
   }
   return (
     <div className="border-t border-border pt-3 space-y-2">
       <p className="text-xs font-semibold text-muted">{t('pp.page.tonalityPrecision')}</p>
-      <div className="flex gap-1" role="group" aria-label={t('pp.page.tonalityPrecision')}>{buttons}</div>
+      <div className="seg seg-fill" role="group" aria-label={t('pp.page.tonalityPrecision')}>{buttons}</div>
       <p className="text-xs text-muted leading-snug">{t('pp.page.precisionHint')}</p>
     </div>
   )

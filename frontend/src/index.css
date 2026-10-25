@@ -55,15 +55,62 @@ a:hover .pysqa-logo .logo-right, button:hover .pysqa-logo .logo-right { transfor
   .pysqa-logo.logo-burst .logo-right { animation: logo-burst-right 1.3s cubic-bezier(0.16, 1, 0.3, 1); }
 }
 
-/* Touch screens: controls need a 44 px target */
-@media (pointer: coarse) {
-  main button, aside button, main select, aside select,
-  main input:not([type=range]):not([type=checkbox]):not([type=file]), aside input:not([type=range]):not([type=checkbox]):not([type=file]) {
-    min-height: 44px;
+/* ── UI primitives: one look for buttons, icon buttons, segmented choices and sliders ───────────────── */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 h-9 px-4 rounded-md text-xs font-semibold whitespace-nowrap transition-colors
+      focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal disabled:opacity-40 disabled:pointer-events-none;
   }
+  .btn-sm { @apply h-8 px-3; }
+  .btn-primary   { @apply bg-teal text-dark hover:bg-teal/85; }
+  .btn-secondary { @apply bg-panel text-white border border-field hover:border-teal; }
+  .btn-ghost     { @apply text-muted hover:text-white hover:bg-panel; }
+  .btn[aria-pressed=true] { @apply border-teal text-teal bg-teal/15; }
+
+  .icon-btn {
+    @apply inline-flex items-center justify-center shrink-0 w-9 h-9 rounded-full transition-colors
+      focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal disabled:opacity-40 disabled:pointer-events-none;
+  }
+  .icon-btn-primary { @apply bg-teal text-dark hover:bg-teal/85; }
+  .icon-btn-ghost   { @apply text-muted hover:text-white hover:bg-panel; }
+
+  /* a group of choices where exactly one is on; each button needs aria-pressed */
+  .seg { @apply inline-flex shrink-0 max-w-full rounded-md overflow-hidden border border-field; }
+  .seg > button {
+    @apply inline-flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-medium bg-panel text-muted transition-colors hover:text-white
+      focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-teal disabled:opacity-40;
+  }
+  .seg > button[aria-pressed=true], .seg > button[aria-checked=true] { @apply bg-teal text-dark font-semibold hover:text-dark; }
+  .seg-fill { @apply flex w-full; }
+  .seg-fill > button { @apply flex-1; }
+}
+
+/* Sliders: thin track, round teal thumb */
+input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; height: 20px; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 9999px; background: #2b3c50; }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 9999px; background: #2b3c50; }
+input[type=range]::-moz-range-progress { height: 4px; border-radius: 9999px; background: #50b89e; }
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%;
+  background: #50b89e; border: 2px solid #0f1923; box-shadow: 0 0 0 1px #50b89e; transition: transform 0.12s;
+}
+input[type=range]::-moz-range-thumb { width: 10px; height: 10px; border-radius: 50%; background: #50b89e; border: 2px solid #0f1923; box-shadow: 0 0 0 1px #50b89e; }
+input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.15); }
+input[type=range]:focus-visible { outline: 2px solid #50b89e; outline-offset: 3px; border-radius: 4px; }
+input[type=range]:disabled { opacity: 0.4; cursor: default; }
+
+/* Touch screens: controls need a comfortable target */
+@media (pointer: coarse) {
+  main button:not(.btn):not(.icon-btn):not(.seg > button), aside button:not(.btn):not(.icon-btn):not(.seg > button), main select, aside select,
+  main input:not([type=range]):not([type=checkbox]):not([type=file]), aside input:not([type=range]):not([type=checkbox]):not([type=file]) {
+    min-height: 40px;
+  }
+  .btn, .seg > button { min-height: 40px; }
+  .icon-btn { min-width: 40px; min-height: 40px; }
   main input[type=checkbox], aside input[type=checkbox] { width: 20px; height: 20px; }
   main label:has(> input[type=checkbox]), aside label:has(> input[type=checkbox]) { min-height: 44px; }
-  main input[type=range], aside input[type=range] { min-height: 32px; }
+  input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; margin-top: -8px; }
+  input[type=range]::-moz-range-thumb { width: 16px; height: 16px; }
   footer a { display: inline-block; padding: 0.6rem 0.25rem; }
   .js-plotly-plot button, .js-plotly-plot a { min-height: 0; }
 }

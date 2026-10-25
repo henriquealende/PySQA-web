@@ -19,7 +19,7 @@ export default function LevelSection({ gainDb, calibrated }: { gainDb: number | 
   return (
     <section className="rounded-lg border border-border bg-panel p-4 space-y-3" aria-labelledby="aur-lv">
       <h2 id="aur-lv" className="text-sm font-semibold">{t('aur.lv.title')}</h2>
-      <div className="flex flex-wrap rounded overflow-hidden border border-border w-fit" role="radiogroup" aria-label={t('aur.lv.title')}>
+      <div className="seg flex-wrap" role="radiogroup" aria-label={t('aur.lv.title')}>
         {MODES.map((m) => {
           const blocked = m === 'source' && !calibrated
           return (
@@ -27,7 +27,6 @@ export default function LevelSection({ gainDb, calibrated }: { gainDb: number | 
               key={m} role="radio" aria-checked={level.mode === m} disabled={blocked}
               title={blocked ? t('aur.lv.needsCal') : undefined}
               onClick={() => setLevel({ mode: m })}
-              className={clsx('px-3 py-1.5 text-xs disabled:opacity-40', level.mode === m ? 'bg-teal text-dark font-semibold' : 'bg-dark text-muted hover:text-white')}
             >
               {t(`aur.lv.mode.${m}`)}
             </button>

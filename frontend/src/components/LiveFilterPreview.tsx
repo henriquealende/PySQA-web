@@ -34,22 +34,21 @@ export default function LiveFilterPreview({ sessionId, audioId, sampleRate, filt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, audioId, key])
 
-  const seg = (active: boolean) => clsx('px-3 py-1 text-xs transition-colors', active ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white')
   return (
     <div className="border border-border rounded-lg p-3 bg-dark/40 space-y-2" role="group" aria-label={t('pp.proc.live.title')}>
       <p className="text-[11px] text-muted uppercase tracking-wider">{t('pp.proc.live.title')}</p>
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={toggle} aria-label={playing ? t('pp.proc.live.pause') : t('pp.proc.live.play')}
-          className="w-8 h-8 rounded-full bg-teal text-dark flex items-center justify-center">
-          {playing ? <Pause size={14} /> : <Play size={14} />}
+          className="icon-btn icon-btn-primary">
+          {playing ? <Pause size={16} /> : <Play size={16} className="ml-0.5" />}
         </button>
         <button onClick={stop} aria-label={t('pp.proc.live.stop')}
-          className="w-8 h-8 rounded-full text-muted hover:text-white hover:bg-panel flex items-center justify-center transition-colors">
-          <Square size={13} />
+          className="icon-btn icon-btn-ghost">
+          <Square size={14} />
         </button>
-        <div className="flex rounded overflow-hidden border border-border" role="group" aria-label={t('pp.proc.live.version')}>
-          <button onClick={() => setBypass(false)} aria-pressed={!bypass} className={seg(!bypass)}>{t('pp.proc.live.with')}</button>
-          <button onClick={() => setBypass(true)} aria-pressed={bypass} className={seg(bypass)}>{t('pp.proc.live.without')}</button>
+        <div className="seg" role="group" aria-label={t('pp.proc.live.version')}>
+          <button onClick={() => setBypass(false)} aria-pressed={!bypass}>{t('pp.proc.live.with')}</button>
+          <button onClick={() => setBypass(true)} aria-pressed={bypass}>{t('pp.proc.live.without')}</button>
         </div>
       </div>
       {(problem || error) && <p className="text-[11px] text-amber-400">{problem || t('pp.proc.live.failed')}</p>}

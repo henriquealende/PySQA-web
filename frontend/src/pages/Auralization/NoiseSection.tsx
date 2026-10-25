@@ -29,11 +29,10 @@ export default function NoiseSection() {
   return (
     <section className="rounded-lg border border-border bg-panel p-4 space-y-3" aria-labelledby="aur-noise">
       <h2 id="aur-noise" className="text-sm font-semibold">{t('aur.noise.title')}</h2>
-      <div className="flex flex-wrap rounded overflow-hidden border border-border w-fit" role="radiogroup" aria-label={t('aur.noise.title')}>
+      <div className="seg flex-wrap" role="radiogroup" aria-label={t('aur.noise.title')}>
         {TYPES.map((ty) => (
           <button
             key={ty} role="radio" aria-checked={noise.type === ty} onClick={() => setNoise({ type: ty })}
-            className={clsx('px-3 py-1.5 text-xs', noise.type === ty ? 'bg-teal text-dark font-semibold' : 'bg-dark text-muted hover:text-white')}
           >
             {t(`aur.noise.type.${ty}`)}
           </button>

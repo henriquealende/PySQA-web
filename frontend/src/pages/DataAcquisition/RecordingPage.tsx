@@ -1472,7 +1472,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             )}
             {isReviewing && pendingRec && (<>
               <button onClick={acceptRecording}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-teal text-dark text-sm font-semibold hover:bg-teal/80 transition-colors">
+                className="btn btn-primary">
                 <CheckCircle size={14}/> {t('rec.transport.accept')}
               </button>
               <button onClick={declineRecording}
@@ -1595,7 +1595,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
           )}
           <div className="flex gap-2">
             <button onClick={acceptRecording}
-              className="flex items-center gap-1.5 px-4 py-2 rounded bg-teal text-dark text-sm font-semibold hover:bg-teal/80 transition-colors">
+              className="btn btn-primary">
               <CheckCircle size={14}/> {t('rec.transport.accept')}
             </button>
             <button onClick={declineRecording}

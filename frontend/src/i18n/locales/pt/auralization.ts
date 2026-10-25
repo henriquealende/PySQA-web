@@ -38,6 +38,8 @@ export default {
   'aur.ab.title': 'Ouvir e comparar',
   'aur.ab.play': 'Tocar',
   'aur.ab.pause': 'Pausar',
+  'aur.ab.mute': 'Silenciar',
+  'aur.ab.volume': 'Volume',
   'aur.ab.seek': 'Posição de reprodução',
   'aur.ab.version': 'Versão',
   'aur.ab.processed': 'Processado',

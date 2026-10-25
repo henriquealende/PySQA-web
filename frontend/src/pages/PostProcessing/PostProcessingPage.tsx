@@ -163,13 +163,12 @@ export default function PostProcessingPage() {
 
           <div className="space-y-2">
             <p className="text-xs font-semibold text-muted">{t('pp.page.fieldType')}</p>
-            <div className="flex gap-1">
+            <div className="seg seg-fill">
               {(['free', 'diffuse'] as FieldType[]).map((ft) => (
                 <button
                   key={ft}
                   onClick={() => setFieldType(ft)}
                   aria-pressed={fieldType === ft}
-                  className={`flex-1 py-1.5 text-xs rounded transition-colors ${fieldType === ft ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white'}`}
                 >
                   {ft === 'free' ? t('pp.page.freeField') : t('pp.page.diffuse')}
                 </button>
@@ -234,7 +233,7 @@ export default function PostProcessingPage() {
                 <button
                   onClick={handleCalibrate}
                   disabled={calBusy || !calInput}
-                  className="px-2 py-0.5 text-xs bg-teal text-dark rounded hover:bg-teal/80 disabled:opacity-40 transition-colors font-semibold"
+                  className="btn btn-primary btn-sm"
                 >{t('pp.page.set')}</button>
               </div>
             )}
@@ -264,18 +263,13 @@ export default function PostProcessingPage() {
             {t('pp.page.sectFiles')}
           </button>
 
-          <div className="flex gap-1 flex-wrap">
+          <div className="seg flex-wrap">
             {VIEW_MODES.map(({ key, labelKey, Icon }) => (
               <button
                 key={key}
                 onClick={() => { setViewMode(key); if (key !== 'normal') setMetricKey('none'); setShowBatch(false) }}
                 disabled={!selectedId}
-                className={clsx(
-                  'flex items-center gap-1.5 px-3 py-1 text-xs rounded font-medium transition-colors disabled:opacity-30',
-                  viewMode === key && metricKey === 'none' && !showBatch
-                    ? 'bg-teal text-dark'
-                    : 'bg-panel text-muted hover:text-white hover:bg-panel/80'
-                )}
+                aria-pressed={viewMode === key && metricKey === 'none' && !showBatch}
               >
                 <Icon size={13} />
                 {t(labelKey)}
@@ -289,12 +283,7 @@ export default function PostProcessingPage() {
             <button
               onClick={() => setShowBatch(!showBatch)}
               aria-pressed={showBatch}
-              className={clsx(
-                'flex items-center gap-1.5 px-3 py-1 text-xs rounded font-medium transition-colors border',
-                showBatch
-                  ? 'bg-orange-500/20 border-orange-500/60 text-orange-400'
-                  : 'bg-panel border-border text-muted hover:text-white hover:bg-panel/80'
-              )}
+              className="btn btn-secondary btn-sm"
             >
               <BarChart3 size={13} />
               {t('pp.page.batch')}
@@ -306,7 +295,7 @@ export default function PostProcessingPage() {
           {selectedId && !showBatch && (
             <button
               onClick={() => setShowExport(true)}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-teal border border-teal/50 rounded hover:bg-teal/10 transition-colors"
+              className="btn btn-secondary btn-sm"
             >
               <Download size={13} aria-hidden="true" />
               {t('pp.page.export')}
