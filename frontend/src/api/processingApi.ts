@@ -40,6 +40,25 @@ export async function applyFilter(
   }, [audioId])
 }
 
+/** The sections of a filter, to hear it while its settings are changed (see useLiveFilter). */
+export async function fetchFilterSos(
+  sessionId: string, audioId: string,
+  p: { filterType: string; cutoff?: number | [number, number]; method: string; fundamental?: number; qFactor: number },
+  signal?: AbortSignal,
+): Promise<{ sos: number[][]; passes: number }> {
+  const res = await apiFetch(sessionId, `${BASE}/filter-sos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal,
+    body: JSON.stringify({
+      session_id: sessionId, audio_id: audioId, filter_type: p.filterType, cutoff: p.cutoff ?? null,
+      method: p.method, fundamental: p.fundamental ?? null, q_factor: p.qFactor,
+    }),
+  })
+  await checkResponse(res)
+  return res.json()
+}
+
 export async function applyWindow(
   sessionId: string, audioId: string,
   startSample: number, endSample: number,

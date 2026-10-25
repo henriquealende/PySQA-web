@@ -251,6 +251,13 @@ export default function PostProcessingDoc() {
             Os filtros de corte são do tipo <strong>Butterworth</strong> <Cite ids={['butterworth1930']} />, de ordem 4 por padrão, a resposta mais plana
             possível na banda de passagem. Há também a variante Linkwitz-Riley.
           </P>
+          <P>
+            <strong>Ouvir o filtro antes de aplicar.</strong> Na janela de Processamento, o painel <K>Ouvir com o filtro</K> toca o arquivo em repetição e acompanha os valores à medida que você os muda
+            (frequência de corte, método, fundamental e Q), sem gerar arquivo nenhum. <K>Com filtro</K> e <K>Sem filtro</K> alternam a escuta. O servidor devolve ao navegador os próprios coeficientes do filtro,
+            e o navegador os aplica duas vezes, o que dá o <strong>mesmo nível em cada frequência</strong> do arquivo final (conferido nos filtros de corte, nos de faixa e no notch). A diferença é a <strong>fase</strong>:
+            o arquivo final usa fase zero e a prévia, não. Por isso, é um recurso para <em>escolher</em> o ajuste; confira o resultado no arquivo aplicado. O equalizador de 1/3 de oitava não tem prévia ao vivo, e um notch
+            com harmônicos demais (fundamental muito baixa) também não.
+          </P>
           <Callout kind="info" title="Filtro de “ida e volta” (fase zero)">
             O PySQA filtra o sinal para frente e depois para trás <Cite ids={['gustafsson1996']} />. Assim, o filtro não atrasa nem deforma a forma
             de onda no tempo (sem distorção de fase). O preço: a resposta em amplitude é aplicada duas vezes. Na frequência de corte o

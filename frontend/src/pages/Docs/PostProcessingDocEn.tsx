@@ -251,6 +251,13 @@ export default function PostProcessingDocEn() {
             The cutoff filters are of the <strong>Butterworth</strong> type <Cite ids={['butterworth1930']} />, of order 4 by default, the flattest possible
             response in the passband. There is also a Linkwitz-Riley variant.
           </P>
+          <P>
+            <strong>Hearing the filter before applying it.</strong> In the Processing window, the <K>Hear with the filter</K> panel plays the file in a loop and follows the values as you change them
+            (cutoff, method, fundamental and Q), without creating any file. <K>With filter</K> and <K>Without filter</K> switch what you hear. The server gives the browser the coefficients of the filter itself,
+            and the browser applies them twice, which gives the <strong>same level at each frequency</strong> as the final file (checked on the cutoff, band and notch filters). The difference is the <strong>phase</strong>:
+            the final file uses zero phase and the preview does not. So this is a feature to <em>choose</em> the setting; check the result on the applied file. The 1/3-octave equaliser has no live preview, and neither does a notch
+            with too many harmonics (a very low fundamental).
+          </P>
           <Callout kind="info" title="“Forward-backward” filter (zero phase)">
             PySQA filters the signal forward and then backward <Cite ids={['gustafsson1996']} />. This way, the filter neither delays nor distorts the
             waveform in time (no phase distortion). The price: the amplitude response is applied twice. At the cutoff frequency the

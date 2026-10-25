@@ -7,6 +7,7 @@ import { X, Loader2 } from 'lucide-react'
 import clsx from 'clsx'
 import { AudioFile } from '../types'
 import { fetchWaveform } from '../api/audioApi'
+import LiveFilterPreview from './LiveFilterPreview'
 import { applyFilter, applyWindow, applyWeighting, applyLoudnessAdj } from '../api/processingApi'
 
 // ── Colours ───────────────────────────────────────────────────────────────────
@@ -487,6 +488,16 @@ export default function ProcessingModal({
                       <input type="number" value={qFactor} onChange={e => setQFactor(Number(e.target.value))} className={inputCls} min={1} />
                     </div>
                   </div>
+                )}
+                {!isOctave ? (
+                  <LiveFilterPreview
+                    sessionId={sessionId} audioId={audioId} sampleRate={sampleRate}
+                    filterType={filterType}
+                    cutoff={isBand ? [cutoffLow, cutoffHigh] : isSingle ? cutoffLow : undefined}
+                    method={method} fundamental={isHarmonic ? fundamental : undefined} qFactor={qFactor}
+                  />
+                ) : (
+                  <p className="text-[11px] text-muted">{t('pp.proc.live.octaveNone')}</p>
                 )}
                 {isOctave && (
                   <div className="border border-border rounded-lg p-2 bg-dark/40">

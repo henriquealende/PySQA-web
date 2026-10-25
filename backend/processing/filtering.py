@@ -170,6 +170,72 @@ def apply_filter(
 
 
 # ---------------------------------------------------------------------------
+# Coefficients of the filter, for the live preview in the browser
+# ---------------------------------------------------------------------------
+
+_MAX_PREVIEW_SECTIONS = 60
+
+
+def filter_sos(
+    fs: int,
+    filter_type: FilterType | str,
+    cutoff: float | tuple[float, float] | None = None,
+    order: int = 4,
+    design: str = "Butterworth",
+    fundamental: float | None = None,
+    q_factor: float = 30.0,
+) -> tuple[np.ndarray, int]:
+    """
+    The second-order sections of the filter :func:`apply_filter` would use, and how many times the
+    cascade has to be run to give the same *magnitude* response.
+
+    ``apply_filter`` runs the filter forward and backward (zero phase), which squares the magnitude, so a
+    causal player gets the same tone by running the sections twice (``passes`` = 2). The Linkwitz-Riley
+    design runs two such passes (``passes`` = 4). Only the phase differs from the real result.
+    """
+    if isinstance(filter_type, str):
+        filter_type = FilterType.from_label(filter_type)
+    nyq = fs / 2.0
+
+    if filter_type == FilterType.OCTAVE:
+        raise ValueError(msg("O equalizador de 1/3 de oitava não tem prévia ao vivo.", "The 1/3-octave equaliser has no live preview."))
+
+    if filter_type == FilterType.HARMONIC_NOTCH:
+        if fundamental is None or fundamental <= 0:
+            raise ValueError(msg("Informe a frequência fundamental para o Notch harmônico.", "fundamental must be specified for Harmonic Notch."))
+        from scipy.signal import iirnotch, tf2sos
+        sections = []
+        k = 1
+        while fundamental * k < nyq:
+            b, a = iirnotch(fundamental * k, q_factor, fs=float(fs))
+            sections.append(tf2sos(b, a)[0])
+            k += 1
+            if len(sections) > _MAX_PREVIEW_SECTIONS:
+                raise ValueError(msg("Há harmônicos demais para a prévia ao vivo; aumente a fundamental.", "Too many harmonics for the live preview; raise the fundamental."))
+        if not sections:
+            raise ValueError(msg("A fundamental está acima da frequência de Nyquist.", "The fundamental is above the Nyquist frequency."))
+        return np.array(sections, dtype=float), 2
+
+    if cutoff is None:
+        raise ValueError(msg("Informe a frequência de corte para este tipo de filtro.", "cutoff must be specified for this filter type."))
+    two = filter_type in (FilterType.BANDPASS, FilterType.BANDSTOP)
+    if two:
+        if not hasattr(cutoff, "__len__") or len(cutoff) != 2:
+            raise ValueError(msg("O corte deve ser um par (baixa, alta).", "The cutoff must be a (low, high) pair."))
+        wn = (cutoff[0] / nyq, cutoff[1] / nyq)
+        if not (0 < wn[0] < wn[1] < 1):
+            raise ValueError(msg("Use 0 < baixa < alta < Nyquist.", "Use 0 < low < high < Nyquist."))
+    else:
+        wn = float(cutoff) / nyq
+        if not 0 < wn < 1:
+            raise ValueError(msg("A frequência de corte deve estar entre 0 e Nyquist.", "The cutoff must be between 0 and Nyquist."))
+    btype = {FilterType.LOWPASS: "low", FilterType.HIGHPASS: "high", FilterType.BANDPASS: "band", FilterType.BANDSTOP: "bandstop"}[filter_type]
+    linkwitz = design.lower().startswith("link")
+    sos = sp.butter(order // 2 if linkwitz else order, wn, btype=btype, output="sos")
+    return np.asarray(sos, dtype=float), 4 if linkwitz else 2
+
+
+# ---------------------------------------------------------------------------
 # Octave-band equaliser
 # ---------------------------------------------------------------------------
 

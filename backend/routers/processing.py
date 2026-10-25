@@ -27,6 +27,16 @@ class FilterRequest(BaseModel):
     new_audio_id: Optional[str] = None   # lets the browser re-create this file under the same id
 
 
+class FilterSosRequest(BaseModel):
+    session_id: str
+    audio_id: str
+    filter_type: str
+    cutoff: Optional[Union[float, List[float]]] = None
+    method: str = "Butterworth"
+    fundamental: Optional[float] = None
+    q_factor: float = 30.0
+
+
 class WindowRequest(BaseModel):
     session_id: str
     audio_id: str
@@ -78,6 +88,18 @@ def apply_filter(body: FilterRequest):
         "channels": new_entry.channels,
         "duration_s": new_entry.duration_s,
     }
+
+
+@router.post("/filter-sos")
+def filter_sos(body: FilterSosRequest):
+    """Coefficients of the filter, so the browser can play the file through it while the settings are changed."""
+    from processing.filtering import filter_sos as design
+    entry = _entry(body.session_id, body.audio_id)
+    try:
+        sos, passes = design(entry.sample_rate, body.filter_type, body.cutoff, 4, body.method, body.fundamental, body.q_factor)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"sos": sos.tolist(), "passes": passes, "sample_rate": entry.sample_rate}
 
 
 @router.post("/window")
