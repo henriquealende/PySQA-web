@@ -36,6 +36,7 @@ export default function ConfigMenu() {
       s.setBatchMetrics(cfg.batch.metrics)
       s.setBatchAnnoyance(cfg.batch.annoyance)
       s.setBatchLimits(cfg.batch.limits)
+      s.setBatchModels(cfg.batch.models)
       s.setViewMode(cfg.view.viewMode)
       s.setMetricKey(cfg.view.metricKey)
 

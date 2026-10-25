@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { AudioFile, ViewMode, MetricKey, FieldType, TonalityPrecision, Section, SpectrogramParams, EnvelopeParams, BatchLimit } from '../types'
+import { AudioFile, ViewMode, MetricKey, FieldType, TonalityPrecision, Section, SpectrogramParams, EnvelopeParams, BatchLimit, BatchModel } from '../types'
 import { forgetSession } from '../api/recovery'
 import { clearViewCache } from '../api/viewCache'
 
@@ -37,6 +37,7 @@ interface AppState {
   batchMetrics: MetricKey[]                       // metrics ticked in the batch
   batchAnnoyance: string[]                        // annoyance models ticked in the batch
   batchLimits: Record<string, BatchLimit>         // pass/fail limit per batch column
+  batchModels: BatchModel[]                       // user-defined indices (weights on the metrics)
   isLoading: boolean
   loadingMessage: string
   audioIsPlaying: boolean
@@ -63,6 +64,7 @@ interface AppState {
   setBatchMetrics: (m: MetricKey[]) => void
   setBatchAnnoyance: (a: string[]) => void
   setBatchLimits: (l: Record<string, BatchLimit>) => void
+  setBatchModels: (m: BatchModel[]) => void
   setBatchLimit: (key: string, patch: Partial<BatchLimit>) => void
   setLoading: (v: boolean, msg?: string) => void
   setAudioPlayback: (isPlaying: boolean, duration: number) => void
@@ -99,6 +101,7 @@ export const useStore = create<AppState>((set, get) => ({
   batchMetrics: ['loudness_zwk', 'sharpness_din'],
   batchAnnoyance: [],
   batchLimits: {},
+  batchModels: [],
   isLoading: false,
   loadingMessage: '',
   audioIsPlaying: false,
@@ -148,6 +151,7 @@ export const useStore = create<AppState>((set, get) => ({
   setBatchMetrics: (batchMetrics) => set({ batchMetrics }),
   setBatchAnnoyance: (batchAnnoyance) => set({ batchAnnoyance }),
   setBatchLimits: (batchLimits) => set({ batchLimits }),
+  setBatchModels: (batchModels) => set({ batchModels }),
   setBatchLimit: (key, patch) => set((s) => {
     const prev = s.batchLimits[key]
     const next: BatchLimit = { min: prev?.min ?? null, max: prev?.max ?? null, ...patch }

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Loader2, Download, CheckSquare, Square } from 'lucide-react'
+import { Loader2, Download, CheckSquare, Square, Plus, Pencil } from 'lucide-react'
 import clsx from 'clsx'
 import { useStore } from '../../store/useStore'
 import { fetchMetric, fetchServerLoad, isAbort, SessionExpiredError } from '../../api/audioApi'
@@ -11,6 +11,9 @@ import { toast } from '../../store/useToast'
 import { useT, currentLocale } from '../../i18n'
 import { judge, judgeRow, hasLimit, describeLimit, type Verdict } from '../../utils/batchLimits'
 import ChannelNotice from '../../components/ChannelNotice'
+import NumberInput from '../../components/NumberInput'
+import ModelEditor from './ModelEditor'
+import { computeModel, isModelKey, modelKey, modelNeeds, newModelId } from '../../utils/batchModels'
 
 const BATCH_METRICS: { key: MetricKey; label: string; short: string }[] = [
   { key: 'loudness_zwk',         label: 'Loudness ZWK',    short: 'N (ZWK)' },
@@ -47,29 +50,6 @@ function computeZWK(row: any) {
   return n * (1 + Math.sqrt(ws*ws + wfr*wfr))
 }
 
-/** A number box for one side of a limit: keeps what is being typed and follows changes that come from outside (a loaded setup). */
-function LimitInput({ value, onChange, placeholder, title, disabled }: {
-  value: number | null; onChange: (v: number | null) => void; placeholder: string; title: string; disabled?: boolean
-}) {
-  const [text, setText] = useState(value == null ? '' : String(value))
-  useEffect(() => {
-    const parsed = text.trim() === '' ? null : Number(text.replace(',', '.'))
-    if ((value ?? null) !== (parsed != null && Number.isFinite(parsed) ? parsed : null)) setText(value == null ? '' : String(value))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value])
-  return (
-    <input
-      type="text" inputMode="decimal" value={text} placeholder={placeholder} title={title} aria-label={title} disabled={disabled}
-      onChange={e => {
-        setText(e.target.value)
-        const v = e.target.value.trim() === '' ? null : Number(e.target.value.replace(',', '.'))
-        onChange(v != null && Number.isFinite(v) ? v : null)
-      }}
-      className="w-[46px] bg-dark border border-field rounded px-1 py-0.5 text-[11px] font-normal text-right text-white placeholder:text-muted/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal"
-    />
-  )
-}
-
 function BatchProgress({ step, total, label, elapsed, eta, onCancel }: {
   step: number; total: number; label: string; elapsed: number; eta: number | null; onCancel: () => void
 }) {
@@ -103,7 +83,8 @@ function BatchProgress({ step, total, label, elapsed, eta, onCancel }: {
 export default function BatchPanel() {
   const t = useT()
   const { sessionId, files, fieldType, setFieldType, precision, sections } = useStore()
-  const { batchMetrics: selected, batchAnnoyance: annoyance, batchLimits: limits, setBatchMetrics, setBatchAnnoyance, setBatchLimit } = useStore()
+  const { batchMetrics: selected, batchAnnoyance: annoyance, batchLimits: limits, batchModels: models, setBatchMetrics, setBatchAnnoyance, setBatchLimit, setBatchModels } = useStore()
+  const [editingId, setEditingId] = useState<string | null>(null)
   const locale = currentLocale()
 
   // File selection
@@ -131,6 +112,7 @@ export default function BatchPanel() {
     const extra: MetricKey[] = []
     if (annoyance.includes('sil')) silNeeds.forEach(k => { if (!selected.includes(k)) extra.push(k) })
     if (annoyance.includes('zwk')) zwkNeeds.forEach(k => { if (!selected.includes(k)) extra.push(k) })
+    models.filter(m => m.on).forEach(m => modelNeeds(m).forEach(k => { if (!selected.includes(k)) extra.push(k) }))
     return [...new Set([...selected, ...extra])]
   }
   const autoAdded = metricsToCompute().filter(k => !selected.includes(k))
@@ -146,6 +128,7 @@ export default function BatchPanel() {
   const [pLabel, setPLabel] = useState('')
 
   const keyLabel = (k: string) => {
+    if (isModelKey(k)) return models.find(m => modelKey(m.id) === k)?.name || t('pp.batch.modelUnnamed')
     const ann = ANNOYANCE_MODELS.find(m => `annoyance_${m.key}` === k)
     if (ann) return t(ann.fullKey)
     return BATCH_METRICS.find(m => m.key === k)?.label ?? k
@@ -228,6 +211,7 @@ export default function BatchPanel() {
     const r = {...row}
     if (annoyance.includes('sil')) r['annoyance_sil'] = computeSIL(row)
     if (annoyance.includes('zwk')) r['annoyance_zwk'] = computeZWK(row)
+    models.filter(m => m.on).forEach(m => { r[modelKey(m.id)] = computeModel(m, row) })
     return r
   }) : null
 
@@ -235,6 +219,7 @@ export default function BatchPanel() {
     ...keys,
     ...(annoyance.includes('sil') ? ['annoyance_sil'] : []),
     ...(annoyance.includes('zwk') ? ['annoyance_zwk'] : []),
+    ...models.filter(m => m.on).map(m => modelKey(m.id)),
   ]
   const failedKeys = augRows ? keys.filter(k => augRows.every(r => r[k]==null)) : []
   const unexplainedFailures = failedKeys.filter(k => !skipped.some(s => s.metric === k))
@@ -247,7 +232,7 @@ export default function BatchPanel() {
   }
   const colHeader = (k: string) => {
     const label = keyLabel(k)
-    const unit  = METRIC_UNITS[k]
+    const unit  = isModelKey(k) ? models.find(m => modelKey(m.id) === k)?.unit : METRIC_UNITS[k]
     return unit ? `${label}\n(${unit})` : label
   }
 
@@ -400,6 +385,46 @@ export default function BatchPanel() {
             )}
           </div>
 
+          {/* Row 3: user-defined models */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-muted uppercase tracking-wider shrink-0 whitespace-nowrap">{t('pp.batch.models')}</span>
+            {models.map(m => (
+              <span key={m.id} className={clsx('inline-flex items-stretch rounded border text-xs overflow-hidden',
+                m.on ? 'border-amber-500 bg-amber-500/20 text-amber-400' : 'border-border bg-panel text-muted')}>
+                <button onClick={() => setBatchModels(models.map(x => x.id === m.id ? { ...x, on: !x.on } : x))} disabled={busy}
+                  aria-pressed={m.on} title={t('pp.batch.modelToggle')}
+                  className={clsx('px-2.5 py-1 transition-colors disabled:opacity-40', m.on ? 'font-medium' : 'hover:text-white')}>
+                  {m.name || t('pp.batch.modelUnnamed')}
+                </button>
+                <button onClick={() => setEditingId(editingId === m.id ? null : m.id)}
+                  aria-label={t('pp.batch.modelEdit')} title={t('pp.batch.modelEdit')}
+                  className="px-1.5 border-l border-current/30 hover:text-white transition-colors"><Pencil size={11} /></button>
+              </span>
+            ))}
+            <button onClick={() => {
+                const id = newModelId()
+                setBatchModels([...models, { id, name: t('pp.batch.modelDefaultName', { n: models.length + 1 }), unit: '', intercept: 0, weights: {}, on: true }])
+                setEditingId(id)
+              }}
+              disabled={busy || models.length >= 20}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs rounded border border-dashed border-border text-muted hover:text-white transition-colors disabled:opacity-40">
+              <Plus size={12} /> {t('pp.batch.modelNew')}
+            </button>
+          </div>
+          {editingId && models.find(m => m.id === editingId) && (() => {
+            const m = models.find(x => x.id === editingId)!
+            return (
+              <ModelEditor
+                model={m}
+                labelOf={k => BATCH_METRICS.find(x => x.key === k)?.label ?? k}
+                shortOf={k => BATCH_METRICS.find(x => x.key === k)?.short ?? k}
+                onChange={patch => setBatchModels(models.map(x => x.id === m.id ? { ...x, ...patch } : x))}
+                onDelete={() => { setBatchModels(models.filter(x => x.id !== m.id)); setEditingId(null) }}
+                onClose={() => setEditingId(null)}
+              />
+            )
+          })()}
+
           {withSection.length > 0 && (
             <p className="text-[11px] text-muted">
               {t('pp.batch.usingSectionPre')} <span className="text-teal">{t(withSection.length > 1 ? 'pp.batch.fileMany' : 'pp.batch.fileOne', { n: withSection.length })}</span>
@@ -474,14 +499,14 @@ export default function BatchPanel() {
                     {displayKeys.map(k => (
                       <th key={k} className={clsx(
                         'text-right px-3 py-2.5 font-semibold border-b border-l border-border whitespace-nowrap',
-                        k.startsWith('annoyance') ? 'text-amber-400/80'
+                        k.startsWith('annoyance') || isModelKey(k) ? 'text-amber-400/80'
                         : failedKeys.includes(k) ? 'text-muted/70' : 'text-muted'
                       )}>
                         {keyLabel(k)}
                         <span className="flex justify-end gap-1 mt-1">
-                          <LimitInput value={limits[k]?.min ?? null} onChange={v => setBatchLimit(k, { min: v })}
+                          <NumberInput value={limits[k]?.min ?? null} onChange={v => setBatchLimit(k, { min: v })}
                             placeholder={t('pp.batch.limitMin')} title={t('pp.batch.limitMinTitle')} />
-                          <LimitInput value={limits[k]?.max ?? null} onChange={v => setBatchLimit(k, { max: v })}
+                          <NumberInput value={limits[k]?.max ?? null} onChange={v => setBatchLimit(k, { max: v })}
                             placeholder={t('pp.batch.limitMax')} title={t('pp.batch.limitMaxTitle')} />
                         </span>
                       </th>
@@ -507,7 +532,7 @@ export default function BatchPanel() {
                           <td key={k} className={clsx(
                             'px-3 py-2 text-right font-mono tabular-nums border-b border-l border-border/50',
                             v === 'fail' ? 'bg-red-500/15 text-red-300' : v === 'pass' ? 'bg-teal/10' : '',
-                            v !== 'fail' && (k.startsWith('annoyance') ? 'text-amber-400' : 'text-teal')
+                            v !== 'fail' && (k.startsWith('annoyance') || isModelKey(k) ? 'text-amber-400' : 'text-teal')
                           )}>
                             {v === 'pass' && <span className="mr-1 text-teal" aria-label={t('pp.batch.pass')}>✓</span>}
                             {v === 'fail' && <span className="mr-1" aria-label={t('pp.batch.fail')}>✗</span>}

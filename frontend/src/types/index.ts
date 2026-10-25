@@ -156,3 +156,13 @@ export interface BatchLimit {
   min: number | null
   max: number | null
 }
+
+/** A user-defined index for the batch: intercept + Σ weight · global value of each metric. */
+export interface BatchModel {
+  id: string
+  name: string
+  unit: string
+  intercept: number
+  weights: Partial<Record<MetricKey, number>>
+  on: boolean
+}

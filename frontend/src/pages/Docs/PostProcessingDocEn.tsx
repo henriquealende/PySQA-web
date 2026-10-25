@@ -552,13 +552,31 @@ export default function PostProcessingDocEn() {
             The limits are also part of the saved setup (see the next section).
           </P>
         </Section>
+
+        <Section id="l-modelos" title="Own models (weighted index)" level={3}>
+          <P>
+            Besides SIL and ZWK, you can build your own index under <K>Own models</K> &gt; <K>New model</K>. The model is <strong>linear</strong>: the result is a
+            <strong> constant</strong> plus the sum of <strong>weight × global value</strong> of each batch metric. Give it a name and, if you like, a unit; type the constant and
+            the weights (leave blank or 0 the metrics that do not take part). The formula is written under the fields so you can check it. <K>Start from SIL</K> fills the fields with the SIL
+            equation (equation 4), a good starting point to adjust with your own data.
+          </P>
+          <P>
+            The model becomes an amber column in the table, like the annoyance models. Only metrics with a non-zero weight are calculated, and they are added to the batch automatically. If one
+            of them has no value for a file, that file's result is left empty rather than a partial number. The column accepts <strong>pass/fail limits</strong> like the others,
+            goes into the XLSX and the model is saved in the setup file. You can have up to 20 models; the name button switches the model on and off in the table and the pencil opens the editor.
+          </P>
+          <Callout kind="warn" title="The weights are yours">
+            PySQA does the arithmetic but <strong>does not validate the coefficients</strong>: an index is only valid for the kind of sound and the group of listeners it was fitted to.
+            Describe the model (the equation and where the weights come from) in the method of your study.
+          </Callout>
+        </Section>
       </Section>
 
       <Section id="configuracao" title="Saving and loading the setup">
         <P>
           To repeat an analysis with the same settings, use <K>Save</K> under <K>Analysis setup</K>, in the left column. PySQA downloads a
           <K>.json</K> file with the view and metric chosen, the field type, the tonality precision, the options of the spectrogram, the envelope and the 1/3-octave weighting, the
-          batch metrics and annoyance models, the pass/fail limits and, <strong>for each file, the calibration (mV/Pa) and the selected section</strong>.
+          batch metrics and annoyance models, the pass/fail limits, the own models and, <strong>for each file, the calibration (mV/Pa) and the selected section</strong>.
           <K>Load</K> reads that file back and applies everything.
         </P>
         <UL>

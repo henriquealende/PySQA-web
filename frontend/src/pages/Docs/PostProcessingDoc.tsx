@@ -552,13 +552,31 @@ export default function PostProcessingDoc() {
             Os limites também entram na configuração salva (veja a próxima seção).
           </P>
         </Section>
+
+        <Section id="l-modelos" title="Modelos próprios (índice com pesos)" level={3}>
+          <P>
+            Além do SIL e do ZWK, você pode montar o seu índice em <K>Modelos próprios</K> &gt; <K>Novo modelo</K>. O modelo é <strong>linear</strong>: o resultado é uma
+            <strong> constante</strong> mais a soma de <strong>peso × valor global</strong> de cada métrica do lote. Dê um nome e, se quiser, uma unidade; escreva a constante e
+            os pesos (deixe em branco ou 0 as métricas que não entram). A fórmula aparece escrita sob os campos, para conferir. <K>Partir do SIL</K> preenche os campos com a equação
+            do SIL (equação 4), um bom ponto de partida para ajustar com os seus próprios dados.
+          </P>
+          <P>
+            O modelo vira uma coluna âmbar na tabela, como os modelos de incômodo. Só as métricas com peso diferente de zero são calculadas, e elas são adicionadas ao lote sozinhas. Se uma
+            delas não tiver valor para um arquivo, o resultado desse arquivo fica vazio, em vez de um número parcial. A coluna aceita <strong>limites de aprovação</strong> como as demais,
+            sai no XLSX e o modelo vai no arquivo de configuração. Pode-se ter até 20 modelos; o botão do nome liga e desliga o modelo na tabela e o lápis abre a edição.
+          </P>
+          <Callout kind="warn" title="Os pesos são seus">
+            O PySQA calcula a conta, mas <strong>não valida os coeficientes</strong>: um índice só vale para o tipo de som e o grupo de ouvintes com que foi ajustado.
+            Descreva o modelo (a equação e a origem dos pesos) no método do seu estudo.
+          </Callout>
+        </Section>
       </Section>
 
       <Section id="configuracao" title="Salvar e carregar a configuração">
         <P>
           Para repetir uma análise com os mesmos ajustes, use <K>Salvar</K> em <K>Configuração da análise</K>, na coluna da esquerda. O PySQA baixa um arquivo
           <K>.json</K> com a vista e a métrica escolhidas, o tipo de campo, a precisão da tonalidade, as opções do espectrograma, do envelope e da ponderação de 1/3 de oitava, as
-          métricas e os modelos de incômodo do lote, os limites de aprovação e, <strong>para cada arquivo, a calibração (mV/Pa) e o trecho selecionado</strong>.
+          métricas e os modelos de incômodo do lote, os limites de aprovação, os modelos próprios e, <strong>para cada arquivo, a calibração (mV/Pa) e o trecho selecionado</strong>.
           <K>Carregar</K> lê esse arquivo de volta e aplica tudo.
         </P>
         <UL>

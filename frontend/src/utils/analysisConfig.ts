@@ -1,4 +1,4 @@
-import type { BatchLimit, EnvelopeParams, FieldType, MetricKey, Section, SpectrogramParams, TonalityPrecision, ViewMode } from '../types'
+import type { BatchLimit, BatchModel, EnvelopeParams, FieldType, MetricKey, Section, SpectrogramParams, TonalityPrecision, ViewMode } from '../types'
 
 /**
  * The analysis set-up written to a .json file so it can be repeated later: view, metric, field type, spectrogram and envelope
@@ -31,6 +31,7 @@ export interface AnalysisConfig {
     metrics: MetricKey[]
     annoyance: string[]
     limits: Record<string, BatchLimit>
+    models: BatchModel[]
   }
   files: FileSetup[]
 }
@@ -54,7 +55,7 @@ const oneOf = <T extends string>(v: unknown, list: readonly T[], fallback: T): T
 export function buildConfig(s: {
   viewMode: ViewMode; metricKey: MetricKey; fieldType: FieldType; precision: TonalityPrecision; octaveWeighting: string
   spectrogramParams: SpectrogramParams; envelopeParams: EnvelopeParams
-  batchMetrics: MetricKey[]; batchAnnoyance: string[]; batchLimits: Record<string, BatchLimit>
+  batchMetrics: MetricKey[]; batchAnnoyance: string[]; batchLimits: Record<string, BatchLimit>; batchModels: BatchModel[]
   files: { audio_id: string; name: string }[]
   calibrations: Record<string, number | null>; sections: Record<string, Section | undefined>
 }): AnalysisConfig {
@@ -66,7 +67,7 @@ export function buildConfig(s: {
       viewMode: s.viewMode, metricKey: s.metricKey, fieldType: s.fieldType, precision: s.precision,
       octaveWeighting: s.octaveWeighting, spectrogram: s.spectrogramParams, envelope: s.envelopeParams,
     },
-    batch: { metrics: s.batchMetrics, annoyance: s.batchAnnoyance, limits: s.batchLimits },
+    batch: { metrics: s.batchMetrics, annoyance: s.batchAnnoyance, limits: s.batchLimits, models: s.batchModels },
     files: s.files.map(f => ({
       name: f.name,
       calibration_mv_pa: s.calibrations[f.audio_id] ?? null,
@@ -114,6 +115,19 @@ export function parseConfig(text: string, current: { spectrogram: SpectrogramPar
     }
   }
 
+  const models: BatchModel[] = []
+  if (Array.isArray(b.models)) {
+    for (const m of b.models.slice(0, 20)) {
+      if (!isObj(m) || typeof m.id !== 'string' || !m.id || typeof m.name !== 'string') continue
+      const weights: BatchModel['weights'] = {}
+      if (isObj(m.weights)) for (const [k, w] of Object.entries(m.weights)) if (METRICS.includes(k as MetricKey) && k !== 'none' && num(w) != null && w !== 0) weights[k as MetricKey] = w as number
+      models.push({
+        id: m.id.slice(0, 16), name: m.name.slice(0, 40), unit: typeof m.unit === 'string' ? m.unit.slice(0, 16) : '',
+        intercept: num(m.intercept) ?? 0, weights, on: m.on !== false,
+      })
+    }
+  }
+
   const files: FileSetup[] = []
   if (Array.isArray(raw.files)) {
     for (const f of raw.files) {
@@ -142,6 +156,7 @@ export function parseConfig(text: string, current: { spectrogram: SpectrogramPar
       metrics: Array.isArray(b.metrics) ? b.metrics.filter((k: unknown): k is MetricKey => METRICS.includes(k as MetricKey) && k !== 'none') : [],
       annoyance: Array.isArray(b.annoyance) ? b.annoyance.filter((k: unknown): k is string => ANNOYANCE.includes(k as string)) : [],
       limits,
+      models,
     },
     files,
   }
