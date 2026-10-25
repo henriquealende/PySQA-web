@@ -44,7 +44,7 @@ export default function AudioList({ files, selectedId, onSelect, onRemove, onEdi
               {f.name.replace(/\.wav$/i, '')}
             </span>
             {/* Meta */}
-            <span className="text-[11px] text-muted mt-0.5">
+            <span className="text-xs text-muted mt-0.5">
               {fmt(f.duration_s)} · {f.sample_rate / 1000} kHz · {f.channels === 1 ? 'Mono' : t('pp.list.stereo')}
             </span>
 

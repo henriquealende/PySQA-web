@@ -1715,7 +1715,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       </section>
 
       {/* ── Settings column ── */}
-      <aside className="order-2 lg:order-1 shrink-0 lg:w-80 lg:border-r border-border p-3 lg:overflow-y-auto flex flex-col">
+      <aside className="order-2 lg:order-1 shrink-0 lg:w-80 lg:border-r border-border p-4 lg:overflow-y-auto flex flex-col">
         <div className="hidden lg:flex items-center gap-2 px-1 pb-3">
           <Mic size={18} className="text-teal" />
           <h1 className="text-base font-semibold">{t('rec.title')}</h1>
@@ -1725,14 +1725,14 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         <button type="button" onClick={() => setSettingsOpen(o => !o)} aria-expanded={settingsOpen}
           className="flex w-full items-center gap-2 px-4 py-2.5 text-left lg:px-1 lg:pt-0 lg:pointer-events-none">
           <ChevronRight size={14} className={`shrink-0 text-muted transition-transform lg:hidden ${settingsOpen ? 'rotate-90' : ''}`}/>
-          <span className="text-xs font-semibold text-muted uppercase tracking-wider shrink-0">{t('rec.settings.title')}</span>
+          <span className="text-xs font-semibold text-muted shrink-0">{t('rec.settings.title')}</span>
           <span className="text-xs text-muted truncate lg:hidden">
             {(sampleRate/1000).toFixed(1)} kHz · {channels===1?t('rec.settings.mono'):t('rec.settings.stereoMono')} · {t('rec.list.bits', { n: bitDepth })} · {captureMode==='immediate'?t('rec.settings.immediate'):t('rec.settings.levelTrigger')}{durMode==='fixed'?` · ${durSeconds} s`:''}{avgEnabled?` · ${t('rec.settings.avgSummary', { n: avgTotal })}`:''}
           </span>
         </button>
-      <div className={`px-4 pb-4 lg:px-1 flex-col gap-3 ${settingsOpen ? 'flex' : 'hidden'} lg:flex`}>
+      <div className={`px-4 pb-4 lg:px-1 flex-col gap-4 ${settingsOpen ? 'flex' : 'hidden'} lg:flex`}>
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted uppercase tracking-wider">{t('rec.settings.inputDevice')}</span>
+          <span className="text-xs font-semibold text-muted">{t('rec.settings.inputDevice')}</span>
           <button onClick={refreshDevices} className="flex items-center gap-1 text-xs text-muted hover:text-white transition-colors">
             <RefreshCw size={11}/> {t('rec.settings.refresh')}
           </button>
@@ -1809,7 +1809,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         {/* Trigger settings */}
         {captureMode==='triggered' && (
           <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">{t('rec.settings.trigger')}</span>
+            <span className="text-xs font-semibold text-muted">{t('rec.settings.trigger')}</span>
             <div className="flex gap-3 flex-wrap">
               <div className="flex flex-col gap-1 flex-1 min-w-32">
                 <label htmlFor="da-thresh" className="text-xs text-muted">{t('rec.settings.threshold')} <span className="text-amber">{trigThresh} dBFS</span></label>
@@ -1845,7 +1845,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
             <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
               <input type="checkbox" checked={avgEnabled} onChange={e=>setAvgEnabled(e.target.checked)} disabled={isActive}
                 className="accent-teal w-3 h-3"/>
-              <span className="text-muted font-semibold uppercase tracking-wider">{t('rec.settings.averaging')}</span>
+              <span className="text-muted font-semibold">{t('rec.settings.averaging')}</span>
             </label>
             {avgEnabled && avgCount > 0 && (
               <span className="ml-auto text-xs font-semibold text-teal">
@@ -1878,7 +1878,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
 
         {/* Microphone calibration */}
         <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded">
-          <span className="text-xs font-semibold text-muted uppercase tracking-wider">{t('rec.cal.title')}</span>
+          <span className="text-xs font-semibold text-muted">{t('rec.cal.title')}</span>
           {cal ? (
             <div className="flex items-center gap-2 flex-wrap text-xs">
               <CheckCircle size={13} className="text-teal shrink-0"/>
@@ -1905,7 +1905,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
 
         {/* Signal protection */}
         <div className="flex flex-col gap-2 p-3 bg-panel/50 rounded">
-          <span className="text-xs font-semibold text-muted uppercase tracking-wider">{t('rec.protect.title')}</span>
+          <span className="text-xs font-semibold text-muted">{t('rec.protect.title')}</span>
           <div className="flex gap-4 flex-wrap">
             <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
               <input type="checkbox" checked={overloadOn} onChange={e=>setOverloadOn(e.target.checked)} disabled={isRecording}

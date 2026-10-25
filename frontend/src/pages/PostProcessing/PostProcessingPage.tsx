@@ -192,7 +192,7 @@ export default function PostProcessingPage() {
                   <div className="flex items-center gap-1.5 text-[11px]">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#60a5fa' }} />
                     <span className="text-muted truncate">{files.find(f => f.audio_id === compareId)?.name.replace(/\.wav$/i,'')}</span>
-                    <button onClick={() => setCompareId(null)} className="ml-auto text-muted hover:text-red-400 transition-colors">✕</button>
+                    <button onClick={() => setCompareId(null)} aria-label={t('pp.page.clear')} className="ml-auto px-1 text-muted hover:text-red-400 transition-colors">✕</button>
                   </div>
                 )}
               </div>

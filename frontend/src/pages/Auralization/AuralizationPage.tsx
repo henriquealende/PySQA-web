@@ -196,18 +196,18 @@ export default function AuralizationPage() {
 
   return (
     <div className="flex flex-1 overflow-hidden flex-col sm:flex-row">
-      <aside className="flex flex-col gap-3 p-3 border-b sm:border-b-0 sm:border-r border-border overflow-y-auto shrink-0 sm:w-64 lg:w-80">
+      <aside className="flex flex-col gap-5 p-4 border-b sm:border-b-0 sm:border-r border-border overflow-y-auto shrink-0 sm:w-64 lg:w-80">
         <div className="flex items-center gap-2 px-1 pb-1">
           <Headphones size={18} className="text-teal" aria-hidden="true" />
           <h1 className="text-base font-semibold">{t('aur.page.title')}</h1>
         </div>
-        <p className="text-[11px] text-muted px-1">{t('aur.page.intro')}</p>
+        <p className="text-xs text-muted px-1">{t('aur.page.intro')}</p>
         <FileDropzone onFiles={handleFiles} disabled={uploading} highlight={files.length === 0 && !uploading} />
         {uploading && <p className="text-[11px] text-teal text-center animate-pulse">{t('pp.page.uploading')}</p>}
         {uploadError && <p className="text-[11px] text-red-400 text-center">{uploadError}</p>}
         {files.length > 0 && (
           <div className="space-y-1">
-            <p className="text-[11px] text-muted uppercase tracking-wider">{t('aur.source.pick')}</p>
+            <p className="text-xs font-semibold text-muted">{t('aur.source.pick')}</p>
             <ul className="flex flex-col gap-1" role="radiogroup" aria-label={t('aur.source.pick')}>
               {files.map((f) => (
                 <li key={f.audio_id}>

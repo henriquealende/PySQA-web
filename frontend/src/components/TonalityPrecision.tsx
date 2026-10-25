@@ -37,16 +37,16 @@ export default function TonalityPrecisionSelect({ compact = false, disabled = fa
   if (compact) {
     return (
       <div className="flex items-center gap-1" role="group" aria-label={t('pp.page.tonalityPrecision')}>
-        <span className="text-[11px] text-muted">{t('pp.batch.tonality')}</span>
+        <span className="text-xs text-muted">{t('pp.batch.tonality')}</span>
         {buttons}
       </div>
     )
   }
   return (
     <div className="border-t border-border pt-3 space-y-2">
-      <p className="text-[11px] text-muted uppercase tracking-wider">{t('pp.page.tonalityPrecision')}</p>
+      <p className="text-xs font-semibold text-muted">{t('pp.page.tonalityPrecision')}</p>
       <div className="flex gap-1" role="group" aria-label={t('pp.page.tonalityPrecision')}>{buttons}</div>
-      <p className="text-[11px] text-muted leading-snug">{t('pp.page.precisionHint')}</p>
+      <p className="text-xs text-muted leading-snug">{t('pp.page.precisionHint')}</p>
     </div>
   )
 }

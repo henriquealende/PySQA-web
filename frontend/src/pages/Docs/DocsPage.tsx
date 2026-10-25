@@ -96,14 +96,14 @@ export default function DocsPage() {
       <h1 className="sr-only">{t('docs.title')}</h1>
 
       {/* ── Left column: pages and table of contents ── */}
-      <aside className="shrink-0 lg:w-80 lg:border-r border-border p-3 flex flex-col gap-4 lg:overflow-y-auto" aria-label={t('docs.indexLabel')}>
+      <aside className="shrink-0 lg:w-80 lg:border-r border-border p-4 flex flex-col gap-5 lg:overflow-y-auto" aria-label={t('docs.indexLabel')}>
         <div className="flex items-center gap-2 px-1">
           <BookOpen size={18} className="text-teal" aria-hidden="true" />
           <span className="text-base font-semibold">{t('nav.docs')}</span>
         </div>
 
         <nav aria-label={t('docs.pagesLabel')} className="flex flex-col gap-1">
-          <p className="text-[11px] text-muted uppercase tracking-wider px-1">{t('nav.pages')}</p>
+          <p className="text-xs font-semibold text-muted px-1">{t('nav.pages')}</p>
           {PAGES.map((p) => (
             <Link key={p.key} to={`/docs/${p.key}`} aria-current={p.key === page ? 'page' : undefined}
               className={clsx('flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors',
@@ -122,7 +122,7 @@ export default function DocsPage() {
               <nav aria-label={t('docs.onThisPage')} className="flex flex-col gap-0.5 p-1">{tocLinks}</nav>
             </details>
             <nav aria-label={t('docs.onThisPage')} className="hidden lg:flex flex-col gap-0.5">
-              <p className="text-[11px] text-muted uppercase tracking-wider px-1 mb-1">{t('docs.onThisPage')}</p>
+              <p className="text-xs font-semibold text-muted px-1 mb-1">{t('docs.onThisPage')}</p>
               {tocLinks}
             </nav>
           </>

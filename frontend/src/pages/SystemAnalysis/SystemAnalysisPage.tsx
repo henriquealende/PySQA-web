@@ -29,11 +29,11 @@ const RESP_LABEL: Record<RespType, string> = {
 
 const sel = 'w-full bg-panel border border-field rounded px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal disabled:opacity-50'
 const num = 'w-full bg-panel border border-field rounded px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal'
-const lab = 'text-[11px] text-muted uppercase tracking-wider'
+const lab = 'text-xs font-semibold text-muted'
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="border-t border-border pt-3 flex flex-col gap-2">
+    <div className="border-t border-border pt-5 flex flex-col gap-3">
       <p className={lab}>{title}</p>
       {children}
     </div>
@@ -133,7 +133,7 @@ export default function SystemAnalysisPage() {
     <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden text-white">
 
       {/* ── Settings column ── */}
-      <aside className="shrink-0 lg:w-80 lg:border-r border-border p-3 flex flex-col gap-3 lg:overflow-y-auto">
+      <aside className="shrink-0 lg:w-80 lg:border-r border-border p-4 flex flex-col gap-5 lg:overflow-y-auto">
         <div className="flex items-center gap-2 px-1 pb-1">
           <BarChart2 size={18} className="text-teal" aria-hidden="true" />
           <h1 className="text-base font-semibold">{t('sa.page.title')}</h1>

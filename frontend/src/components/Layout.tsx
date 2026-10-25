@@ -8,7 +8,7 @@ import Logo from './Logo'
 import LanguageSwitch from './LanguageSwitch'
 import { useT } from '../i18n'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Activity, Mic, BarChart2, BookOpen, Headphones, Menu, X } from 'lucide-react'
+import { Activity, Mic, BarChart2, BookOpen, Headphones, Menu, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import clsx from 'clsx'
 
 // AGPL-3.0 section 13: whoever uses the hosted service must be able to get the source of what runs.
@@ -35,8 +35,15 @@ function DaqDot({ state, className }: { state: DaqState; className?: string }) {
   )
 }
 
-/** One entry of the side navigation. Wide screens: icon + name. Medium screens: icon only (name as tooltip). */
-function SideItem({ to, label, Icon, daqState, alwaysWide }: { to: string; label: string; Icon: typeof Mic; daqState?: DaqState; alwaysWide?: boolean }) {
+const NAV_KEY = 'pysqa.nav.wide'
+/** Expanded or collapsed: what the user chose last time, otherwise expanded on wide screens only. */
+function initialWide() {
+  try { const v = localStorage.getItem(NAV_KEY); if (v === '1' || v === '0') return v === '1' } catch { /* storage blocked */ }
+  return window.innerWidth >= 1280
+}
+
+/** One entry of the side navigation. Expanded: icon + name. Collapsed: icon only (name as tooltip). */
+function SideItem({ to, label, Icon, daqState, wide }: { to: string; label: string; Icon: typeof Mic; daqState?: DaqState; wide: boolean }) {
   const t = useT()
   return (
     <NavLink
@@ -47,14 +54,14 @@ function SideItem({ to, label, Icon, daqState, alwaysWide }: { to: string; label
         clsx(
           'relative flex items-center gap-3 h-11 px-3 rounded-lg text-sm font-medium transition-colors',
           'focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal',
-          alwaysWide ? 'justify-start' : 'justify-center xl:justify-start',
+          wide ? 'justify-start' : 'justify-center',
           isActive ? 'bg-teal/15 text-teal' : 'text-muted hover:bg-panel hover:text-white'
         )
       }
     >
       <Icon size={19} className="shrink-0" aria-hidden="true" />
-      <span className={clsx('truncate', !alwaysWide && 'hidden xl:inline')}>{t(label)}</span>
-      {daqState && <DaqDot state={daqState} className={alwaysWide ? 'ml-auto' : 'absolute top-2 right-2 xl:static xl:ml-auto'} />}
+      {wide && <span className="truncate">{t(label)}</span>}
+      {daqState && <DaqDot state={daqState} className={wide ? 'ml-auto' : 'absolute top-2 right-2'} />}
     </NavLink>
   )
 }
@@ -62,6 +69,8 @@ function SideItem({ to, label, Icon, daqState, alwaysWide }: { to: string; label
 export default function Layout() {
   const t = useT()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [wide, setWide] = useState(initialWide)
+  const toggleWide = () => setWide((w) => { try { localStorage.setItem(NAV_KEY, w ? '0' : '1') } catch { /* storage blocked */ } return !w })
   const daqState = useStore((s) => s.daqState)
   const serverWaking = useStore((s) => s.serverWaking)
   const frfBusy = useFrfStore((s) => s.busy)
@@ -81,31 +90,48 @@ export default function Layout() {
   return (
     <div className="flex h-screen overflow-hidden bg-dark">
       {/* ── Side navigation (tablet and desktop) ─────────────────────── */}
-      <aside className="hidden sm:flex flex-col shrink-0 w-[4.5rem] xl:w-60 bg-surface border-r border-border">
+      <aside className={clsx('hidden sm:flex flex-col shrink-0 bg-surface border-r border-border', wide ? 'w-60' : 'w-[4.5rem]')}>
         {/* Brand: the cube is the biggest thing here on purpose */}
         <Link
           to="/"
           aria-label={t('nav.home')}
-          className="flex flex-col items-center xl:items-start gap-3 px-3 xl:px-5 pt-6 pb-5 border-b border-border"
+          className="flex flex-col items-center gap-3 px-3 pt-6 pb-5 border-b border-border"
         >
-          <Logo state={logoState} className="h-12 w-12 xl:h-20 xl:w-20 shrink-0" />
-          <span className="hidden xl:flex flex-col gap-1" aria-hidden="true">
-            <span className="font-bold text-teal tracking-wide text-2xl leading-none">PySQA</span>
-            <span className="text-xs text-muted leading-snug">{t('nav.tagline')}</span>
-          </span>
+          <Logo state={logoState} className={clsx('shrink-0', wide ? 'h-16 w-16' : 'h-12 w-12')} />
+          {wide && (
+            <span className="flex flex-col items-center gap-1.5 text-center" aria-hidden="true">
+              <span className="font-semibold text-slate-200 uppercase tracking-[0.14em] pl-[0.14em] text-xl leading-none">PySQA</span>
+              <span className="text-xs text-muted leading-snug">{t('nav.tagline')}</span>
+            </span>
+          )}
         </Link>
 
         <nav className="flex flex-col gap-1.5 px-3 py-5" aria-label={t('nav.pages')}>
           {NAV.map(({ to, label, Icon }) => (
-            <SideItem key={to} to={to} label={label} Icon={Icon} daqState={to === '/data-acquisition' ? daqState : undefined} />
+            <SideItem key={to} to={to} label={label} Icon={Icon} wide={wide} daqState={to === '/data-acquisition' ? daqState : undefined} />
           ))}
         </nav>
 
         <div className="flex-1" />
 
         <div className="flex flex-col gap-3 px-3 py-4 border-t border-border">
-          <SideItem to="/docs" label="nav.docs" Icon={BookOpen} />
-          <LanguageSwitch className="self-center xl:self-stretch [&>button]:flex-1 [&>button]:px-2" />
+          <SideItem to="/docs" label="nav.docs" Icon={BookOpen} wide={wide} />
+          <LanguageSwitch className={clsx('[&>button]:flex-1 [&>button]:px-2', wide ? 'self-stretch' : 'self-center')} />
+          <button
+            type="button"
+            onClick={toggleWide}
+            aria-expanded={wide}
+            title={t(wide ? 'nav.collapse' : 'nav.expand')}
+            aria-label={t(wide ? 'nav.collapse' : 'nav.expand')}
+            className={clsx(
+              'flex items-center gap-3 h-11 px-3 rounded-lg text-sm font-medium text-muted transition-colors hover:bg-panel hover:text-white',
+              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal',
+              wide ? 'justify-start' : 'justify-center'
+            )}
+          >
+            {wide ? <PanelLeftClose size={19} className="shrink-0" aria-hidden="true" /> : <PanelLeftOpen size={19} className="shrink-0" aria-hidden="true" />}
+            {wide && <span className="truncate">{t('nav.collapse')}</span>}
+          </button>
         </div>
       </aside>
 
@@ -130,9 +156,9 @@ export default function Layout() {
         {menuOpen && (
           <div className="sm:hidden bg-surface border-b border-border px-3 py-3 flex flex-col gap-1.5 shrink-0 z-40" onClick={() => setMenuOpen(false)}>
             {NAV.map(({ to, label, Icon }) => (
-              <SideItem key={to} to={to} label={label} Icon={Icon} alwaysWide daqState={to === '/data-acquisition' ? daqState : undefined} />
+              <SideItem key={to} to={to} label={label} Icon={Icon} wide daqState={to === '/data-acquisition' ? daqState : undefined} />
             ))}
-            <SideItem to="/docs" label="nav.docs" Icon={BookOpen} alwaysWide />
+            <SideItem to="/docs" label="nav.docs" Icon={BookOpen} wide />
             <div onClick={(e) => e.stopPropagation()} className="self-start mt-2">
               <LanguageSwitch />
             </div>
