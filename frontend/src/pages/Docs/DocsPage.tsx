@@ -84,6 +84,15 @@ export default function DocsPage() {
     </a>
   ))
 
+  const pageLinks = PAGES.map((p) => (
+    <Link key={p.key} to={`/docs/${p.key}`} aria-current={p.key === page ? 'page' : undefined}
+      className={clsx('flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors',
+        p.key === page ? 'bg-teal/15 border-teal/60 text-teal' : 'bg-panel border-field text-white hover:border-teal')}>
+      {t(p.label)}
+      {!p.ready && <span className="ml-auto text-[11px] text-muted font-normal">{t('docs.soon')}</span>}
+    </Link>
+  ))
+
   const en = lang === 'en'
   const body = page === 'sobre' ? <AboutDoc />
     : page === 'data-acquisition' ? (en ? <DataAcquisitionDocEn /> : <DataAcquisitionDoc />)
@@ -102,16 +111,14 @@ export default function DocsPage() {
           <span className="text-base font-semibold">{t('nav.docs')}</span>
         </div>
 
-        <nav aria-label={t('docs.pagesLabel')} className="flex flex-col gap-1">
+        {/* narrow screens: only the current page shows; the list opens on demand */}
+        <details className="lg:hidden rounded-md border border-field bg-panel">
+          <summary className="px-3 py-2 text-sm font-medium cursor-pointer select-none">{t('nav.pages')} · <span className="text-teal">{t(current.label)}</span></summary>
+          <nav aria-label={t('docs.pagesLabel')} className="flex flex-col gap-1 p-1">{pageLinks}</nav>
+        </details>
+        <nav aria-label={t('docs.pagesLabel')} className="hidden lg:flex flex-col gap-1">
           <p className="text-xs font-semibold text-muted px-1">{t('nav.pages')}</p>
-          {PAGES.map((p) => (
-            <Link key={p.key} to={`/docs/${p.key}`} aria-current={p.key === page ? 'page' : undefined}
-              className={clsx('flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors',
-                p.key === page ? 'bg-teal/15 border-teal/60 text-teal' : 'bg-panel border-field text-white hover:border-teal')}>
-              {t(p.label)}
-              {!p.ready && <span className="ml-auto text-[11px] text-muted font-normal">{t('docs.soon')}</span>}
-            </Link>
-          ))}
+          {pageLinks}
         </nav>
 
         {toc.length > 0 && (

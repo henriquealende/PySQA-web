@@ -9,6 +9,7 @@
  *            countdown visor, VU peak-hold, FFT average mode, silence stop (any mode)
  */
 
+import MobileFold from '../../components/MobileFold'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Mic, Square, Send, Trash2, RefreshCw, Play, Pause,
@@ -1701,7 +1702,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
       )}
 
       {/* Help */}
-      <div className="text-xs text-muted bg-surface border border-border rounded-lg p-3 leading-relaxed">
+      <MobileFold title={t('rec.help.title')} className="text-xs text-muted bg-surface border border-border rounded-lg px-3 pb-3 leading-relaxed">
         <strong className="text-white">{t('rec.help.workflow')}</strong> {t('rec.help.flow1')} <strong className="text-teal">{t('rec.transport.accept')}</strong> {t('rec.help.flow2')} <strong className="text-orange">{t('rec.transport.discard')}</strong> {t('rec.help.flow3')}
         {' '}{t('rec.help.badge1')} <span className="text-teal font-semibold">Worklet</span> {t('rec.help.badge2')}
         <br/><br/>
@@ -1710,7 +1711,7 @@ export default function RecordingPage({ active = true }: { active?: boolean }) {
         <strong className="text-white">{t('rec.help.trigger')}</strong> {t('rec.help.triggerText')}
         <br/><br/>
         <strong className="text-white">{t('rec.help.calibration')}</strong> {t('rec.help.calibrationText')}
-      </div>
+      </MobileFold>
         </div>
       </section>
 

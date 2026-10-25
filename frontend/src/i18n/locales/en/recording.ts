@@ -41,6 +41,7 @@ export default {
   'rec.list.no': 'No',
   'rec.list.delete': 'Delete',
   'rec.list.decoding': 'Decoding…',
+  'rec.help.title': 'How it works',
   'rec.help.workflow': 'Workflow:',
   'rec.help.flow1': 'Monitor → Record / Watch → Stop →',
   'rec.help.flow2': '(keeps) or',

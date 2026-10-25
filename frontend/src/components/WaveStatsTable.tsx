@@ -13,7 +13,7 @@ interface Row { name: string; color: string; stats: WaveStats }
 export default function WaveStatsTable({ rows, calibrated }: { rows: Row[]; calibrated: boolean }) {
   const t = useT()
   const locale = currentLocale()
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(() => window.matchMedia('(min-width: 640px)').matches)
   if (rows.length === 0) return null
 
   const th = 'px-2 py-1 text-right font-medium text-muted whitespace-nowrap'

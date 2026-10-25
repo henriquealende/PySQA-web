@@ -51,6 +51,8 @@ a:hover .pysqa-logo .logo-right { transform: translateX(4px); }
   }
   main input[type=checkbox], aside input[type=checkbox] { width: 20px; height: 20px; }
   main label:has(> input[type=checkbox]), aside label:has(> input[type=checkbox]) { min-height: 44px; }
+  main input[type=range], aside input[type=range] { min-height: 32px; }
+  footer a { display: inline-block; padding: 0.6rem 0.25rem; }
   .js-plotly-plot button, .js-plotly-plot a { min-height: 0; }
 }
 

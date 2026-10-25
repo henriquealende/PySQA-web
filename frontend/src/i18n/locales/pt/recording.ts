@@ -41,6 +41,7 @@ export default {
   'rec.list.no': 'Não',
   'rec.list.delete': 'Apagar',
   'rec.list.decoding': 'Decodificando…',
+  'rec.help.title': 'Como funciona',
   'rec.help.workflow': 'Fluxo:',
   'rec.help.flow1': 'Monitorar → Gravar / Aguardar → Parar →',
   'rec.help.flow2': '(guarda) ou',
