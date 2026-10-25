@@ -26,6 +26,8 @@ export default {
   'pp.page.calCleared': 'Calibration cleared',
   'pp.page.title': 'Post-Processing',
   'pp.page.uploading': 'Uploading…',
+  'pp.page.sectFiles': 'Files',
+  'pp.page.sectAnalysis': 'Analysis',
   'pp.page.metric': 'Metric',
   'pp.channels.notice': 'This file has two channels. Metrics use only the left channel (channel 1): computing both would double the processing time. The charts show left and right.',
   'pp.page.fieldType': 'Field Type',

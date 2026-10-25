@@ -70,8 +70,7 @@ export default function ConfigMenu() {
 
   const btn = 'flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs rounded bg-panel text-muted hover:text-white transition-colors disabled:opacity-40'
   return (
-    <div className="border-t border-border pt-5 space-y-3">
-      <p className="text-xs font-semibold text-muted">{t('pp.cfg.title')}</p>
+    <div className="space-y-3">
       <div className="flex gap-1">
         <button onClick={save} className={btn} title={t('pp.cfg.saveHelp')}>
           <Save size={13} aria-hidden="true" /> {t('pp.cfg.save')}

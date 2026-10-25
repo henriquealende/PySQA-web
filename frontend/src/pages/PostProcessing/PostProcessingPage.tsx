@@ -12,6 +12,7 @@ import ChannelNotice from '../../components/ChannelNotice'
 import TonalityPrecisionSelect from '../../components/TonalityPrecision'
 import BugReportButton from '../../components/BugReportButton'
 import ConfigMenu from '../../components/ConfigMenu'
+import SideSection from '../../components/SideSection'
 import AudioList from '../../components/AudioList'
 import MetricSelector from '../../components/MetricSelector'
 import AudioPlayer from '../../components/AudioPlayer'
@@ -124,122 +125,132 @@ export default function PostProcessingPage() {
         />
       )}
 
+      {files.length > 0 && (
       <aside className={clsx(
-        'flex flex-col gap-5 p-4 border-r border-border overflow-y-auto shrink-0 transition-transform',
+        'flex flex-col gap-3 p-4 border-r border-border overflow-y-auto shrink-0 transition-transform',
         'sm:relative sm:translate-x-0 sm:w-64 lg:w-80',
         'fixed top-0 left-0 h-full w-72 z-30 bg-surface sm:bg-transparent',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'
       )}>
-        <div className="flex items-center gap-2 px-1">
+        <div className="flex items-center gap-2 px-1 pb-1">
           <Activity size={18} className="text-teal" aria-hidden="true" />
           <h1 className="text-base font-semibold">{t('pp.page.title')}</h1>
         </div>
-        <FileDropzone onFiles={handleFiles} disabled={uploading} highlight={files.length === 0 && !uploading} />
-        {uploading    && <p className="text-[11px] text-teal text-center animate-pulse">{t('pp.page.uploading')}</p>}
-        {uploadError  && <p className="text-[11px] text-red-400 text-center">{uploadError}</p>}
 
-        <AudioList
-          files={files}
-          selectedId={selectedId}
-          onSelect={(id) => { selectFile(id); setSidebarOpen(false) }}
-          onRemove={handleRemove}
-          onEdit={(id) => setEditId(id)}
-        />
+        <SideSection id="files" title={t('pp.page.sectFiles')}>
+          <FileDropzone onFiles={handleFiles} disabled={uploading} highlight={false} />
+          {uploading    && <p className="text-[11px] text-teal text-center animate-pulse">{t('pp.page.uploading')}</p>}
+          {uploadError  && <p className="text-[11px] text-red-400 text-center">{uploadError}</p>}
+          <AudioList
+            files={files}
+            selectedId={selectedId}
+            onSelect={(id) => { selectFile(id); setSidebarOpen(false) }}
+            onRemove={handleRemove}
+            onEdit={(id) => setEditId(id)}
+          />
+        </SideSection>
 
-        {files.length > 0 && (
-          <>
-            <div className="border-t border-border pt-5 space-y-3">
-              <p className="text-xs font-semibold text-muted">{t('pp.page.metric')}</p>
-              <MetricSelector
-                value={metricKey}
-                onChange={(k) => { setMetricKey(k); if (k !== 'none') setViewMode('normal') }}
-                disabled={!selectedId}
-              />
-              {(selectedFile?.channels ?? 1) > 1 && metricKey !== 'none' && <ChannelNotice />}
-            </div>
+        <SideSection id="analysis" title={t('pp.page.sectAnalysis')}>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted">{t('pp.page.metric')}</p>
+            <MetricSelector
+              value={metricKey}
+              onChange={(k) => { setMetricKey(k); if (k !== 'none') setViewMode('normal') }}
+              disabled={!selectedId}
+            />
+            {(selectedFile?.channels ?? 1) > 1 && metricKey !== 'none' && <ChannelNotice />}
+          </div>
 
-            <div className="border-t border-border pt-5 space-y-3">
-              <p className="text-xs font-semibold text-muted">{t('pp.page.fieldType')}</p>
-              <div className="flex gap-1">
-                {(['free', 'diffuse'] as FieldType[]).map((ft) => (
-                  <button
-                    key={ft}
-                    onClick={() => setFieldType(ft)}
-                    className={`flex-1 py-1.5 text-xs rounded transition-colors ${fieldType === ft ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white'}`}
-                  >
-                    {ft === 'free' ? t('pp.page.freeField') : t('pp.page.diffuse')}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {metricKey === 'tonality_ecma' && <TonalityPrecisionSelect />}
-
-            {files.length > 1 && selectedId && !showBatch && (
-              <div className="border-t border-border pt-5 space-y-3">
-                <p className="text-xs font-semibold text-muted">{t('pp.page.compareWith')}</p>
-                <select
-                  value={compareId ?? ''}
-                  onChange={e => setCompareId(e.target.value || null)}
-                  className="w-full bg-panel border border-field rounded px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal"
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted">{t('pp.page.fieldType')}</p>
+            <div className="flex gap-1">
+              {(['free', 'diffuse'] as FieldType[]).map((ft) => (
+                <button
+                  key={ft}
+                  onClick={() => setFieldType(ft)}
+                  aria-pressed={fieldType === ft}
+                  className={`flex-1 py-1.5 text-xs rounded transition-colors ${fieldType === ft ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white'}`}
                 >
-                  <option value="">{t('pp.page.none')}</option>
-                  {files.filter(f => f.audio_id !== selectedId).map(f => (
-                    <option key={f.audio_id} value={f.audio_id}>
-                      {f.name.replace(/\.wav$/i, '')}
-                    </option>
-                  ))}
-                </select>
-                {compareId && (
-                  <div className="flex items-center gap-1.5 text-[11px]">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#60a5fa' }} />
-                    <span className="text-muted truncate">{files.find(f => f.audio_id === compareId)?.name.replace(/\.wav$/i,'')}</span>
-                    <button onClick={() => setCompareId(null)} aria-label={t('pp.page.clear')} className="ml-auto px-1 text-muted hover:text-red-400 transition-colors">✕</button>
-                  </div>
-                )}
+                  {ft === 'free' ? t('pp.page.freeField') : t('pp.page.diffuse')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {metricKey === 'tonality_ecma' && <TonalityPrecisionSelect />}
+
+          {files.length > 1 && selectedId && !showBatch && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted">{t('pp.page.compareWith')}</p>
+              <select
+                value={compareId ?? ''}
+                onChange={e => setCompareId(e.target.value || null)}
+                className="w-full bg-panel border border-field rounded px-2 py-1 text-xs text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal"
+              >
+                <option value="">{t('pp.page.none')}</option>
+                {files.filter(f => f.audio_id !== selectedId).map(f => (
+                  <option key={f.audio_id} value={f.audio_id}>
+                    {f.name.replace(/\.wav$/i, '')}
+                  </option>
+                ))}
+              </select>
+              {compareId && (
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: '#60a5fa' }} />
+                  <span className="text-muted truncate">{files.find(f => f.audio_id === compareId)?.name.replace(/\.wav$/i,'')}</span>
+                  <button onClick={() => setCompareId(null)} aria-label={t('pp.page.clear')} className="ml-auto px-1 text-muted hover:text-red-400 transition-colors">✕</button>
+                </div>
+              )}
+            </div>
+          )}
+        </SideSection>
+
+        {selectedId && (
+          <SideSection
+            id="calibration" title={t('pp.page.micCal')} defaultOpen={false}
+            summary={calibrations[selectedId] != null ? `${calibrations[selectedId]!.toFixed(1)} mV/Pa ✓` : undefined}
+          >
+            {calibrations[selectedId] != null ? (
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-teal flex-1">
+                  {calibrations[selectedId]!.toFixed(1)} mV/Pa ✓
+                </span>
+                <button
+                  onClick={handleClearCal}
+                  className="text-[11px] text-muted hover:text-red-400 transition-colors"
+                >{t('pp.page.clear')}</button>
+              </div>
+            ) : (
+              <div className="flex gap-1">
+                <input
+                  type="number"
+                  placeholder="mV/Pa"
+                  aria-label={t('pp.page.micCal')}
+                  value={calInput}
+                  onChange={e => { setCalInput(e.target.value); setCalError('') }}
+                  className="flex-1 w-0 min-w-0 bg-panel border border-field rounded px-2 py-0.5 text-xs text-white placeholder:text-muted/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal"
+                />
+                <button
+                  onClick={handleCalibrate}
+                  disabled={calBusy || !calInput}
+                  className="px-2 py-0.5 text-xs bg-teal text-dark rounded hover:bg-teal/80 disabled:opacity-40 transition-colors font-semibold"
+                >{t('pp.page.set')}</button>
               </div>
             )}
-
-            {selectedId && (
-              <div className="border-t border-border pt-5 space-y-3">
-                <p className="text-xs font-semibold text-muted">{t('pp.page.micCal')}</p>
-                {calibrations[selectedId] != null ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-teal flex-1">
-                      {calibrations[selectedId]!.toFixed(1)} mV/Pa ✓
-                    </span>
-                    <button
-                      onClick={handleClearCal}
-                      className="text-[11px] text-muted hover:text-red-400 transition-colors"
-                    >{t('pp.page.clear')}</button>
-                  </div>
-                ) : (
-                  <div className="flex gap-1">
-                    <input
-                      type="number"
-                      placeholder="mV/Pa"
-                      value={calInput}
-                      onChange={e => { setCalInput(e.target.value); setCalError('') }}
-                      className="flex-1 w-0 min-w-0 bg-panel border border-field rounded px-2 py-0.5 text-xs text-white placeholder:text-muted/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal"
-                    />
-                    <button
-                      onClick={handleCalibrate}
-                      disabled={calBusy || !calInput}
-                      className="px-2 py-0.5 text-xs bg-teal text-dark rounded hover:bg-teal/80 disabled:opacity-40 transition-colors font-semibold"
-                    >{t('pp.page.set')}</button>
-                  </div>
-                )}
-                {calError && <p className="text-[11px] text-red-400">{calError}</p>}
-              </div>
-            )}
-
-          </>
+            {calError && <p className="text-[11px] text-red-400">{calError}</p>}
+          </SideSection>
         )}
-        <ConfigMenu />
-        <BugReportButton />
+
+        <SideSection id="setup" title={t('pp.cfg.title')} defaultOpen={false}>
+          <ConfigMenu />
+        </SideSection>
+
+        <div className="mt-auto pt-2"><BugReportButton /></div>
       </aside>
+      )}
 
       <div className="flex flex-col flex-1 overflow-hidden">
+        {files.length > 0 && (
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0 flex-wrap">
           <button
             className="sm:hidden p-1.5 rounded text-muted hover:text-white hover:bg-panel transition-colors"
@@ -295,6 +306,7 @@ export default function PostProcessingPage() {
             </button>
           )}
         </div>
+        )}
 
         <div className="flex flex-col flex-1 overflow-hidden">
           {showBatch && files.length > 0
@@ -303,7 +315,7 @@ export default function PostProcessingPage() {
               <div className="flex flex-col flex-1 overflow-hidden p-2 gap-1">
                 <div className="flex-1 overflow-hidden">
                   {files.length === 0
-                    ? <ImportCallout onFiles={handleFiles} disabled={uploading} />
+                    ? <ImportCallout onFiles={handleFiles} disabled={uploading} hintLeft={false} />
                     : <Suspense fallback={<ChartFallback />}><PlotPanel /></Suspense>}
                 </div>
                 {selectedFile && (

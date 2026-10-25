@@ -74,7 +74,7 @@ export default function PostProcessingDocEn() {
           L = 20 · log₁₀( p<sub>rms</sub> / p<sub>0</sub> )
         </Eq>
         <P>
-          In the sidebar, <K>Mic Calibration</K> takes the sensitivity in mV/Pa. PySQA assumes 1 V at full scale and computes
+          In the sidebar, the <K>Mic Calibration</K> section (closed until you open it; it still shows the value applied) takes the sensitivity in mV/Pa. PySQA assumes 1 V at full scale and computes
           the pressure that corresponds to it:
         </P>
         <Eq n={2} where={<>Example: a 50 mV/Pa microphone gives 1000/50 = 20 Pa at full scale; a maximum-amplitude tone is then worth about 117 dB SPL (RMS).</>}>

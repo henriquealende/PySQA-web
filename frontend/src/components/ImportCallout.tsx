@@ -12,11 +12,13 @@ interface Props {
   what?: string
   /** File extensions accepted, lower case with the dot */
   extensions?: string[]
+  /** Show "or use the box in the left panel" (only when the page has such a box) */
+  hintLeft?: boolean
 }
 
 /** Large, centred "start here" call to action shown while a page has nothing loaded yet. */
 export default function ImportCallout({
-  onFiles, disabled, title, what, extensions = ['.wav'],
+  onFiles, disabled, title, what, extensions = ['.wav'], hintLeft = true,
 }: Props) {
   const t = useT()
   const titleText = title ?? t('pp.import.title')
@@ -53,9 +55,11 @@ export default function ImportCallout({
         <span className="text-muted text-xs">
           {t('pp.import.dropPre', { what: whatText })} <span className="text-teal">{t('pp.drop.browse')}</span>
         </span>
-        <span className="hidden lg:flex items-center gap-1 text-[11px] text-muted/80">
-          <ArrowLeft size={12} className="text-teal" /> {t('pp.import.leftPanel')}
-        </span>
+        {hintLeft && (
+          <span className="hidden lg:flex items-center gap-1 text-[11px] text-muted/80">
+            <ArrowLeft size={12} className="text-teal" /> {t('pp.import.leftPanel')}
+          </span>
+        )}
         <input
           type="file"
           accept={extensions.join(',')}

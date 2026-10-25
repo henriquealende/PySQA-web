@@ -26,6 +26,8 @@ export default {
   'pp.page.calCleared': 'Calibração removida',
   'pp.page.title': 'Pós-processamento',
   'pp.page.uploading': 'Enviando…',
+  'pp.page.sectFiles': 'Arquivos',
+  'pp.page.sectAnalysis': 'Análise',
   'pp.page.metric': 'Métrica',
   'pp.channels.notice': 'Este arquivo tem dois canais. As métricas usam só o canal esquerdo (canal 1): calcular os dois dobraria o tempo de processamento. Os gráficos mostram esquerdo e direito.',
   'pp.page.fieldType': 'Tipo de campo',

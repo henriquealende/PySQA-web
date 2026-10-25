@@ -74,7 +74,7 @@ export default function PostProcessingDoc() {
           L = 20 · log₁₀( p<sub>rms</sub> / p<sub>0</sub> )
         </Eq>
         <P>
-          Na barra lateral, <K>Calibração do microfone</K> recebe a sensibilidade em mV/Pa. O PySQA assume 1 V no fundo de escala e calcula
+          Na barra lateral, na seção <K>Calibração do microfone</K> (fechada até você abri-la; ela mostra o valor aplicado mesmo fechada), informe a sensibilidade em mV/Pa. O PySQA assume 1 V no fundo de escala e calcula
           a pressão que corresponde a ele:
         </P>
         <Eq n={2} where={<>Exemplo: um microfone de 50 mV/Pa dá 1000/50 = 20 Pa no fundo de escala; um tom de amplitude máxima vale então cerca de 117 dB SPL (RMS).</>}>
