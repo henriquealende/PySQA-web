@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Check, ChevronRight, Download, ExternalLink, Headphones, Trash2, Upload, Wand2 } from 'lucide-react'
+import { AlertTriangle, Check, ChevronDown, ChevronUp, Download, ExternalLink, Headphones, Trash2, Upload, Wand2 } from 'lucide-react'
 import clsx from 'clsx'
 import FileDropzone from '../../components/FileDropzone'
 import { useStore } from '../../store/useStore'
@@ -23,42 +23,45 @@ import ScenesBar from './ScenesBar'
 
 const STEPS: StepId[] = ['environment', 'hrtf', 'noise', 'headphone', 'level']
 
-/** The coloured strip on top of what stays on screen in every step: the source card, the step cards and the listen-and-create panel. */
-function FixedBar() {
-  return <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-teal to-sky-400" />
-}
-
 /** "Sennheiser HD600" from a library id such as lib:sbaf:cEAR32:Sennheiser-HD600 */
 const libName = (id: string) => id.split(':').slice(3).join(':').replace(/-/g, ' ')
 
-/**
- * A card of the chain. The source card is only a summary (the source is chosen in the left column); the others are tabs:
- * they show what was set and, when selected, open their settings below.
- */
-function StepCard({ n, title, children, configured, selected, step, onSelect }: {
-  n: number; title: string; children: React.ReactNode; configured?: boolean; selected?: boolean; step?: StepId; onSelect?: () => void
-}) {
+type Phase = 'on' | 'ok' | 'off'
+
+/** Where the user is: audio, scenario, listen and create. */
+function Stepper({ phases, sourceName }: { phases: [Phase, Phase, Phase]; sourceName?: string }) {
   const t = useT()
-  const base = 'relative overflow-hidden flex-1 min-w-[130px] rounded-lg border px-3 pb-2 pt-3 text-left'
-  const body = (
-    <>
-      <FixedBar />
-      <span className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted">
-        <span>{n} · {title}</span>
-        {configured && <><Check size={12} className="text-teal" aria-hidden="true" /><span className="sr-only">{t('aur.step.on')}</span></>}
-      </span>
-      <span className="block text-xs mt-1">{children}</span>
-    </>
+  const labels = [sourceName ? `${t('aur.guide.step1')}: ${sourceName}` : t('aur.guide.step1'), t('aur.guide.step2'), t('aur.guide.step3')]
+  return (
+    <ol className="flex items-center gap-2 flex-wrap text-xs" aria-label={t('aur.chain.title')}>
+      {labels.map((label, i) => (
+        <li key={i} className="flex items-center gap-2 min-w-0" aria-current={phases[i] === 'on' ? 'step' : undefined}>
+          {i > 0 && <span className="w-4 h-px bg-border shrink-0" aria-hidden="true" />}
+          <span className={clsx('flex items-center gap-2 rounded-full border px-3 py-1.5 min-w-0',
+            phases[i] === 'on' ? 'border-teal bg-teal/10 text-teal' : phases[i] === 'ok' ? 'border-border text-teal' : 'border-border text-muted')}>
+            <span className={clsx('w-[18px] h-[18px] rounded-full flex items-center justify-center text-[11px] font-medium shrink-0',
+              phases[i] === 'on' ? 'bg-teal text-dark' : phases[i] === 'ok' ? 'bg-teal/25 text-teal' : 'bg-panel')}>
+              {phases[i] === 'ok' ? <Check size={11} aria-hidden="true" /> : i + 1}
+            </span>
+            <span className="truncate">{label}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
   )
-  if (!onSelect || !step) return <div className={clsx(base, 'border-border bg-panel')}>{body}</div>
+}
+
+/** One tab of the fine adjustments. */
+function TabBtn({ step, label, configured, selected, onSelect }: { step: StepId; label: string; configured: boolean; selected: boolean; onSelect: () => void }) {
+  const t = useT()
   return (
     <button
       role="tab" id={`aur-tab-${step}`} aria-selected={selected} aria-controls="aur-panel" tabIndex={selected ? 0 : -1} onClick={onSelect}
-      className={clsx(base, 'transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal',
-        configured ? 'border-teal/60 bg-teal/10 hover:bg-teal/15' : 'border-border bg-panel hover:border-teal/40',
-        selected && 'ring-2 ring-teal')}
+      className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal',
+        selected ? 'bg-teal text-dark font-semibold' : 'bg-panel text-muted hover:text-white')}
     >
-      {body}
+      {label}
+      {configured && <><Check size={12} className={selected ? 'text-dark' : 'text-teal'} aria-hidden="true" /><span className="sr-only">{t('aur.step.on')}</span></>}
     </button>
   )
 }
@@ -70,7 +73,7 @@ export default function AuralizationPage() {
   const fmt = (n: number, d = 1) => n.toLocaleString(locale, { minimumFractionDigits: d, maximumFractionDigits: d })
   const navigate = useNavigate()
   const { sessionId, files, addFiles, selectFile, calibrations } = useStore()
-  const { step, setStep, sourceId, hrtf, env, noise, headphone, level, assets, lastRender, setSource, setHrtf, setEnv, setHeadphone, setAssets, setLastRender } = useAuralStore()
+  const { step, setStep, sourceId, scene, hrtf, env, noise, headphone, level, assets, lastRender, setSource, setHrtf, setEnv, setHeadphone, setAssets, setLastRender } = useAuralStore()
   // keeping the level of a recording needs the calibration of the microphone; without it there is nothing to keep
   const calibrated = sourceId != null && calibrations[sourceId] != null
   const lvEff = useMemo(() => (level.mode === 'source' && !calibrated ? NO_LEVEL : level), [level, calibrated])
@@ -88,6 +91,7 @@ export default function AuralizationPage() {
   const [rendering, setRendering] = useState(false)
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const sofaInput = useRef<HTMLInputElement>(null)
+  const [adv, setAdv] = useState(false)
 
   const source = files.find((f) => f.audio_id === sourceId) ?? null
   const fs = source?.sample_rate ?? 48000
@@ -193,6 +197,15 @@ export default function AuralizationPage() {
   const setName = hrtf.asset === SPHERE_ID ? t('aur.hrtf.sphere') : asset?.name ?? '—'
   const modelDesc = useMemo(() => catalog?.builtin.find((b) => b.id === SPHERE_ID)?.description[lang] ?? '', [catalog, lang])
   const clipped = (preview?.peakDbfs ?? -200) > 0
+  const sceneName = catalog?.scenes?.find((sc) => sc.id === scene)?.name[lang]
+  // what is set, shown while the fine adjustments are folded
+  const chips = [
+    sceneName ?? (envEff.type === 'none' ? t('aur.env.type.none') : assets.find((a) => a.asset_id === envEff.asset)?.name ?? '—'),
+    envEff.type === 'brir' ? t('aur.chain.ignored') : `${setName} · ${t('aur.chain.pos', { az: hrtf.azimuth, el: hrtf.elevation })}`,
+    noise.type === 'none' ? t('aur.noise.type.none') : `${t(`aur.noise.type.${noise.type}`)} · ${noise.snr_db} dB`,
+    hpEff.mode === 'off' ? t('aur.hp.mode.off') : hpEff.asset?.startsWith('lib:') ? libName(hpEff.asset) : assets.find((a) => a.asset_id === hpEff.asset)?.name ?? '—',
+    lvEff.mode === 'off' ? t('aur.lv.mode.off') : lvEff.mode === 'spl' ? `${lvEff.target_db_spl} dB SPL` : t('aur.lv.mode.source'),
+  ]
 
   return (
     <div className="flex flex-1 overflow-hidden flex-col sm:flex-row">
@@ -202,9 +215,13 @@ export default function AuralizationPage() {
           <h1 className="text-base font-semibold">{t('aur.page.title')}</h1>
         </div>
         <p className="text-xs text-muted px-1">{t('aur.page.intro')}</p>
-        <FileDropzone onFiles={handleFiles} disabled={uploading} highlight={files.length === 0 && !uploading} />
+        {files.length > 0 && (
+          <>
+        <FileDropzone onFiles={handleFiles} disabled={uploading} highlight={false} />
         {uploading && <p className="text-[11px] text-teal text-center animate-pulse">{t('pp.page.uploading')}</p>}
         {uploadError && <p className="text-[11px] text-red-400 text-center">{uploadError}</p>}
+          </>
+        )}
         {files.length > 0 && (
           <div className="space-y-1">
             <p className="text-xs font-semibold text-muted">{t('aur.source.pick')}</p>
@@ -229,53 +246,50 @@ export default function AuralizationPage() {
         )}
       </aside>
 
-      <main className="flex-1 overflow-y-auto p-4 space-y-4">
-        <ScenesBar />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-5xl p-6 space-y-5">
+          <Stepper phases={[source ? 'ok' : 'on', source ? 'on' : 'off', lastRender ? 'ok' : 'off']} sourceName={source ? source.name.replace(/\.wav$/i, '') : undefined} />
 
-        {/* ── The chain ───────────────────────────────────────────────── */}
-        <div className="flex items-stretch gap-2 flex-wrap" aria-label={t('aur.chain.title')}>
-          <StepCard n={1} title={t('aur.chain.source')}>
-            <span className="font-semibold block truncate">{source ? source.name.replace(/\.wav$/i, '') : t('aur.chain.noSource')}</span>
-          </StepCard>
-          <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
-          <div role="tablist" aria-label={t('aur.chain.title')} onKeyDown={onTabKeys} className="contents">
-          <StepCard n={2} title={t('aur.chain.environment')} step="environment" selected={step === 'environment'} onSelect={() => setStep('environment')} configured={envEff.type !== 'none'}>
-            <span className="font-semibold block truncate">
-              {envEff.type === 'none' ? t('aur.env.type.none') : assets.find((a) => a.asset_id === envEff.asset)?.name ?? '—'}
-            </span>
-            {envEff.type !== 'none' && <span className="text-muted">{t(`aur.env.type.${envEff.type}`)}</span>}
-          </StepCard>
-          <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
-          <StepCard n={3} title="HRTF" step="hrtf" selected={step === 'hrtf'} onSelect={() => setStep('hrtf')} configured={envEff.type !== 'brir'}>
-            <span className="font-semibold block truncate">{setName}</span>
-            <span className="text-muted">{t('aur.chain.pos', { az: hrtf.azimuth, el: hrtf.elevation })}</span>
-            {envEff.type === 'brir' && <span className="text-amber block">{t('aur.chain.ignored')}</span>}
-          </StepCard>
-          <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
-          <StepCard n={4} title={t('aur.chain.noise')} step="noise" selected={step === 'noise'} onSelect={() => setStep('noise')} configured={noise.type !== 'none'}>
-            <span className="font-semibold block truncate">{t(`aur.noise.type.${noise.type}`)}</span>
-            {noise.type !== 'none' && <span className="text-muted">{noise.snr_db} dB</span>}
-          </StepCard>
-          <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
-          <StepCard n={5} title={t('aur.chain.headphone')} step="headphone" selected={step === 'headphone'} onSelect={() => setStep('headphone')} configured={hpEff.mode !== 'off'}>
-            <span className="font-semibold block truncate">{hpEff.mode === 'off' ? t('aur.hp.mode.off') : hpEff.asset?.startsWith('lib:') ? libName(hpEff.asset) : assets.find((a) => a.asset_id === hpEff.asset)?.name ?? '—'}</span>
-            {hpEff.mode !== 'off' && <span className="text-muted">{t(`aur.hp.mode.${hpEff.mode}`)}</span>}
-          </StepCard>
-          <ChevronRight size={16} className="self-center text-muted hidden sm:block" aria-hidden="true" />
-          <StepCard n={6} title={t('aur.chain.level')} step="level" selected={step === 'level'} onSelect={() => setStep('level')} configured={lvEff.mode !== 'off'}>
-            <span className="font-semibold block truncate">{lvEff.mode === 'off' ? t('aur.lv.mode.off') : lvEff.mode === 'spl' ? `${lvEff.target_db_spl} dB SPL` : t('aur.lv.mode.source')}</span>
-          </StepCard>
-          </div>
-        </div>
-        <p className="text-[11px] text-muted -mt-2">{t('aur.step.hint')}</p>
+          {!source && (
+            <section className="mx-auto max-w-xl pt-10 space-y-4 text-center" aria-labelledby="aur-empty">
+              <h2 id="aur-empty" className="text-lg font-semibold">{t('aur.guide.emptyTitle')}</h2>
+              <FileDropzone onFiles={handleFiles} disabled={uploading} highlight={!uploading} />
+              {uploading && <p className="text-xs text-teal animate-pulse">{t('pp.page.uploading')}</p>}
+              {uploadError && <p className="text-xs text-red-400">{uploadError}</p>}
+              <p className="text-sm text-muted">{t('aur.guide.emptyHint')}</p>
+            </section>
+          )}
 
-        {!source && (
-          <p className="text-sm text-muted rounded-lg border border-border bg-panel px-4 py-6 text-center">{t('aur.page.empty')}</p>
-        )}
+          {source && (
+            <>
+              <ScenesBar onOpenAdvanced={() => setAdv(true)} />
 
-        {/* ── The settings of the selected card ───────────────────────── */}
-        <div role="tabpanel" id="aur-panel" aria-labelledby={`aur-tab-${step}`} className="space-y-4">
-        {step === 'environment' && <EnvironmentSection />}
+              {/* ── Fine adjustments (optional) ───────────────────────── */}
+              <section className="space-y-4" aria-labelledby="aur-fine">
+                <div className="flex items-center gap-2 flex-wrap rounded-lg border border-border bg-surface px-4 py-3">
+                  <h2 id="aur-fine" className="text-sm font-semibold mr-1">{t('aur.guide.fine')}</h2>
+                  {!adv && chips.map((c, i) => <span key={i} className="rounded bg-panel px-2 py-0.5 text-xs text-muted">{c}</span>)}
+                  <button
+                    onClick={() => setAdv(!adv)} aria-expanded={adv} aria-controls="aur-fine-body"
+                    className="ml-auto flex items-center gap-1 text-xs text-teal hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal rounded"
+                  >
+                    {adv ? t('aur.guide.collapse') : t('aur.guide.adjust')} {adv ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
+                  </button>
+                </div>
+
+                {adv && (
+                  <div id="aur-fine-body" className="space-y-4">
+                    <div role="tablist" aria-label={t('aur.guide.fine')} onKeyDown={onTabKeys} className="flex gap-1 flex-wrap">
+                      <TabBtn step="environment" label={t('aur.chain.environment')} configured={envEff.type !== 'none'} selected={step === 'environment'} onSelect={() => setStep('environment')} />
+                      <TabBtn step="hrtf" label={t('aur.guide.tabHrtf')} configured={envEff.type !== 'brir'} selected={step === 'hrtf'} onSelect={() => setStep('hrtf')} />
+                      <TabBtn step="noise" label={t('aur.chain.noise')} configured={noise.type !== 'none'} selected={step === 'noise'} onSelect={() => setStep('noise')} />
+                      <TabBtn step="headphone" label={t('aur.chain.headphone')} configured={hpEff.mode !== 'off'} selected={step === 'headphone'} onSelect={() => setStep('headphone')} />
+                      <TabBtn step="level" label={t('aur.chain.level')} configured={lvEff.mode !== 'off'} selected={step === 'level'} onSelect={() => setStep('level')} />
+                    </div>
+
+                    <div role="tabpanel" id="aur-panel" aria-labelledby={`aur-tab-${step}`} className="space-y-4">
+                      {step === 'environment' && <EnvironmentSection />}
 
         {step === 'hrtf' && (
         <section className={clsx('rounded-lg border border-border bg-panel p-4 space-y-4', envEff.type === 'brir' && 'opacity-50')} aria-labelledby="aur-hrtf">
@@ -331,70 +345,53 @@ export default function AuralizationPage() {
         </section>
         )}
 
-        {step === 'noise' && <NoiseSection />}
+                      {step === 'noise' && <NoiseSection />}
 
-        {step === 'headphone' && <HeadphoneSection />}
+                      {step === 'headphone' && <HeadphoneSection />}
 
-        {step === 'level' && <LevelSection gainDb={lvEff.mode === 'off' ? null : preview?.gainDb ?? null} calibrated={calibrated} />}
+                      {step === 'level' && <LevelSection gainDb={lvEff.mode === 'off' ? null : preview?.gainDb ?? null} calibrated={calibrated} />}
+                    </div>
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+        </div>
         </div>
 
         {/* ── Listen and create the file (always on screen) ───────────── */}
-        <section className="relative overflow-hidden rounded-lg border border-border bg-panel p-4 pt-5 space-y-4" aria-labelledby="aur-play">
-          <FixedBar />
-          <h2 id="aur-play" className="text-sm font-semibold">{t('aur.play.title')}</h2>
-          <div className="space-y-2">
-          <h3 id="aur-ab" className="text-xs font-semibold uppercase tracking-wider text-muted">{t('aur.ab.title')}</h3>
-          <AbPlayer
-            originalUrl={sourceId ? getStreamUrl(sessionId, sourceId) : null}
-            processedUrl={preview?.url ?? null}
-            busy={previewBusy}
-          />
-          <p className="text-[11px] text-muted flex items-center gap-1.5">
-            <Headphones size={12} aria-hidden="true" /> {t('aur.ab.note')}
-          </p>
-          {previewError && <p className="text-xs text-red-400">{previewError}</p>}
-          {clipped && (
-            <p className="text-xs text-amber flex items-center gap-1.5">
-              <AlertTriangle size={13} aria-hidden="true" /> {t('aur.ab.clip', { db: fmt(preview!.peakDbfs) })}
-            </p>
-          )}
-          </div>
-
-          <div className="space-y-3 border-t border-border pt-4">
-          <h3 id="aur-render" className="text-xs font-semibold uppercase tracking-wider text-muted">{t('aur.render.title')}</h3>
-          <p className="text-[11px] text-muted">{t('aur.render.help')}</p>
-          <button
-            onClick={() => void render()} disabled={!sourceId || rendering}
-            className="flex items-center gap-2 px-4 py-2 rounded bg-teal text-dark text-sm font-semibold disabled:opacity-40"
-          >
-            <Wand2 size={15} aria-hidden="true" /> {rendering ? t('aur.render.working') : t('aur.render.button')}
-          </button>
-          {lastRender && (
-            <div className="rounded border border-teal/40 bg-teal/10 p-3 space-y-2 text-xs" role="status">
-              <p><span className="font-semibold">{lastRender.name}</span> · {fmt(lastRender.duration_s)} s · {lastRender.sample_rate / 1000} kHz · {t('pp.list.stereo')}</p>
-              <p className="text-muted">{t('aur.render.peak', { db: fmt(lastRender.peak_dbfs) })}</p>
-              {lastRender.level_db_spl != null && lastRender.gain_db != null && (
-                <p className="text-muted">{t('aur.lv.rendered', { spl: fmt(lastRender.level_db_spl), gain: fmt(lastRender.gain_db) })}</p>
-              )}
-              {lastRender.notes.map((n) => <p key={n} className="text-amber">{n}</p>)}
-              <div className="flex gap-2 flex-wrap">
+        {source && (
+          <section className="shrink-0 border-t border-border bg-surface" aria-labelledby="aur-play">
+            <h2 id="aur-play" className="sr-only">{t('aur.play.title')}</h2>
+            <div className="mx-auto max-w-5xl px-6 py-3 space-y-2 max-h-[45vh] overflow-y-auto">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex-1 min-w-[300px]">
+                  <AbPlayer
+                    originalUrl={sourceId ? getStreamUrl(sessionId, sourceId) : null}
+                    processedUrl={preview?.url ?? null}
+                    busy={previewBusy}
+                  />
+                </div>
                 <button
-                  onClick={() => { selectFile(lastRender.audio_id); navigate('/post-processing') }}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded border border-teal text-teal hover:bg-teal/10"
+                  onClick={() => void render()} disabled={!sourceId || rendering} title={t('aur.render.help')}
+                  className="flex items-center gap-2 px-4 py-2 rounded bg-teal text-dark text-sm font-semibold disabled:opacity-40"
                 >
-                  <ExternalLink size={13} aria-hidden="true" /> {t('aur.render.open')}
+                  <Wand2 size={15} aria-hidden="true" /> {rendering ? t('aur.render.working') : t('aur.render.button')}
                 </button>
-                <a
-                  href={getStreamUrl(sessionId, lastRender.audio_id)} download={lastRender.name}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded border border-field hover:border-teal hover:text-teal"
-                >
-                  <Download size={13} aria-hidden="true" /> {t('aur.render.download')}
-                </a>
               </div>
+              <p className="text-xs text-muted flex items-center gap-1.5">
+                <Headphones size={12} aria-hidden="true" /> {t('aur.ab.note')}
+              </p>
+              {previewError && <p className="text-xs text-red-400">{previewError}</p>}
+              {clipped && (
+                <p className="text-xs text-amber flex items-center gap-1.5">
+                  <AlertTriangle size={13} aria-hidden="true" /> {t('aur.ab.clip', { db: fmt(preview!.peakDbfs) })}
+                </p>
+              )}
+
             </div>
-          )}
-        </div>
-        </section>
+          </section>
+        )}
       </main>
     </div>
   )

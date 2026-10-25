@@ -12,7 +12,7 @@ import { applySyntheticRoom } from './synthRoom'
 const ICONS: Record<string, LucideIcon> = { kitchen: ChefHat, living: Sofa, car: Car, aircraft: Plane }
 
 /** One click puts a synthetic room, a head position and a background noise in place; each block stays adjustable. */
-export default function ScenesBar() {
+export default function ScenesBar({ onOpenAdvanced }: { onOpenAdvanced?: () => void }) {
   const t = useT()
   const lang = useLang((s) => s.lang)
   const sessionId = useStore((s) => s.sessionId)
@@ -51,6 +51,7 @@ export default function ScenesBar() {
 
   const goToCard = () => {
     setAdDismissed(false)
+    onOpenAdvanced?.()
     setStep('environment')                     // the card lives in the Environment step
     window.setTimeout(() => {
       const el = document.getElementById('auralize-salas')
@@ -62,35 +63,35 @@ export default function ScenesBar() {
   const active = catalog.scenes.find((s) => s.id === scene)
   return (
     <section className="rounded-lg border border-border bg-panel p-4 space-y-3" aria-labelledby="aur-scenes">
-      <h2 id="aur-scenes" className="text-sm font-semibold">{t('aur.scene.title')}</h2>
-      <div className="flex flex-wrap gap-2" role="group" aria-label={t('aur.scene.title')}>
+      <h2 id="aur-scenes" className="text-base font-semibold">{t('aur.scene.title')}</h2>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2" role="group" aria-label={t('aur.scene.title')}>
         {catalog.scenes.map((sc) => {
           const Icon = ICONS[sc.icon] ?? SlidersHorizontal
           return (
             <button
               key={sc.id} onClick={() => void apply(sc)} disabled={busy !== null} aria-pressed={scene === sc.id}
-              className={clsx('flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs transition-colors disabled:opacity-50',
-                scene === sc.id ? 'bg-teal text-dark border-teal font-semibold' : 'bg-dark border-field text-white hover:border-teal hover:text-teal')}
+              className={clsx('flex items-center gap-2.5 px-4 py-3 rounded-lg border text-sm text-left transition-colors disabled:opacity-50',
+                scene === sc.id ? 'bg-teal/15 text-teal border-teal font-semibold' : 'bg-dark border-field text-white hover:border-teal hover:text-teal')}
             >
-              <Icon size={14} aria-hidden="true" /> {busy === sc.id ? t('aur.scene.applying') : sc.name[lang]}
+              <Icon size={18} aria-hidden="true" /> {busy === sc.id ? t('aur.scene.applying') : sc.name[lang]}
             </button>
           )
         })}
         <button
           onClick={() => void clear()} disabled={busy !== null}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border text-xs text-muted hover:text-white hover:border-field disabled:opacity-50"
+          className="flex items-center gap-2.5 px-4 py-3 rounded-lg border border-border text-sm text-left text-muted hover:text-white hover:border-field disabled:opacity-50"
         >
           <SlidersHorizontal size={14} aria-hidden="true" /> {t('aur.scene.none')}
         </button>
         <button
           onClick={goToCard}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-dashed border-[#00BFC8]/60 text-xs text-[#00BFC8] hover:bg-[#00BFC8]/10"
+          className="flex items-center gap-2.5 px-4 py-3 rounded-lg border border-dashed border-[#00BFC8]/60 text-sm text-left text-[#00BFC8] hover:bg-[#00BFC8]/10"
         >
           <Building2 size={14} aria-hidden="true" /> {t('aur.scene.mine')}
         </button>
       </div>
-      <p className="text-[11px] text-muted">{active ? active.description[lang] : t('aur.scene.hint')}</p>
-      <p className="text-[11px] text-amber">{catalog.scenes_note[lang]}</p>
+      <p className="text-xs text-muted">{active ? active.description[lang] : t('aur.scene.hint')}</p>
+      <p className="text-xs text-amber">{catalog.scenes_note[lang]}</p>
     </section>
   )
 }
