@@ -26,6 +26,8 @@ export default {
   'pp.page.calCleared': 'Calibração removida',
   'pp.page.title': 'Pós-processamento',
   'pp.page.uploading': 'Enviando…',
+  'pp.page.fieldHelp': 'Campo livre: o som chega de uma direção (o padrão). Campo difuso: chega de todas as direções, como numa sala reverberante. Vale para loudness ISO 532-1, sharpness e tonalidade.',
+  'pp.page.calHelp': 'Sensibilidade do microfone em mV/Pa. Com ela, os níveis aparecem em dB SPL em vez de dBFS.',
   'pp.page.sectFiles': 'Arquivos',
   'pp.page.sectAnalysis': 'Análise',
   'pp.page.metric': 'Métrica',

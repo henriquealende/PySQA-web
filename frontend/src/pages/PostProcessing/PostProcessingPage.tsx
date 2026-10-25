@@ -175,6 +175,7 @@ export default function PostProcessingPage() {
                 </button>
               ))}
             </div>
+            <p className="text-[11px] leading-snug text-muted">{t('pp.page.fieldHelp')}</p>
           </div>
 
           {metricKey === 'tonality_ecma' && <TonalityPrecisionSelect />}
@@ -238,6 +239,7 @@ export default function PostProcessingPage() {
               </div>
             )}
             {calError && <p className="text-[11px] text-red-400">{calError}</p>}
+            <p className="text-[11px] leading-snug text-muted">{t('pp.page.calHelp')}</p>
           </SideSection>
         )}
 
@@ -253,11 +255,13 @@ export default function PostProcessingPage() {
         {files.length > 0 && (
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0 flex-wrap">
           <button
-            className="sm:hidden p-1.5 rounded text-muted hover:text-white hover:bg-panel transition-colors"
+            className="sm:hidden flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded border border-border text-muted hover:text-white hover:bg-panel transition-colors"
             onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-expanded={sidebarOpen}
             aria-label={t('pp.page.toggleSidebar')}
           >
-            {sidebarOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+            {sidebarOpen ? <PanelLeftClose size={15} aria-hidden="true" /> : <PanelLeftOpen size={15} aria-hidden="true" />}
+            {t('pp.page.sectFiles')}
           </button>
 
           <div className="flex gap-1 flex-wrap">
@@ -279,9 +283,12 @@ export default function PostProcessingPage() {
             ))}
           </div>
 
+          {files.length > 0 && <span className="w-px h-5 bg-border mx-1" aria-hidden="true" />}
+
           {files.length > 0 && (
             <button
               onClick={() => setShowBatch(!showBatch)}
+              aria-pressed={showBatch}
               className={clsx(
                 'flex items-center gap-1.5 px-3 py-1 text-xs rounded font-medium transition-colors border',
                 showBatch
@@ -299,9 +306,9 @@ export default function PostProcessingPage() {
           {selectedId && !showBatch && (
             <button
               onClick={() => setShowExport(true)}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs text-muted hover:text-white rounded hover:bg-panel transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-teal border border-teal/50 rounded hover:bg-teal/10 transition-colors"
             >
-              <Download size={13} />
+              <Download size={13} aria-hidden="true" />
               {t('pp.page.export')}
             </button>
           )}

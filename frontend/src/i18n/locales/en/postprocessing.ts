@@ -26,6 +26,8 @@ export default {
   'pp.page.calCleared': 'Calibration cleared',
   'pp.page.title': 'Post-Processing',
   'pp.page.uploading': 'Uploading…',
+  'pp.page.fieldHelp': 'Free-field: sound arrives from one direction (the default). Diffuse: it arrives from all directions, as in a reverberant room. Applies to ISO 532-1 loudness, sharpness and tonality.',
+  'pp.page.calHelp': 'Microphone sensitivity in mV/Pa. With it, levels are shown in dB SPL instead of dBFS.',
   'pp.page.sectFiles': 'Files',
   'pp.page.sectAnalysis': 'Analysis',
   'pp.page.metric': 'Metric',

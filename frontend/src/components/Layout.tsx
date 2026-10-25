@@ -79,11 +79,11 @@ export default function Layout() {
   // Data Acquisition stays mounted once opened (it is only hidden on other pages), so a recording,
   // a take under review and the open microphone survive a visit to Post-Processing.
   const pathname = useLocation().pathname
+  const pageKey = pathname.startsWith('/docs') ? 'nav.docs' : NAV.find((n) => pathname.startsWith(n.to))?.label
   const isDaq = pathname.startsWith('/data-acquisition')
   useEffect(() => {
-    const key = pathname.startsWith('/docs') ? 'nav.docs' : NAV.find((n) => pathname.startsWith(n.to))?.label
-    document.title = key ? `${t(key)} · PySQA` : 'PySQA'
-  }, [pathname, t])
+    document.title = pageKey ? `${t(pageKey)} · PySQA` : 'PySQA'
+  }, [pageKey, t])
   const [daqVisited, setDaqVisited] = useState(isDaq)
   useEffect(() => { if (isDaq) setDaqVisited(true) }, [isDaq])
 
@@ -95,24 +95,23 @@ export default function Layout() {
         <Link
           to="/"
           aria-label={t('nav.home')}
-          className="flex flex-col items-center gap-3 px-3 pt-6 pb-5 border-b border-border"
+          className="flex flex-col items-center gap-3 px-3 pt-6 pb-5 border-b border-border [@media(max-height:700px)]:pt-3 [@media(max-height:700px)]:pb-3 [@media(max-height:700px)]:gap-1.5"
         >
-          <Logo state={logoState} className={clsx('shrink-0', wide ? 'h-16 w-16' : 'h-12 w-12')} />
+          <Logo state={logoState} className={clsx('shrink-0', wide ? 'h-16 w-16 [@media(max-height:700px)]:h-10 [@media(max-height:700px)]:w-10' : 'h-12 w-12 [@media(max-height:700px)]:h-9 [@media(max-height:700px)]:w-9')} />
           {wide && (
             <span className="flex flex-col items-center gap-1.5 text-center" aria-hidden="true">
               <span className="font-semibold text-slate-200 uppercase tracking-[0.14em] pl-[0.14em] text-xl leading-none">PySQA</span>
-              <span className="text-xs text-muted leading-snug">{t('nav.tagline')}</span>
+              <span className="text-xs text-muted leading-snug [@media(max-height:700px)]:hidden">{t('nav.tagline')}</span>
             </span>
           )}
         </Link>
 
-        <nav className="flex flex-col gap-1.5 px-3 py-5" aria-label={t('nav.pages')}>
+        {/* The middle part scrolls on a short window, so the bottom buttons are never cut off */}
+        <nav className="flex flex-col gap-1.5 px-3 py-5 flex-1 min-h-0 overflow-y-auto [@media(max-height:700px)]:py-3" aria-label={t('nav.pages')}>
           {NAV.map(({ to, label, Icon }) => (
             <SideItem key={to} to={to} label={label} Icon={Icon} wide={wide} daqState={to === '/data-acquisition' ? daqState : undefined} />
           ))}
         </nav>
-
-        <div className="flex-1" />
 
         <div className="flex flex-col gap-3 px-3 py-4 border-t border-border">
           <SideItem to="/docs" label="nav.docs" Icon={BookOpen} wide={wide} />
@@ -142,6 +141,7 @@ export default function Layout() {
             <Logo state={logoState} className="h-10 w-10 shrink-0" />
             <span className="font-bold text-teal tracking-wide text-xl" aria-hidden="true">PySQA</span>
           </Link>
+          {pageKey && <span className="text-sm text-muted truncate min-w-0 pl-3 border-l border-border" aria-current="page">{t(pageKey)}</span>}
           <div className="flex-1" />
           <button
             className="p-2 mr-3 rounded text-muted hover:text-white hover:bg-panel transition-colors"
