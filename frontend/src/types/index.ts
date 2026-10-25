@@ -150,3 +150,9 @@ export interface BatchRow {
   name: string
   [metric: string]: string | number | null
 }
+
+/** A pass/fail limit of a batch column; a side left null is not checked. */
+export interface BatchLimit {
+  min: number | null
+  max: number | null
+}

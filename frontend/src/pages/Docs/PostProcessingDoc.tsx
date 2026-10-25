@@ -535,6 +535,42 @@ export default function PostProcessingDoc() {
           reproduzir exatamente um dos ajustes publicados, consulte a Tabela 54 e a Tabela 57 da tese. O modelo foi calibrado com sons de refrigeradores: fora desse tipo
           de fonte, trate-o como índice de comparação.
         </Callout>
+        <Section id="l-limites" title="Limites de aprovação" level={3}>
+          <P>
+            Sob o nome de cada coluna da tabela há dois campos, <K>mín</K> e <K>máx</K>. Digite um limite em uma das métricas (ou nas colunas de incômodo) e cada arquivo
+            passa a ser comparado com ele: um valor <strong>abaixo do mínimo</strong> ou <strong>acima do máximo</strong> reprova. A célula que passa ganha ✓ e fundo verde;
+            a que reprova ganha ✗ e fundo vermelho. Os símbolos existem para que a leitura não dependa só da cor.
+          </P>
+          <P>
+            Uma coluna <K>Resultado</K> resume cada arquivo: <strong>Aprovado</strong> se todos os limites passam, <strong>Reprovado</strong> se algum falha e
+            <strong> Sem valor</strong> se há limite mas o cálculo não devolveu número (nesse caso o arquivo não é dado como aprovado). Acima da tabela aparece a contagem
+            de aprovados, reprovados e sem valor, e <K>Limpar limites</K> apaga todos. O valor comparado é o mostrado na tabela, o global de cada métrica
+            (e do trecho, se houve seleção); o PySQA não define limites por conta própria, eles vêm da sua norma, do seu requisito ou do seu estudo.
+          </P>
+          <P>
+            No XLSX, as células que passam ou reprovam saem coloridas, a coluna <K>Resultado</K> acompanha e duas linhas abaixo da tabela registram os limites usados e a contagem.
+            Os limites também entram na configuração salva (veja a próxima seção).
+          </P>
+        </Section>
+      </Section>
+
+      <Section id="configuracao" title="Salvar e carregar a configuração">
+        <P>
+          Para repetir uma análise com os mesmos ajustes, use <K>Salvar</K> em <K>Configuração da análise</K>, na coluna da esquerda. O PySQA baixa um arquivo
+          <K>.json</K> com a vista e a métrica escolhidas, o tipo de campo, a precisão da tonalidade, as opções do espectrograma, do envelope e da ponderação de 1/3 de oitava, as
+          métricas e os modelos de incômodo do lote, os limites de aprovação e, <strong>para cada arquivo, a calibração (mV/Pa) e o trecho selecionado</strong>.
+          <K>Carregar</K> lê esse arquivo de volta e aplica tudo.
+        </P>
+        <UL>
+          <li><strong>Os áudios não vão no arquivo.</strong> Só os ajustes. Envie os mesmos arquivos WAV e carregue a configuração: a calibração e o trecho vão para os arquivos
+            de <strong>mesmo nome</strong>. Se algum arquivo da configuração não está na lista, o PySQA avisa quantos faltam.</li>
+          <li><strong>O que o arquivo não menciona fica como está.</strong> Carregar não remove uma calibração que você já tenha posto em um arquivo.</li>
+          <li><strong>O processamento não é salvo.</strong> Filtros, janelas, ponderação e ajuste de loudness geram um arquivo novo; refaça esse passo ou envie o arquivo já processado.</li>
+          <li>Um arquivo que não é JSON, que não é do PySQA ou que foi salvo por uma versão mais nova é recusado com uma mensagem, sem alterar nada.</li>
+        </UL>
+        <P>
+          Guarde a configuração junto com os dados do estudo e cite a versão do PySQA no método: é o que permite a outra pessoa repetir a análise.
+        </P>
       </Section>
 
       {/* ── 10 ── */}

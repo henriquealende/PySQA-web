@@ -11,6 +11,7 @@ import ImportCallout from '../../components/ImportCallout'
 import ChannelNotice from '../../components/ChannelNotice'
 import TonalityPrecisionSelect from '../../components/TonalityPrecision'
 import BugReportButton from '../../components/BugReportButton'
+import ConfigMenu from '../../components/ConfigMenu'
 import AudioList from '../../components/AudioList'
 import MetricSelector from '../../components/MetricSelector'
 import AudioPlayer from '../../components/AudioPlayer'
@@ -233,6 +234,7 @@ export default function PostProcessingPage() {
 
           </>
         )}
+        <ConfigMenu />
         <BugReportButton />
       </aside>
 

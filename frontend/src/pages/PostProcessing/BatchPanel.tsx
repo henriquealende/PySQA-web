@@ -4,11 +4,12 @@ import clsx from 'clsx'
 import { useStore } from '../../store/useStore'
 import { fetchMetric, fetchServerLoad, isAbort, SessionExpiredError } from '../../api/audioApi'
 import { newClientId } from '../../api/http'
-import { MetricKey, FieldType } from '../../types'
+import { MetricKey, FieldType, BatchLimit } from '../../types'
 import TonalityPrecisionSelect from '../../components/TonalityPrecision'
 import { exportXlsx } from '../../api/exportApi'
 import { toast } from '../../store/useToast'
-import { useT } from '../../i18n'
+import { useT, currentLocale } from '../../i18n'
+import { judge, judgeRow, hasLimit, describeLimit, type Verdict } from '../../utils/batchLimits'
 import ChannelNotice from '../../components/ChannelNotice'
 
 const BATCH_METRICS: { key: MetricKey; label: string; short: string }[] = [
@@ -46,6 +47,29 @@ function computeZWK(row: any) {
   return n * (1 + Math.sqrt(ws*ws + wfr*wfr))
 }
 
+/** A number box for one side of a limit: keeps what is being typed and follows changes that come from outside (a loaded setup). */
+function LimitInput({ value, onChange, placeholder, title, disabled }: {
+  value: number | null; onChange: (v: number | null) => void; placeholder: string; title: string; disabled?: boolean
+}) {
+  const [text, setText] = useState(value == null ? '' : String(value))
+  useEffect(() => {
+    const parsed = text.trim() === '' ? null : Number(text.replace(',', '.'))
+    if ((value ?? null) !== (parsed != null && Number.isFinite(parsed) ? parsed : null)) setText(value == null ? '' : String(value))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+  return (
+    <input
+      type="text" inputMode="decimal" value={text} placeholder={placeholder} title={title} aria-label={title} disabled={disabled}
+      onChange={e => {
+        setText(e.target.value)
+        const v = e.target.value.trim() === '' ? null : Number(e.target.value.replace(',', '.'))
+        onChange(v != null && Number.isFinite(v) ? v : null)
+      }}
+      className="w-[46px] bg-dark border border-field rounded px-1 py-0.5 text-[11px] font-normal text-right text-white placeholder:text-muted/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal"
+    />
+  )
+}
+
 function BatchProgress({ step, total, label, elapsed, eta, onCancel }: {
   step: number; total: number; label: string; elapsed: number; eta: number | null; onCancel: () => void
 }) {
@@ -79,6 +103,8 @@ function BatchProgress({ step, total, label, elapsed, eta, onCancel }: {
 export default function BatchPanel() {
   const t = useT()
   const { sessionId, files, fieldType, setFieldType, precision, sections } = useStore()
+  const { batchMetrics: selected, batchAnnoyance: annoyance, batchLimits: limits, setBatchMetrics, setBatchAnnoyance, setBatchLimit } = useStore()
+  const locale = currentLocale()
 
   // File selection
   const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set(files.map(f => f.audio_id)))
@@ -94,13 +120,10 @@ export default function BatchPanel() {
   const sectionMap = Object.fromEntries(withSection.map(f => [f.audio_id, sections[f.audio_id]!]))
 
   // Metric + annoyance selection
-  const [selected,  setSelected]  = useState<MetricKey[]>(['loudness_zwk','sharpness_din'])
-  const [annoyance, setAnnoyance] = useState<string[]>([])
-
   const toggle = (k: MetricKey) =>
-    setSelected(s => s.includes(k) ? s.filter(x => x !== k) : [...s, k])
+    setBatchMetrics(selected.includes(k) ? selected.filter(x => x !== k) : [...selected, k])
   const toggleAnn = (k: string) =>
-    setAnnoyance(s => s.includes(k) ? s.filter(x => x !== k) : [...s, k])
+    setBatchAnnoyance(annoyance.includes(k) ? annoyance.filter(x => x !== k) : [...annoyance, k])
 
   const silNeeds: MetricKey[] = ['loudness_zwk','sharpness_din','roughness_dw','ipm']
   const zwkNeeds: MetricKey[] = ['loudness_zwk','sharpness_din','roughness_dw','fluctuation_strength']
@@ -228,13 +251,36 @@ export default function BatchPanel() {
     return unit ? `${label}\n(${unit})` : label
   }
 
+  // Pass/fail against the limits typed under the column names
+  const limited = displayKeys.filter(k => hasLimit(limits[k]))
+  const verdicts = augRows ? augRows.map(r => judgeRow(r, displayKeys, limits)) : []
+  const nPass = verdicts.filter(v => v === 'pass').length
+  const nFail = verdicts.filter(v => v === 'fail').length
+  const nMissing = verdicts.filter(v => v === 'missing').length
+  const verdictText = (v: Verdict) => v === 'pass' ? t('pp.batch.pass') : v === 'fail' ? t('pp.batch.fail') : v === 'missing' ? t('pp.batch.incomplete') : ''
+  const verdictMark = (v: Verdict) => v === 'pass' ? '✓' : v === 'fail' ? '✗' : ''
+
   const doExport = async () => {
     if (!augRows) return
     try {
       const columns: Record<string,any[]> = { [t('pp.batch.colFile')]: augRows.map(r => r.name) }
       if (augRows.some(r => r.section)) columns[t('pp.batch.colSection')] = augRows.map(r => r.section ? `${r.section[0]}-${r.section[1]}` : t('pp.batch.wholeFile'))
       displayKeys.forEach(k => { columns[colHeader(k)] = augRows.map(r => r[k]??'') })
-      await exportXlsx(sessionId, selectedFiles.map(f => f.audio_id), [{ sheet_name: t('pp.batch.sheetName'), columns }])
+      const sheet: Record<string, any> = { sheet_name: t('pp.batch.sheetName'), columns }
+      if (limited.length) {
+        // Cells that pass or fail are coloured in the workbook; the Result column says it in words as well
+        const marks: Record<string, (string | null)[]> = {}
+        limited.forEach(k => { marks[colHeader(k)] = augRows.map(r => { const v = judge(r[k], limits[k]); return v === 'pass' || v === 'fail' ? v : null }) })
+        const resultHeader = t('pp.batch.colResult')
+        columns[resultHeader] = verdicts.map(v => [verdictMark(v), verdictText(v)].filter(Boolean).join(' '))
+        marks[resultHeader] = verdicts.map(v => v === 'pass' || v === 'fail' ? v : null)
+        sheet.marks = marks
+        sheet.notes = [
+          t('pp.batch.limitsNote', { list: limited.map(k => `${keyLabel(k)} ${describeLimit(limits[k], locale)}`).join('; ') }),
+          t('pp.batch.limitsSummary', { pass: nPass, fail: nFail, missing: nMissing }),
+        ]
+      }
+      await exportXlsx(sessionId, selectedFiles.map(f => f.audio_id), [sheet])
       toast.success(t('pp.batch.xlsxExported'))
     } catch(e:any) { toast.error(t('pp.batch.exportFailed')) }
   }
@@ -404,12 +450,23 @@ export default function BatchPanel() {
           )}
 
           {augRows && augRows.length > 0 && !busy && (
+            <p className="text-[11px] text-muted">
+              {limited.length > 0
+                ? <><span className="text-teal font-semibold">{t('pp.batch.limitsSummary', { pass: nPass, fail: nFail, missing: nMissing })}</span>
+                    <button onClick={() => limited.forEach(k => setBatchLimit(k, { min: null, max: null }))}
+                      className="ml-3 underline hover:text-white">{t('pp.batch.limitsClear')}</button></>
+                : t('pp.batch.limitsHint')}
+            </p>
+          )}
+
+          {augRows && augRows.length > 0 && !busy && (
             <div className="overflow-auto rounded-lg border border-border flex-1">
               <table className="text-xs border-collapse"
-                style={{ tableLayout:'fixed', width:'100%', minWidth:`${180+displayKeys.length*110}px` }}>
+                style={{ tableLayout:'fixed', width:'100%', minWidth:`${180+displayKeys.length*120+(limited.length ? 110 : 0)}px` }}>
                 <colgroup>
                   <col style={{ width:'180px' }} />
-                  {displayKeys.map(k => <col key={k} style={{ width:'110px' }} />)}
+                  {displayKeys.map(k => <col key={k} style={{ width:'120px' }} />)}
+                  {limited.length > 0 && <col style={{ width:'110px' }} />}
                 </colgroup>
                 <thead>
                   <tr className="bg-panel sticky top-0 z-10">
@@ -421,8 +478,17 @@ export default function BatchPanel() {
                         : failedKeys.includes(k) ? 'text-muted/70' : 'text-muted'
                       )}>
                         {keyLabel(k)}
+                        <span className="flex justify-end gap-1 mt-1">
+                          <LimitInput value={limits[k]?.min ?? null} onChange={v => setBatchLimit(k, { min: v })}
+                            placeholder={t('pp.batch.limitMin')} title={t('pp.batch.limitMinTitle')} />
+                          <LimitInput value={limits[k]?.max ?? null} onChange={v => setBatchLimit(k, { max: v })}
+                            placeholder={t('pp.batch.limitMax')} title={t('pp.batch.limitMaxTitle')} />
+                        </span>
                       </th>
                     ))}
+                    {limited.length > 0 && (
+                      <th className="text-left px-3 py-2.5 text-muted font-semibold border-b border-l border-border align-top whitespace-nowrap">{t('pp.batch.colResult')}</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -435,14 +501,26 @@ export default function BatchPanel() {
                         {row.name.replace(/\.wav$/i,'')}
                         {row.section && <span className="block text-[11px] text-teal/80">{t('pp.batch.section', { a: row.section[0], b: row.section[1] })}</span>}
                       </td>
-                      {displayKeys.map(k => (
-                        <td key={k} className={clsx(
-                          'px-3 py-2 text-right font-mono tabular-nums border-b border-l border-border/50',
-                          k.startsWith('annoyance') ? 'text-amber-400' : 'text-teal'
-                        )}>
-                          {row[k] != null ? Number(row[k]).toFixed(3) : <span className="text-muted/70">—</span>}
+                      {displayKeys.map(k => {
+                        const v = judge(row[k], limits[k])
+                        return (
+                          <td key={k} className={clsx(
+                            'px-3 py-2 text-right font-mono tabular-nums border-b border-l border-border/50',
+                            v === 'fail' ? 'bg-red-500/15 text-red-300' : v === 'pass' ? 'bg-teal/10' : '',
+                            v !== 'fail' && (k.startsWith('annoyance') ? 'text-amber-400' : 'text-teal')
+                          )}>
+                            {v === 'pass' && <span className="mr-1 text-teal" aria-label={t('pp.batch.pass')}>✓</span>}
+                            {v === 'fail' && <span className="mr-1" aria-label={t('pp.batch.fail')}>✗</span>}
+                            {row[k] != null ? Number(row[k]).toFixed(3) : <span className="text-muted/70">—</span>}
+                          </td>
+                        )
+                      })}
+                      {limited.length > 0 && (
+                        <td className={clsx('px-3 py-2 border-b border-l border-border/50 font-semibold whitespace-nowrap',
+                          verdicts[i] === 'pass' ? 'text-teal' : verdicts[i] === 'fail' ? 'text-red-300' : 'text-muted')}>
+                          {verdictMark(verdicts[i])} {verdictText(verdicts[i]) || '—'}
                         </td>
-                      ))}
+                      )}
                     </tr>
                   ))}
                 </tbody>

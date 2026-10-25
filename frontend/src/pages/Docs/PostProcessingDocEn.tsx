@@ -535,6 +535,42 @@ export default function PostProcessingDocEn() {
           exactly reproduce one of the published fits, see Table 54 and Table 57 of the thesis. The model was calibrated with refrigerator sounds: outside that kind
           of source, treat it as a comparison index.
         </Callout>
+        <Section id="l-limites" title="Pass/fail limits" level={3}>
+          <P>
+            Under each column name there are two fields, <K>min</K> and <K>max</K>. Type a limit on one of the metrics (or on the annoyance columns) and each file
+            is compared with it: a value <strong>below the minimum</strong> or <strong>above the maximum</strong> fails. A cell that passes gets ✓ and a green background;
+            one that fails gets ✗ and a red background. The symbols are there so that reading does not depend on colour alone.
+          </P>
+          <P>
+            A <K>Result</K> column sums up each file: <strong>Pass</strong> if every limit holds, <strong>Fail</strong> if any is broken and
+            <strong> No value</strong> if there is a limit but the calculation returned no number (the file is then not counted as a pass). Above the table you see the count
+            of passes, fails and no-values, and <K>Clear limits</K> removes them all. The value compared is the one shown in the table, the global value of each metric
+            (and of the section, if one was selected); PySQA sets no limits of its own, they come from your standard, your requirement or your study.
+          </P>
+          <P>
+            In the XLSX the cells that pass or fail are coloured, the <K>Result</K> column follows, and two lines under the table record the limits used and the count.
+            The limits are also part of the saved setup (see the next section).
+          </P>
+        </Section>
+      </Section>
+
+      <Section id="configuracao" title="Saving and loading the setup">
+        <P>
+          To repeat an analysis with the same settings, use <K>Save</K> under <K>Analysis setup</K>, in the left column. PySQA downloads a
+          <K>.json</K> file with the view and metric chosen, the field type, the tonality precision, the options of the spectrogram, the envelope and the 1/3-octave weighting, the
+          batch metrics and annoyance models, the pass/fail limits and, <strong>for each file, the calibration (mV/Pa) and the selected section</strong>.
+          <K>Load</K> reads that file back and applies everything.
+        </P>
+        <UL>
+          <li><strong>The audio is not in the file.</strong> Only the settings. Upload the same WAV files and load the setup: the calibration and the section go to the files
+            with the <strong>same name</strong>. If a file of the setup is not in the list, PySQA tells you how many are missing.</li>
+          <li><strong>What the file does not mention stays as it is.</strong> Loading does not remove a calibration you have already set on a file.</li>
+          <li><strong>Processing is not saved.</strong> Filters, windows, weighting and loudness adjustment make a new file; redo that step or upload the processed file.</li>
+          <li>A file that is not JSON, is not from PySQA or was saved by a newer version is refused with a message, changing nothing.</li>
+        </UL>
+        <P>
+          Keep the setup with the study data and cite the PySQA version in the method: it is what lets someone else repeat the analysis.
+        </P>
       </Section>
 
       {/* ── 10 ── */}

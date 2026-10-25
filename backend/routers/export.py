@@ -33,7 +33,7 @@ def export_wav(session_id: str, audio_id: str):
 class XLSXRequest(BaseModel):
     session_id: str
     audio_ids: List[str]
-    plot_data: List[dict]   # [{sheet_name, columns: {col: [values]}}]
+    plot_data: List[dict]   # [{sheet_name, columns: {col: [values]}, marks?: {col: ["pass"|"fail"|null]}, notes?: [text]}]
 
 
 def _build_xlsx(plot_data: List[dict]) -> io.BytesIO:
@@ -70,6 +70,10 @@ def _build_xlsx(plot_data: List[dict]) -> io.BytesIO:
     right  = Alignment(horizontal="right",  vertical="center")
     left   = Alignment(horizontal="left",   vertical="center")
 
+    # Cells marked "pass" or "fail" (batch limits): a green or red fill with bold text
+    mark_fill = {"pass": PatternFill("solid", fgColor="FF1F5A3E"), "fail": PatternFill("solid", fgColor="FF6B2420")}
+    mark_font = Font(bold=True, color=TEXT_WHITE, size=10, name="Calibri")
+
     NUM_FMT  = '#,##0.000'    # 3 decimal places with thousands sep
     INT_FMT  = '#,##0'
 
@@ -81,6 +85,8 @@ def _build_xlsx(plot_data: List[dict]) -> io.BytesIO:
         columns: dict = sheet_info.get("columns", {})
         if not columns:
             continue
+        marks: dict = sheet_info.get("marks") or {}
+        notes = sheet_info.get("notes") or []
 
         ws = wb.create_sheet(title=sheet_name)
         ws.sheet_view.showGridLines = False
@@ -124,6 +130,12 @@ def _build_xlsx(plot_data: List[dict]) -> io.BytesIO:
                     cell.font      = data_font
                     cell.alignment = left
 
+                col_marks = marks.get(col_name)
+                mark = col_marks[ri] if isinstance(col_marks, list) and ri < len(col_marks) else None
+                if mark in mark_fill:
+                    cell.fill = mark_fill[mark]
+                    cell.font = mark_font
+
         # ── Column widths (auto-fit heuristic) ─────────────────────────
         for ci, col_name in enumerate(col_names, start=1):
             shown = col_name if ("\n" in col_name or " " in col_name) else col_name.replace("_", " ").title()
@@ -139,6 +151,12 @@ def _build_xlsx(plot_data: List[dict]) -> io.BytesIO:
 
         # ── Header row height (taller for multi-line headers) ──
         ws.row_dimensions[1].height = 32 if any("\n" in c for c in col_names) else 20
+
+        # ── Notes under the table (the limits used, the count of passes) ────
+        for ni, text in enumerate(notes):
+            c = ws.cell(row=n_rows + 3 + ni, column=1, value=str(text))
+            c.font = muted_font
+            c.alignment = left
 
         # ── Freeze header row ──────────────────────────────────────────
         ws.freeze_panes = "A2"

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { AudioFile, ViewMode, MetricKey, FieldType, TonalityPrecision, Section, SpectrogramParams, EnvelopeParams } from '../types'
+import { AudioFile, ViewMode, MetricKey, FieldType, TonalityPrecision, Section, SpectrogramParams, EnvelopeParams, BatchLimit } from '../types'
 import { forgetSession } from '../api/recovery'
 import { clearViewCache } from '../api/viewCache'
 
@@ -34,6 +34,9 @@ interface AppState {
   calibrations: Record<string, number | null>  // audio_id → sensitivity_mv_pa
   sections: Record<string, Section | undefined> // audio_id → the part of the file every analysis looks at
   batchEnabled: boolean
+  batchMetrics: MetricKey[]                       // metrics ticked in the batch
+  batchAnnoyance: string[]                        // annoyance models ticked in the batch
+  batchLimits: Record<string, BatchLimit>         // pass/fail limit per batch column
   isLoading: boolean
   loadingMessage: string
   audioIsPlaying: boolean
@@ -57,6 +60,10 @@ interface AppState {
   setCalibration: (audioId: string, mVPa: number | null) => void
   setSection: (audioId: string, section: Section | null) => void
   setBatchEnabled: (v: boolean) => void
+  setBatchMetrics: (m: MetricKey[]) => void
+  setBatchAnnoyance: (a: string[]) => void
+  setBatchLimits: (l: Record<string, BatchLimit>) => void
+  setBatchLimit: (key: string, patch: Partial<BatchLimit>) => void
   setLoading: (v: boolean, msg?: string) => void
   setAudioPlayback: (isPlaying: boolean, duration: number) => void
   clearSession: () => void
@@ -89,6 +96,9 @@ export const useStore = create<AppState>((set, get) => ({
   calibrations: {},
   sections: {},
   batchEnabled: false,
+  batchMetrics: ['loudness_zwk', 'sharpness_din'],
+  batchAnnoyance: [],
+  batchLimits: {},
   isLoading: false,
   loadingMessage: '',
   audioIsPlaying: false,
@@ -135,6 +145,17 @@ export const useStore = create<AppState>((set, get) => ({
     return { sections }
   }),
   setBatchEnabled: (batchEnabled) => set({ batchEnabled }),
+  setBatchMetrics: (batchMetrics) => set({ batchMetrics }),
+  setBatchAnnoyance: (batchAnnoyance) => set({ batchAnnoyance }),
+  setBatchLimits: (batchLimits) => set({ batchLimits }),
+  setBatchLimit: (key, patch) => set((s) => {
+    const prev = s.batchLimits[key]
+    const next: BatchLimit = { min: prev?.min ?? null, max: prev?.max ?? null, ...patch }
+    const batchLimits = { ...s.batchLimits }
+    if (next.min == null && next.max == null) delete batchLimits[key]
+    else batchLimits[key] = next
+    return { batchLimits }
+  }),
   setLoading: (isLoading, loadingMessage = '') => set({ isLoading, loadingMessage }),
   setAudioPlayback: (audioIsPlaying, audioDuration) => set({ audioIsPlaying, audioDuration }),
   clearSession: () => {
