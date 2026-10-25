@@ -135,6 +135,18 @@ export default function PostProcessingDocEn() {
             band (no tone disappears). Stereo files get one curve per channel, left and right. The drawing follows the idea of windowed spectral
             analysis described by Harris <Cite ids={['harris1978']} />.
           </P>
+          <P>
+            <strong>Axes.</strong> In the row above the spectrum, <K>Frequency</K> takes the start and end of the axis in Hz (for example 20 and 10000) and there are ready buttons
+            (20 Hz–20 kHz, 20 Hz–10 kHz, 100 Hz–5 kHz); <K>Level</K> does the same on the vertical axis. <K>Auto</K> goes back to the automatic setting. Dragging the chart to zoom also updates these fields, and the
+            chosen range is kept when you change file or mark points.
+          </P>
+          <P>
+            <strong>Cursors with the right click.</strong> Right-click on the chart to open a menu at the point you indicate:
+            <K>Mark this point</K> (the frequency and level of the nearest point of the curve), <K>Mark the nearest peak</K> (the highest value of the curve within 1/3 octave around the click, useful to read a tone without hitting the FFT line),
+            <K>Harmonics from here</K> or <K>from the nearest peak</K> (draws f₀, 2×, 3× … up to the end of the axis, at most 40 lines, the first ten labelled), <K>Axis: start here</K> and <K>end here</K>,
+            and <K>Clear marks and harmonics</K>. The menu moves with the arrow keys and closes with Esc. The fundamental can also be typed in <K>f₀</K>. A plain left click
+            no longer marks points, so that an accidental click does not clutter the chart; the value under the pointer still shows when you hover.
+          </P>
         </Section>
 
         <Section id="v-espectrograma" title="Spectrogram" level={3}>

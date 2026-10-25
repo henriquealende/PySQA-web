@@ -18,6 +18,8 @@ import SectionBar, { sectionKey, toSection } from './SectionBar'
 import MetricProgress from './MetricProgress'
 import MetricStats from './MetricStats'
 import WaveStatsTable from './WaveStatsTable'
+import SpectrumBar from './SpectrumBar'
+import PlotMenu, { type MenuItem } from './PlotMenu'
 import { useT } from '../i18n'
 import { serverLabel } from '../i18n/serverLabels'
 import { LEGEND_INSIDE } from './plotLegend'
@@ -89,31 +91,47 @@ function barkTicksHz(barkValues: number[], isHMS = false): { tickvals: number[];
 }
 
 // ─── Harmonic cursor ────────────────────────────────────────────────────────
-const N_HARMONICS = 8
-function harmonicShapes(f0: number, color = C_ORANGE): any[] {
-  return Array.from({ length: N_HARMONICS }, (_, i) => ({
+const MAX_HARMONICS = 40
+const LABELLED_HARMONICS = 10
+/** Lines at f0, 2·f0, 3·f0 … up to the top of the axis (at most MAX_HARMONICS), the first one solid. */
+function harmonicCount(f0: number, fMax: number): number {
+  return Math.max(1, Math.min(MAX_HARMONICS, Math.floor(fMax / f0)))
+}
+function harmonicShapes(f0: number, fMax: number, color = C_ORANGE): any[] {
+  return Array.from({ length: harmonicCount(f0, fMax) }, (_, i) => ({
     type: 'line', xref: 'x', yref: 'paper',
     x0: f0*(i+1), x1: f0*(i+1), y0: 0, y1: 1,
     line: { color, width: i===0 ? 1.5 : 1, dash: i===0 ? 'solid' : 'dot' },
   }))
 }
+/** "f₀, 2×, 3× …" above the first lines, so it is clear which line is which. */
+function harmonicLabels(f0: number, fMax: number, color = C_ORANGE): any[] {
+  return Array.from({ length: Math.min(LABELLED_HARMONICS, harmonicCount(f0, fMax)) }, (_, i) => ({
+    x: Math.log10(f0*(i+1)), xref: 'x', y: 1, yref: 'paper', yanchor: 'bottom', showarrow: false,
+    text: i === 0 ? 'f₀' : `${i+1}×`, font: { size: 9, color },
+  }))
+}
 
-function HarmonicInput({ f0, onChange }: { f0: number|null; onChange: (v: number|null) => void }) {
-  const t = useT()
-  const [raw, setRaw] = useState(f0 ? String(f0) : '')
-  const apply = () => { const v = parseFloat(raw); onChange(isNaN(v)||v<=0 ? null : v) }
-  const clear = () => { setRaw(''); onChange(null) }
-  return (
-    <div className="flex items-center gap-1 shrink-0">
-      <span className="text-[11px] text-muted">f₀</span>
-      <input type="number" min={1} placeholder="Hz" value={raw}
-        onChange={e => setRaw(e.target.value)}
-        onKeyDown={e => e.key==='Enter' && apply()}
-        className="w-16 bg-panel border border-field rounded px-1.5 py-0.5 text-xs text-white placeholder:text-muted/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal focus:border-teal" />
-      <button onClick={apply} className="px-1.5 py-0.5 text-[11px] bg-teal/20 border border-teal/40 text-teal rounded hover:bg-teal/30 transition-colors">{t('plot.set')}</button>
-      {f0 && <button onClick={clear} className="px-1.5 py-0.5 text-[11px] text-muted hover:text-white transition-colors">✕</button>}
-    </div>
-  )
+/** The point of the curve nearest (in log frequency) to f. */
+function nearestPoint(freqs: number[], mags: number[], f: number): { x: number; y: number } | null {
+  let best = -1, bd = Infinity
+  for (let i = 0; i < freqs.length; i++) {
+    if (freqs[i] <= 0) continue
+    const d = Math.abs(Math.log(freqs[i] / f))
+    if (d < bd) { bd = d; best = i }
+  }
+  return best < 0 ? null : { x: freqs[best], y: mags[best] }
+}
+/** The highest point of the curve within 1/3 octave around f (1/6 each side): the peak the user is pointing at. */
+function nearestPeak(freqs: number[], mags: number[], f: number): { x: number; y: number } | null {
+  const lo = f * 2 ** (-1 / 6), hi = f * 2 ** (1 / 6)
+  let best = -1
+  for (let i = 0; i < freqs.length; i++) {
+    if (freqs[i] < lo || freqs[i] <= 0) continue
+    if (freqs[i] > hi) break
+    if (best < 0 || mags[i] > mags[best]) best = i
+  }
+  return best < 0 ? nearestPoint(freqs, mags, f) : { x: freqs[best], y: mags[best] }
 }
 
 // ─── Helper components ───────────────────────────────────────────────────────
@@ -320,6 +338,12 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   const [spCmp, setSpCmp] = useState<SpectrumData|null>(null)
   const [err,   setErr]   = useState('')
   const [f0,    setF0]    = useState<number|null>(null)
+  // Range of the spectrum's axes, kept here because every re-render hands Plotly a fresh layout (null: automatic)
+  const [spX, setSpX] = useState<[number, number] | null>(null)
+  const [spY, setSpY] = useState<[number, number] | null>(null)
+  const spGraph = useRef<any>(null)                       // the spectrum's Plotly graph
+  const spWrap = useRef<HTMLDivElement>(null)
+  const [menu, setMenu] = useState<{ left: number; top: number; f: number; level: number } | null>(null)
   const [spPins, setSpPins] = useState<{x: number; y: number}[]>([])
   const [wfPins, setWfPins] = useState<{x: number; y: number}[]>([])
   // What dragging on the waveform does: mark a section to analyse (default), or zoom / pan
@@ -452,7 +476,6 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   ]
 
   const showLegend = !!compareId
-  const totalPins = spPins.length + wfPins.length
 
   // Statistics of the waveform: one row per channel of the file, plus one per channel of the compared file
   const fileName = files.find(f => f.audio_id === audioId)?.name ?? ''
@@ -466,6 +489,41 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
     ...statRows(wf, fileName, [C_TEAL, C_VIOLET]),
     ...(wfCmp ? statRows(wfCmp, compareName, [C_BLUE, C_BLUE]) : []),
   ]
+
+  // ── Cursors of the spectrum: right click opens a menu at the point pointed to ──────────────────────
+  const spMags = spCurves[0].y
+  const spFMax = spX?.[1] ?? sp.freqs[sp.freqs.length - 1] ?? 20000
+  const closeMenu = () => setMenu(null)
+  const openMenu = (e: React.MouseEvent) => {
+    const gd = spGraph.current, box = spWrap.current?.getBoundingClientRect()
+    const xa = gd?._fullLayout?.xaxis, ya = gd?._fullLayout?.yaxis
+    if (!gd || !box || !xa || !ya) return
+    const g = gd.getBoundingClientRect()
+    const px = e.clientX - g.left - xa._offset, py = e.clientY - g.top - ya._offset
+    if (px < 0 || px > xa._length || py < 0 || py > ya._length) return        // outside the plot area: leave the browser's menu
+    e.preventDefault()
+    const f = xa.p2d(px), level = ya.p2d(py)
+    if (!(f > 0)) return
+    setMenu({
+      left: Math.max(0, Math.min(e.clientX - box.left, box.width - 330)),
+      top: Math.max(0, Math.min(e.clientY - box.top, box.height - 230)),
+      f, level,
+    })
+  }
+  const menuItems = (m: { f: number; level: number }): MenuItem[] => {
+    const pt = nearestPoint(sp.freqs, spMags, m.f)
+    const pk = nearestPeak(sp.freqs, spMags, m.f)
+    const hz = (v: number) => v.toFixed(v < 100 ? 1 : 0)
+    return [
+      { label: pt ? t('plot.menu.pin', { f: hz(pt.x), y: pt.y.toFixed(1), unit: specUnit }) : '', disabled: !pt, onClick: () => pt && setSpPins(p => [...p, pt]) },
+      { label: pk ? t('plot.menu.peak', { f: hz(pk.x), y: pk.y.toFixed(1), unit: specUnit }) : '', disabled: !pk, onClick: () => pk && setSpPins(p => [...p, pk]) },
+      { label: t('plot.menu.f0here', { f: hz(m.f) }), divider: true, onClick: () => setF0(Number(m.f.toFixed(1))) },
+      { label: pk ? t('plot.menu.f0peak', { f: hz(pk.x) }) : '', disabled: !pk, onClick: () => pk && setF0(Number(pk.x.toFixed(1))) },
+      { label: t('plot.menu.axisFrom', { f: hz(m.f) }), divider: true, onClick: () => setSpX([m.f, Math.max(spX?.[1] ?? 0, m.f * 1.01, sp.freqs[sp.freqs.length - 1] ?? 20000)]) },
+      { label: t('plot.menu.axisTo', { f: hz(m.f) }), onClick: () => setSpX([Math.min(spX?.[0] ?? 20, m.f * 0.99), m.f]) },
+      { label: t('plot.menu.clear'), divider: true, disabled: !f0 && spPins.length === 0, onClick: () => { setF0(null); setSpPins([]) } },
+    ]
+  }
 
   // The section being analysed, shaded on the (always whole) waveform
   const sectionShape: any[] = section
@@ -485,12 +543,33 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
 
   return (
     <div className="flex flex-col h-full gap-1">
-      {compareId && (
-        <div className="flex items-center gap-2 px-2 py-1 shrink-0">
-          <CompareBadge name={compareName} color={C_BLUE} />
-        </div>
-      )}
       <WaveStatsTable rows={waveStatRows} calibrated={!!wf.calibrated} />
+      <div className="flex items-center gap-2 px-2 shrink-0 flex-wrap text-[11px]">
+        {compareId && <CompareBadge name={compareName} color={C_BLUE} />}
+        <span ref={cursorClock} className="font-mono tabular-nums text-orange shrink-0" style={{ display: 'none' }} />
+        <div className="flex items-center gap-1" role="group" aria-label={t('plot.normal.dragAria')}>
+          <span className="text-muted">{t('plot.normal.dragTo')}</span>
+          {(['select', 'zoom'] as const).map(m => (
+            <button key={m} onClick={() => setWfDrag(m)} aria-pressed={wfDrag === m}
+              className={`px-1.5 py-0.5 rounded border transition-colors ${wfDrag === m ? 'bg-teal/20 border-teal/50 text-teal' : 'border-border text-muted hover:text-white'}`}>
+              {m === 'select' ? t('plot.normal.select') : t('plot.normal.zoom')}
+            </button>
+          ))}
+        </div>
+        {wf.peak !== undefined && (
+          <span
+            className={`tabular-nums ${wf.peak >= 0.999 ? 'text-orange font-semibold' : 'text-muted'}`}
+            title={t('plot.normal.peakTitle')}>
+            {t('plot.normal.peakLevel', { db: wf.peak > 0 ? (20 * Math.log10(wf.peak)).toFixed(1) : '−∞' })}{wf.peak >= 0.999 ? ` · ${t('plot.normal.clipping')}` : ''}
+          </span>
+        )}
+        {wfPins.length > 0 && (
+          <button onClick={() => setWfPins([])}
+            className="ml-auto px-2 py-0.5 text-muted hover:text-white border border-border rounded transition-colors">
+            {t(wfPins.length > 1 ? 'plot.pins.clearMany' : 'plot.pins.clearOne', { n: wfPins.length })}
+          </button>
+        )}
+      </div>
       <div className="relative flex-1 min-h-0">
       <Plot data={wfData}
         layout={{ ...BASE_LAYOUT,
@@ -518,44 +597,36 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
       <div ref={cursorLine} className="absolute left-0 w-[1.5px] bg-orange pointer-events-none"
         style={{ display: 'none', top: 0, height: 0 }} />
       </div>
-      <Plot data={spData}
-        layout={{ ...BASE_LAYOUT,
-          xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.frequency'), type: 'log' },
-          yaxis: { ...BASE_LAYOUT.yaxis, title: isCalibrated ? t('plot.axis.spl') : t('plot.axis.magnitudeDbfs') },
-          shapes: f0 ? harmonicShapes(f0, C_ORANGE) : [],
-          annotations: spPins.map(p => makePinAnnotation(p, true, '.0f', '.1f', specUnit)),
-          showlegend: showLegend || stereo,
-          legend: LEGEND_INSIDE }}
-        config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler
-        onClick={(evt: any) => { const pt = evt.points?.[0]; if (!pt) return; setSpPins(p => [...p, {x: pt.x, y: pt.y}]) }}
-        style={{ width:'100%', height:'100%' }} />
-
-      {/* Toolbar row */}
-      <div className="flex items-center gap-2 px-2 shrink-0 flex-wrap">
-        <span ref={cursorClock} className="text-[11px] font-mono tabular-nums text-orange shrink-0" style={{ display: 'none' }} />
-        <span className="text-[11px] text-muted">f₀</span>
-        <HarmonicInput f0={f0} onChange={setF0} />
-        <div className="flex items-center gap-1 ml-2 text-[11px]" role="group" aria-label={t('plot.normal.dragAria')}>
-          <span className="text-muted">{t('plot.normal.dragTo')}</span>
-          {(['select', 'zoom'] as const).map(m => (
-            <button key={m} onClick={() => setWfDrag(m)} aria-pressed={wfDrag === m}
-              className={`px-1.5 py-0.5 rounded border transition-colors ${wfDrag === m ? 'bg-teal/20 border-teal/50 text-teal' : 'border-border text-muted hover:text-white'}`}>
-              {m === 'select' ? t('plot.normal.select') : t('plot.normal.zoom')}
-            </button>
-          ))}
-        </div>
-        {wf.peak !== undefined && (
-          <span
-            className={`ml-2 text-[11px] tabular-nums ${wf.peak >= 0.999 ? 'text-orange font-semibold' : 'text-muted'}`}
-            title={t('plot.normal.peakTitle')}>
-            {t('plot.normal.peakLevel', { db: wf.peak > 0 ? (20 * Math.log10(wf.peak)).toFixed(1) : '−∞' })}{wf.peak >= 0.999 ? ` · ${t('plot.normal.clipping')}` : ''}
-          </span>
-        )}
-        {totalPins > 0 && (
-          <button onClick={() => { setSpPins([]); setWfPins([]) }}
-            className="ml-auto px-2 py-0.5 text-[11px] text-muted hover:text-white border border-border rounded transition-colors">
-            {t(totalPins > 1 ? 'plot.pins.clearMany' : 'plot.pins.clearOne', { n: totalPins })}
-          </button>
+      <SpectrumBar
+        x={spX} y={spY} nyquist={sp.freqs[sp.freqs.length - 1] ?? 20000} unit={specUnit} f0={f0} pins={spPins.length}
+        onX={setSpX} onY={setSpY} onF0={setF0} onClearPins={() => setSpPins([])}
+      />
+      <div ref={spWrap} className="relative flex-1 min-h-0" onContextMenu={openMenu}>
+        <Plot data={spData}
+          layout={{ ...BASE_LAYOUT,
+            xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.frequency'), type: 'log',
+              ...(spX ? { range: [Math.log10(spX[0]), Math.log10(spX[1])], autorange: false } : {}) },
+            yaxis: { ...BASE_LAYOUT.yaxis, title: isCalibrated ? t('plot.axis.spl') : t('plot.axis.magnitudeDbfs'),
+              ...(spY ? { range: spY, autorange: false } : {}) },
+            shapes: f0 ? harmonicShapes(f0, spFMax, C_ORANGE) : [],
+            annotations: [
+              ...spPins.map(p => makePinAnnotation(p, true, '.0f', '.1f', specUnit)),
+              ...(f0 ? harmonicLabels(f0, spFMax, C_ORANGE) : []),
+            ],
+            showlegend: showLegend || stereo,
+            legend: LEGEND_INSIDE } as any}
+          config={PLOT_CONFIG} className="w-full h-full" useResizeHandler
+          onInitialized={(_f: any, gd: any) => { spGraph.current = gd }}
+          onUpdate={(_f: any, gd: any) => { spGraph.current = gd }}
+          onRelayout={(e: any) => {
+            if (e?.['xaxis.range[0]'] != null) setSpX([10 ** e['xaxis.range[0]'], 10 ** e['xaxis.range[1]']])
+            else if (e?.['xaxis.autorange']) setSpX(null)
+            if (e?.['yaxis.range[0]'] != null) setSpY([e['yaxis.range[0]'], e['yaxis.range[1]']])
+            else if (e?.['yaxis.autorange']) setSpY(null)
+          }}
+          style={{ width:'100%', height:'100%' }} />
+        {menu && (
+          <PlotMenu left={menu.left} top={menu.top} items={menuItems(menu)} label={t('plot.menu.label')} onClose={closeMenu} />
         )}
       </div>
     </div>

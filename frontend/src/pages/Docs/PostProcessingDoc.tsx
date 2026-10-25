@@ -135,6 +135,18 @@ export default function PostProcessingDoc() {
             faixa (nenhum tom desaparece). Em arquivos estéreo há uma curva por canal, esquerdo e direito. O desenho segue a ideia da análise espectral por
             janelas descrita por Harris <Cite ids={['harris1978']} />.
           </P>
+          <P>
+            <strong>Eixos.</strong> Na faixa acima do espectro, <K>Frequência</K> aceita o início e o fim do eixo em Hz (por exemplo, 20 e 10000) e há botões prontos
+            (20 Hz–20 kHz, 20 Hz–10 kHz, 100 Hz–5 kHz); <K>Nível</K> faz o mesmo no eixo vertical. <K>Auto</K> volta ao ajuste automático. Arrastar o gráfico para ampliar também atualiza esses campos, e o
+            intervalo escolhido é mantido ao trocar de arquivo ou ao marcar pontos.
+          </P>
+          <P>
+            <strong>Cursores com o botão direito.</strong> Clique com o botão direito sobre o gráfico para abrir um menu no ponto indicado:
+            <K>Marcar este ponto</K> (a frequência e o nível da curva mais próxima), <K>Marcar o pico mais próximo</K> (o maior valor da curva em 1/3 de oitava ao redor do clique, útil para ler um tom sem acertar a linha da FFT),
+            <K>Harmônicos a partir daqui</K> ou <K>a partir do pico mais próximo</K> (desenha f₀, 2×, 3× … até o fim do eixo, no máximo 40 linhas, cada uma rotulada nas dez primeiras), <K>Eixo: começar aqui</K> e <K>terminar aqui</K>,
+            e <K>Limpar marcas e harmônicos</K>. O menu se move com as setas e fecha com Esc. A fundamental também pode ser digitada em <K>f₀</K>. Um clique simples com o botão esquerdo
+            deixou de marcar pontos, para que um clique sem querer não suje o gráfico; o valor sob o ponteiro continua aparecendo ao passar o mouse.
+          </P>
         </Section>
 
         <Section id="v-espectrograma" title="Espectrograma" level={3}>
