@@ -331,6 +331,29 @@ function makePinAnnotation(p: {x: number; y: number}, isLogX: boolean, xFmt: str
   }
 }
 
+/** On a phone two charts are not shown together: one is picked here and fills the standard height. From sm up this is not used. */
+function useChartPick(): ['time' | 'freq', (v: 'time' | 'freq') => void] {
+  const [mv, setMv] = useState<'time' | 'freq'>('time')
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))   // Plotly measures a chart again once it is shown
+    return () => window.cancelAnimationFrame(id)
+  }, [mv])
+  return [mv, setMv]
+}
+const pickCls = (shown: boolean) => `plot-box ${shown ? '' : 'hidden sm:block'}`
+
+function ChartSwitch({ value, onChange }: { value: 'time' | 'freq'; onChange: (v: 'time' | 'freq') => void }) {
+  const t = useT()
+  return (
+    <div className="sm:hidden px-2 shrink-0">
+      <div className="seg seg-fill" role="group" aria-label={t('plot.normal.chartPick')}>
+        <button onClick={() => onChange('time')} aria-pressed={value === 'time'}>{t('plot.normal.chartTime')}</button>
+        <button onClick={() => onChange('freq')} aria-pressed={value === 'freq'}>{t('plot.normal.chartFreq')}</button>
+      </div>
+    </div>
+  )
+}
+
 function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   sessionId: string; audioId: string; compareId: string|null; compareName: string; section: Section|null
 }) {
@@ -344,12 +367,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   const [spCmp, setSpCmp] = useState<SpectrumData|null>(null)
   const [err,   setErr]   = useState('')
   const [f0,    setF0]    = useState<number|null>(null)
-  // On a phone one chart at a time fills the height; from sm up both are shown
-  const [mv, setMv] = useState<'time' | 'freq'>('time')
-  useEffect(() => {
-    const id = window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))   // Plotly measures a chart again once it is shown
-    return () => window.cancelAnimationFrame(id)
-  }, [mv])
+  const [mv, setMv] = useChartPick()
   // Range of the spectrum's axes, kept here because every re-render hands Plotly a fresh layout (null: automatic)
   const [spX, setSpX] = useState<[number, number] | null>(null)
   const [spY, setSpY] = useState<[number, number] | null>(null)
@@ -556,12 +574,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
   return (
     <div className="flex flex-col h-full gap-1 overflow-y-auto sm:overflow-visible">
       <WaveStatsTable rows={waveStatRows} calibrated={!!wf.calibrated} />
-      <div className="sm:hidden px-2 shrink-0">
-        <div className="seg seg-fill" role="group" aria-label={t('plot.normal.chartPick')}>
-          <button onClick={() => setMv('time')} aria-pressed={mv === 'time'}>{t('plot.normal.chartTime')}</button>
-          <button onClick={() => setMv('freq')} aria-pressed={mv === 'freq'}>{t('plot.normal.chartFreq')}</button>
-        </div>
-      </div>
+      <ChartSwitch value={mv} onChange={setMv} />
       <div className={`items-center gap-2 px-2 shrink-0 flex-wrap text-[11px] ${mv === 'time' ? 'flex' : 'hidden sm:flex'}`}>
         {compareId && <CompareBadge name={compareName} color={C_BLUE} />}
         <span ref={cursorClock} className="font-mono tabular-nums text-orange shrink-0" style={{ display: 'none' }} />
@@ -588,7 +601,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
           </button>
         )}
       </div>
-      <div className={`relative h-[44dvh] min-h-[280px] shrink-0 sm:h-auto sm:min-h-0 sm:shrink sm:flex-1 ${mv === 'time' ? '' : 'hidden sm:block'}`} {...rightButtonFree}>
+      <div className={pickCls(mv === 'time')} {...rightButtonFree}>
       <Plot data={wfData}
         layout={{ ...BASE_LAYOUT,
           xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time'), ...(wfRange.current ? { range: wfRange.current, autorange: false } : {}) },
@@ -621,7 +634,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
           onX={setSpX} onY={setSpY} onF0={setF0} onClearPins={() => setSpPins([])}
         />
       </div>
-      <div ref={spWrap} className={`relative h-[44dvh] min-h-[280px] shrink-0 sm:h-auto sm:min-h-0 sm:shrink sm:flex-1 ${mv === 'freq' ? '' : 'hidden sm:block'}`} onContextMenu={openMenu} {...rightButtonFree}>
+      <div ref={spWrap} className={pickCls(mv === 'freq')} onContextMenu={openMenu} {...rightButtonFree}>
         <Plot data={spData}
           layout={{ ...BASE_LAYOUT,
             xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.frequency'), type: 'log',
@@ -670,6 +683,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
   sessionId: string; audioId: string; metricKey: string; compareId: string|null; compareName: string; section: Section|null
 }) {
   const t = useT()
+  const [mv, setMv] = useChartPick()
   const { fieldType, precision, files, setMetricKey } = useStore()
   const secKey = sectionKey(section)
   const workSeconds = section ? section[1] - section[0] : (files.find(f => f.audio_id === audioId)?.duration_s ?? 0)
@@ -782,7 +796,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
   const timeYLabel = (data.y_label ?? '').split('(')[0].trim() + ` (${data.unit ?? ''})`
 
   return (
-    <div className="flex flex-col h-full gap-1">
+    <div className="flex flex-col h-full gap-1 overflow-y-auto sm:overflow-visible">
       <div className="flex items-center gap-3 px-2 py-1 shrink-0 flex-wrap">
         {globalLabel && <span className="text-xs text-teal font-semibold">{globalLabel}{globalCmpLabel && <span className="text-blue-400 font-normal">{globalCmpLabel}</span>}</span>}
         {isBark && <BarkBadge isHMS={isHMS} />}
@@ -794,15 +808,20 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
         ...(dataCmp?.stats ? [{ name: compareName, color: C_BLUE, stats: dataCmp.stats, unit: dataCmp.unit ?? '' }] : []),
       ]} />
 
+      {data.time_data && <ChartSwitch value={mv} onChange={setMv} />}
+
       {data.time_data && (
+        <div className={pickCls(mv === 'time')}>
         <Plot data={timeTraces}
           layout={{ ...BASE_LAYOUT, margin: { ...BASE_LAYOUT.margin, t: 8 },
             xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time') },
             yaxis: { ...BASE_LAYOUT.yaxis, title: timeYLabel },
             showlegend: showLegend, legend: LEGEND_INSIDE }}
-          config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
+          config={PLOT_CONFIG} className="w-full h-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
+        </div>
       )}
 
+      <div className={pickCls(!data.time_data || mv === 'freq')}>
       <Plot data={[...freqTraces, ...(barkTicks && data.x_axis?.length ? [{
           x: [Math.min(...data.x_axis), Math.max(...data.x_axis)],
           y: [null, null], type: 'scatter' as const, mode: 'lines' as const,
@@ -845,6 +864,7 @@ function MetricView({ sessionId, audioId, metricKey, compareId, compareName, sec
           if (evt['xaxis.autorange'] || evt['yaxis.autorange']) freqZoom.current = {}
         }}
         style={{ width:'100%', height:'100%' }} />
+      </div>
 
       {freqPins.length > 0 && (
         <div className="flex items-center px-2 shrink-0">
@@ -906,7 +926,7 @@ function SpectrogramView({ sessionId, audioId, section }: { sessionId: string; a
   const yAxisType  = data ? ((data.freq_scale ?? applied.freq_scale)==='log' ? 'log' : 'linear') : 'log'
 
   return (
-    <div className="relative w-full h-full">
+    <div className="plot-fill w-full">
       <GearButton onClick={() => { setPending({...applied}); setShowSettings(!showSettings) }} />
       {stereo && <ChannelToggle channel={channel} onChange={chooseChannel} />}
       {showSettings && (
@@ -970,7 +990,7 @@ function OctaveView({ sessionId, audioId, section }: { sessionId: string; audioI
   const topDb    = valid.length ? Math.ceil((Math.max(...valid) + 4) / 10) * 10 : 0
 
   return (
-    <div className="relative w-full h-full">
+    <div className="plot-fill w-full">
       <GearButton onClick={() => { setPending(octaveWeighting); setShowSettings(!showSettings) }} />
       {showSettings && (
         <SettingsOverlay onClose={() => setShowSettings(false)}>
@@ -995,6 +1015,7 @@ function OctaveView({ sessionId, audioId, section }: { sessionId: string; audioI
 
 function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audioId: string; section: Section|null }) {
   const t = useT()
+  const [mv, setMv] = useChartPick()
   const { envelopeParams, setEnvelopeParams } = useStore()
   const secKey = sectionKey(section)
   const [data, setData]               = useState<EnvelopeData|null>(null)
@@ -1028,7 +1049,7 @@ function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audi
     : []
 
   return (
-    <div className="relative flex flex-col h-full gap-1">
+    <div className="relative flex flex-col h-full gap-1 overflow-y-auto sm:overflow-visible">
       <GearButton onClick={() => { setPending({...applied}); setShowSettings(!showSettings) }} />
       {showSettings && (
         <SettingsOverlay onClose={() => setShowSettings(false)}>
@@ -1038,6 +1059,8 @@ function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audi
       )}
       {!data ? <Spinner /> : (
         <>
+          <div className="pt-8 sm:pt-0 shrink-0"><ChartSwitch value={mv} onChange={setMv} /></div>
+          <div className={pickCls(mv === 'time')}>
           <Plot data={envCurves.flatMap(c => [
             { x: data.t, y: c.signal,   type: 'scatter' as const, mode: 'lines' as const, line: { color: c.sigColor, width: 0.8 }, name: `${t('plot.trace.signal')}${c.tag}`,   hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>' },
             { x: data.t, y: c.envelope, type: 'scatter' as const, mode: 'lines' as const, line: { color: c.envColor, width: 1.5 }, name: `${t('plot.trace.envelope')}${c.tag}`, hovertemplate: '%{x:.3f} s — %{y:.4f}<extra></extra>' },
@@ -1046,7 +1069,9 @@ function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audi
               xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time') },
               yaxis: { ...BASE_LAYOUT.yaxis, title: t('plot.axis.amplitude') },
               legend: LEGEND_INSIDE }}
-            config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
+            config={PLOT_CONFIG} className="w-full h-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
+          </div>
+          <div className={pickCls(mv === 'freq')}>
           <Plot data={envCurves.map(c => ({ x: c.f_env, y: c.env_spec_db, type: 'scatter' as const, mode: 'lines' as const,
             line: { color: c.specColor, width: 1 }, name: `${t('plot.trace.envSpectrum')}${c.tag}`,
             hovertemplate: '%{x:.1f} Hz — %{y:.1f} dB<extra></extra>' }))}
@@ -1054,7 +1079,8 @@ function EnvelopeView({ sessionId, audioId, section }: { sessionId: string; audi
               legend: LEGEND_INSIDE,
               xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.frequency'), type: 'log' },
               yaxis: { ...BASE_LAYOUT.yaxis, title: t('plot.axis.magnitudeDb') } }}
-            config={PLOT_CONFIG} className="flex-1 w-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
+            config={PLOT_CONFIG} className="w-full h-full" useResizeHandler style={{ width:'100%', height:'100%' }} />
+          </div>
         </>
       )}
     </div>

@@ -411,7 +411,7 @@ export default function SystemAnalysisPage() {
           )}
           {result && (
             <>
-              <div className={clsx('min-h-[340px]', view === 'modes' ? 'h-[300px] shrink-0' : 'flex-1')}>
+              <div className={clsx(view === 'modes' ? 'h-[300px] shrink-0 min-h-[300px]' : clsx('plot-box sm:!min-h-[340px]', view === 'bode' && 'plot-tall'))}>
                 <Suspense fallback={<div className="flex h-full items-center justify-center text-xs text-teal animate-pulse">{t('sa.page.loadingCharts')}</div>}>
                   <FrfPlots result={result} view={view} xLog={view === 'nyquist' ? false : xLog} showModes={showModes} />
                 </Suspense>

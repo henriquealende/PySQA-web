@@ -31,7 +31,7 @@ export default function MetricStats({ rows, metricKey }: { rows: Row[]; metricKe
   const t = useT()
   const L = letter(metricKey)
   const locale = currentLocale()
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(() => window.matchMedia('(min-width: 640px)').matches)
   const [copied, setCopied] = useState(false)
   if (rows.length === 0) return null
 

@@ -102,6 +102,17 @@ input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.15); }
 input[type=range]:focus-visible { outline: 2px solid #50b89e; outline-offset: 3px; border-radius: 4px; }
 input[type=range]:disabled { opacity: 0.4; cursor: default; }
 
+/* Charts: one height on a phone whatever is around them (44 % of the screen, at least 280 px); from sm up they share what is left.
+   .plot-box is a flex child, .plot-fill fills a plain parent, .plot-tall is for charts with stacked panels (Bode). */
+.plot-box  { position: relative; flex: none; height: 44dvh; min-height: 280px; }
+.plot-fill { position: relative; height: 44dvh; min-height: 280px; }
+.plot-tall { height: 62dvh; min-height: 360px; }
+@media (min-width: 640px) {
+  .plot-box  { flex: 1 1 0%; height: auto; min-height: 0; }
+  .plot-fill { height: 100%; min-height: 0; }
+  .plot-tall { height: auto; min-height: 0; }
+}
+
 /* Touch screens: controls need a comfortable target */
 @media (pointer: coarse) {
   main button:not(.btn):not(.icon-btn):not(.seg > button), aside button:not(.btn):not(.icon-btn):not(.seg > button), main select, aside select,
