@@ -90,6 +90,12 @@ function barkTicksHz(barkValues: number[], isHMS = false): { tickvals: number[];
   return { tickvals, ticktext }
 }
 
+/** Plotly also starts a zoom when the right button is dragged. That button is kept for the cursor menu, so it never reaches the chart. */
+const rightButtonFree = {
+  onMouseDownCapture: (e: React.MouseEvent) => { if (e.button === 2) e.stopPropagation() },
+  onMouseUpCapture: (e: React.MouseEvent) => { if (e.button === 2) e.stopPropagation() },
+}
+
 // ─── Harmonic cursor ────────────────────────────────────────────────────────
 const MAX_HARMONICS = 40
 const LABELLED_HARMONICS = 10
@@ -570,7 +576,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
           </button>
         )}
       </div>
-      <div className="relative flex-1 min-h-0">
+      <div className="relative flex-1 min-h-0" {...rightButtonFree}>
       <Plot data={wfData}
         layout={{ ...BASE_LAYOUT,
           xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.time'), ...(wfRange.current ? { range: wfRange.current, autorange: false } : {}) },
@@ -601,7 +607,7 @@ function NormalView({ sessionId, audioId, compareId, compareName, section }: {
         x={spX} y={spY} nyquist={sp.freqs[sp.freqs.length - 1] ?? 20000} unit={specUnit} f0={f0} pins={spPins.length}
         onX={setSpX} onY={setSpY} onF0={setF0} onClearPins={() => setSpPins([])}
       />
-      <div ref={spWrap} className="relative flex-1 min-h-0" onContextMenu={openMenu}>
+      <div ref={spWrap} className="relative flex-1 min-h-0" onContextMenu={openMenu} {...rightButtonFree}>
         <Plot data={spData}
           layout={{ ...BASE_LAYOUT,
             xaxis: { ...BASE_LAYOUT.xaxis, title: t('plot.axis.frequency'), type: 'log',
